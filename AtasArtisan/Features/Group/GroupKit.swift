@@ -17,7 +17,7 @@ enum GFont {
 /// Tints the design uses that have no token of their own: a token at an opacity over white.
 enum GTint {
     /// #F6FFD0, the replaced-item wash (no token yet).
-    static let replaced = Brand.lime.opacity(0.3)
+    static let replaced = Brand.limeWash
 }
 
 extension View {

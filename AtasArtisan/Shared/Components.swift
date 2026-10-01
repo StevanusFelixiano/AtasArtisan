@@ -228,6 +228,16 @@ enum Art {
         ("caramel", Brand.caramel, "Caramel"),
     ]
     static func background(_ key: String?) -> Color? { backgrounds.first { $0.key == key }?.color }
+
+    /// How each painting sits in a round avatar (design `ataste-art.js` ART table): image size, the face centre as a
+    /// fraction of the image (cx, cy), and how much of the image width the circle shows (cw).
+    static let paintingCrop: [String: (w: CGFloat, h: CGFloat, cx: CGFloat, cy: CGFloat, cw: CGFloat)] = [
+        "paint-croissant": (716, 1113, 0.42, 0.3, 0.8), "paint-creation": (1140, 735, 0.5, 0.5, 0.42),
+        "paint-brioche": (900, 1117, 0.52, 0.3, 0.7), "paint-monalisa": (900, 1117, 0.52, 0.26, 0.62),
+        "paint-scream": (900, 1117, 0.52, 0.3, 0.64), "paint-gothic": (900, 1117, 0.5, 0.3, 1),
+        "paint-sonofbun": (900, 1117, 0.5, 0.28, 0.62), "paint-vangogh": (900, 1117, 0.47, 0.28, 0.62),
+        "paint-supper": (1400, 781, 0.5, 0.4, 0.45),
+    ]
 }
 
 /// `<at-avatar>`: initial in Roundo 700 at 0.4 × size on a pastel (join order), or the person's chosen art.
@@ -245,9 +255,16 @@ struct Avatar: View {
         let fill = Art.background(bg) ?? Brand.people[index % Brand.people.count]
         ZStack {
             Circle().fill(fill)
-            if let art, Art.all.contains(art) {
+            if let art, let c = Art.paintingCrop[art] {
+                // Centre the face, keep the image covering the circle (the design's artBg()).
+                let bw = size / c.cw, bh = bw * c.h / c.w
+                let x = min(0, max(size - bw, size / 2 - c.cx * bw)), y = min(0, max(size - bh, size / 2 - c.cy * bh))
+                Image(art).resizable().frame(width: bw, height: bh)
+                    .offset(x: x + (bw - size) / 2, y: y + (bh - size) / 2)
+                    .frame(width: size, height: size).clipShape(Circle())
+            } else if let art, Art.all.contains(art) {
                 Image(art).resizable().scaledToFill()
-                    .frame(width: size, height: size, alignment: art.hasPrefix("paint") ? .top : .bottom)
+                    .frame(width: size, height: size, alignment: .bottom)
                     .clipShape(Circle())
             } else {
                 Text(String(name.prefix(1)).uppercased())
@@ -327,16 +344,27 @@ struct PaintingFrame: View {
     }
 }
 
-/// Celebration rays (repeating 10° conic stripes) behind the "You're in!" and "Paid up!" moments.
+/// Celebration rays (CSS `repeating-conic-gradient(colour 0 width, transparent width period)`): wedges of `width`
+/// degrees every `period` degrees, starting at 12 o'clock, clipped to a circle. Design system: 10 in 20; 5-8 Paid: 9 in 18.
 struct Rays: View {
     var color: Color = Brand.lime
+    var width: Double = 10
+    var period: Double = 20
     var body: some View {
-        let stops = (0..<36).flatMap { i -> [Gradient.Stop] in
-            let a = Double(i) / 36, m = (Double(i) + 0.5) / 36
-            return [.init(color: color, location: a), .init(color: color, location: m),
-                    .init(color: .clear, location: m), .init(color: .clear, location: (Double(i) + 1) / 36)]
+        Canvas { ctx, size in
+            let c = CGPoint(x: size.width / 2, y: size.height / 2), r = max(size.width, size.height)
+            var wedges = Path()
+            var a = -90.0
+            while a < 270 {
+                wedges.move(to: c)
+                wedges.addArc(center: c, radius: r, startAngle: .degrees(a), endAngle: .degrees(a + width), clockwise: false)
+                wedges.closeSubpath()
+                a += period
+            }
+            ctx.clip(to: Path(ellipseIn: CGRect(origin: .zero, size: size)))
+            ctx.fill(wedges, with: .color(color))
         }
-        Circle().fill(AngularGradient(stops: stops, center: .center)).accessibilityHidden(true)
+        .accessibilityHidden(true)
     }
 }
 
@@ -346,6 +374,8 @@ struct Rays: View {
 struct DiscountBar: View {
     var subtotal: Int
     var host = "the host"
+    /// Personal order (3-8): "Rp X more for the ongkir discount".
+    var personal = false
     static let goal = 200_000
 
     var body: some View {
@@ -365,7 +395,7 @@ struct DiscountBar: View {
                                                startPoint: .topLeading, endPoint: UnitPoint(x: 0.045, y: 0.045)))
                 : AnyShapeStyle(Brand.choc400), width: fraction)
             (Text("\(Rupiah.format(Self.goal - subtotal)) more").foregroundStyle(Brand.caramel).fontWeight(.bold)
-             + Text(" to unlock the ongkir discount"))
+             + Text(personal ? " for the ongkir discount" : " to unlock the ongkir discount"))
                 .font(Brand.font(.body, size: 15, weight: 600))
         }
         .foregroundStyle(Brand.cocoa)
@@ -648,7 +678,7 @@ struct ChoiceCard: View {
             .foregroundStyle(Brand.cocoa)
             .multilineTextAlignment(.leading)
             .padding(16)
-            .background(shape.fill(selected ? Brand.selectedFill : Brand.cream))
+            .background(shape.fill(selected ? Brand.selectedFill : .white))
             .overlay(shape.strokeBorder(selected ? Brand.caramel : Brand.liquorice100, lineWidth: selected ? 2.5 : 1.5))
         }
         .buttonStyle(.plain)
@@ -709,12 +739,18 @@ struct PlaceRow: View {
         Button(action: action) {
             HStack(spacing: 12) {
                 Image(systemName: icon).font(.system(size: 16, weight: .semibold))
-                    .frame(width: 36, height: 36).background(Circle().fill(detail == nil ? Brand.liquorice100 : Brand.choc100))
+                    .frame(width: 36, height: 36)
+                    .background(Circle().fill(detail == nil ? Color.white : Brand.choc100))
+                    .overlay { if detail == nil { Circle().strokeBorder(Brand.liquorice400, lineWidth: 1.5) } }
                 VStack(alignment: .leading, spacing: 2) {
                     Text(title).font(Brand.font(.body, size: 15, weight: detail == nil ? 600 : 700))
                     if let detail { Text(detail).font(Brand.font(.callout, size: 13)).foregroundStyle(Brand.ink2).lineLimit(1) }
                 }
                 Spacer(minLength: 0)
+                if selected {
+                    Image(systemName: "checkmark").font(.system(size: 11, weight: .heavy)).foregroundStyle(.white)
+                        .frame(width: 22, height: 22).background(Circle().fill(Brand.caramel))
+                }
             }
             .foregroundStyle(Brand.cocoa)
             .padding(.horizontal, 16).padding(.vertical, 14)

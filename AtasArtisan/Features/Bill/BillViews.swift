@@ -401,7 +401,7 @@ private struct PaidView: View {
             let top = geo.safeAreaInsets.top
             ZStack(alignment: .top) {
                 Brand.cocoa
-                Rays(color: Brand.lime).opacity(0.9)
+                Rays(color: Brand.lime, width: 9, period: 18).opacity(0.9)
                     .frame(width: 700, height: 700)
                     .position(x: geo.size.width / 2, y: top + 224)
                 VStack(spacing: 0) {

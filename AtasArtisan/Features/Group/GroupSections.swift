@@ -74,7 +74,7 @@ extension GroupView {
 
     @ViewBuilder private func openSectionsFull(_ g: OrderGroup) -> some View {
         header(g, subtitle: true)
-        DiscountBar(subtotal: store.subtotal, host: hostFirst)
+        DiscountBar(subtotal: store.subtotal, host: hostFirst, personal: g.personal)
         if !g.personal && store.subtotal >= DiscountBar.goal { latestActivity }
         if g.personal {
             personalItems(g)

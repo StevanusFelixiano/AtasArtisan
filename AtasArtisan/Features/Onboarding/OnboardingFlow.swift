@@ -387,7 +387,7 @@ struct VerifiedStep: View {
     var body: some View {
         VStack(spacing: 0) {
             ZStack {
-                Rays().frame(width: 500, height: 500)
+                Rays(width: 9, period: 18).frame(width: 500, height: 500)
                 Circle().fill(Brand.lime).frame(width: 300, height: 300)
                 Image("pose-celebrating").resizable().scaledToFill()
                     .frame(width: 270, height: 270)

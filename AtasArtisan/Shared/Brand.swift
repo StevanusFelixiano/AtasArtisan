@@ -36,7 +36,8 @@ enum Brand {
     static let cocoaPressed = Color(rgb: 0x4A3329)
     static let limePressed = Color(rgb: 0xF2FFB8), limeDeepPressed = Color(rgb: 0xD3E886)
     static let destructivePressed = Color(rgb: 0xEE4D5B)
-    static let stripe = Color(rgb: 0xF6AE78)           // second colour of the "close to Rp 200k" bar
+    static let stripe = Color(rgb: 0xF6AE78)
+    static let limeWash = Color(rgb: 0xF6FFD0)          // a replaced item's row (4-8, 4-10)           // second colour of the "close to Rp 200k" bar
 
     /// Avatar pastels, assigned in join order.
     static let people: [Color] = [choc400, pink100, lime, choc100, liquorice100, liquorice400]

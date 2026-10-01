@@ -83,7 +83,7 @@ struct CreateGroupView: View {
             FieldLabel("Deliver to")
             ForEach(addresses) { a in
                 PlaceRow(title: a.label, detail: place(a), icon: addressID == a.id ? "mappin" : "house", selected: addressID == a.id) { addressID = a.id }
-                    .overlay(alignment: .trailing) { if addressID == a.id { CheckDot().padding(.trailing, Brand.s4).allowsHitTesting(false) } }
+
             }
             PlaceRow(title: "Add new address", icon: "plus") { addingAddress = true }
         }
@@ -539,11 +539,3 @@ struct GroupBornState: View {
     }
 }
 
-/// The 22pt caramel check on the selected saved place (2-4).
-private struct CheckDot: View {
-    var body: some View {
-        Image(systemName: "checkmark").font(.system(size: 11, weight: .heavy)).foregroundStyle(.white)
-            .frame(width: 22, height: 22).background(Circle().fill(Brand.caramel))
-            .accessibilityHidden(true)
-    }
-}
