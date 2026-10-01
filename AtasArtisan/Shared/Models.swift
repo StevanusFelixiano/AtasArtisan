@@ -10,6 +10,8 @@ nonisolated struct Profile: Codable, Identifiable, Hashable {
     var msg_lang: String
     var notify_mute: [String]
     var avatar: String?
+    /// Picture background, a key of `Art.backgrounds`; nil = the pastel from join order.
+    var avatar_bg: String?
 }
 
 nonisolated struct PayoutAccount: Codable, Identifiable, Hashable {
