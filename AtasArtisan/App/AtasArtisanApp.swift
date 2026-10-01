@@ -143,7 +143,7 @@ struct RootView: View {
     var body: some View {
         Group {
             switch app.phase {
-            case .launching: LoaderView(line: "Proofing the dough…")
+            case .launching: SplashView()
             case .signedOut: OnboardingFlow()
             case .signedIn:
                 if let p = app.profile {

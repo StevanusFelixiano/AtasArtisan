@@ -206,8 +206,12 @@ struct GroupView: View {
             }
             if [.open, .locked, .edits, .sent].contains(s) {
                 Button(role: .destructive) {
-                    confirm = Confirm(title: "Cancel \(g.name)?", message: "Everyone is told the group was cancelled. This can't be undone.",
-                                      button: "Cancel group") { try await store.rpc("cancel_group", ["g": .string(id.uuidString)]) }
+                    let n = store.activeMembers.count
+                    confirm = Confirm(title: "Cancel \(g.name)?",
+                                      message: "Everyone’s items are dropped and all \(n) members are told. "
+                                          + (s == .sent ? "Atas already has the order, so let them know too. " : "Nothing has been sent to Atas yet. ")
+                                          + "This can’t be undone.",
+                                      button: "Cancel group", keep: "Keep group") { try await store.rpc("cancel_group", ["g": .string(id.uuidString)]) }
                 } label: { Label("Cancel group", systemImage: "trash") }
             }
         } else {
@@ -241,7 +245,14 @@ struct GroupView: View {
     @ViewBuilder private func actionBar(_ g: OrderGroup, _ m: Mode) -> some View {
         switch m {
         case .open:
-            if g.personal || store.isHost {
+            if isBorn(g) {
+                GroupBar {
+                    FlexRow(weights: [1, 1.3]) {
+                        Button { sheet = .menu } label: { Label("My items", systemImage: "plus") }.buttonStyle(BarPillStyle(kind: .secondary))
+                        Button { sheet = .share } label: { Label("Invite people", systemImage: "square.and.arrow.up") }.buttonStyle(BarPillStyle(kind: .primary))
+                    }
+                }
+            } else if g.personal || store.isHost {
                 GroupBar {
                     addCircle
                     Button { lock(g) } label: {
@@ -333,8 +344,11 @@ struct GroupView: View {
     }
 
     func askRemove(_ user: UUID) {
-        confirm = Confirm(title: "Remove \(store.name(user))?", message: "Their items come out of the order and they get a notification.",
-                          button: "Remove") { try await store.rpc("remove_member", ["g": .string(id.uuidString), "u": .string(user.uuidString)]) }
+        let theirs = itemPhrase(store.items.filter { $0.owner_id == user })
+        confirm = Confirm(title: "Remove \(store.name(user)) from the group?",
+                          message: (theirs.isEmpty ? "They" : "Their \(theirs) come out of the order and they") + " get a notification. "
+                              + "They can rejoin with the invite link while the group is open.",
+                          button: "Remove", keep: "Keep \(store.name(user))") { try await store.rpc("remove_member", ["g": .string(id.uuidString), "u": .string(user.uuidString)]) }
     }
 
     func doneEditing() async {

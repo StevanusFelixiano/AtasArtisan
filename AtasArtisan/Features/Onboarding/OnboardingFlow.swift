@@ -15,6 +15,10 @@ struct OnboardingFlow: View {
     }
     @State private var path: [Step] = []
     @State private var attempt = 0
+    @Environment(AppModel.self) private var app
+    /// 2-6b: an invite link opened before sign-in. Shown once; the code stays in `pendingJoin` and the join
+    /// sheet opens by itself after sign-in.
+    @State private var invitePrompted = false
 
     var body: some View {
         switch DebugScreens.value("ATASTE_ONBOARD") {
@@ -35,6 +39,12 @@ struct OnboardingFlow: View {
                         VerifiedStep(phone: phone, suggestedName: name, token: token) { restart() }
                     }
                 }
+        }
+        .sheet(isPresented: Binding(get: { app.pendingJoin != nil && !invitePrompted }, set: { if !$0 { invitePrompted = true } })) {
+            JoinLoginPrompt(code: app.pendingJoin ?? "") {
+                invitePrompted = true
+                restart()
+            }
         }
         .onAppear {
             switch DebugScreens.value("ATASTE_ONBOARD") {

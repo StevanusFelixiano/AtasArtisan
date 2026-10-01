@@ -60,7 +60,19 @@ extension GroupView {
 
     // MARK: Open (3-1 member, 3-2 host, 3-3 unlocked, 3-8 personal)
 
+    /// 2-4d: a group the host just created, nobody has added anything yet.
+    func isBorn(_ g: OrderGroup) -> Bool { !g.personal && store.isHost && store.items.isEmpty }
+
     @ViewBuilder func openSections(_ g: OrderGroup) -> some View {
+        if isBorn(g) {
+            header(g, subtitle: false)
+            GroupBornState(group: g).padding(.top, Brand.s2)
+        } else {
+            openSectionsFull(g)
+        }
+    }
+
+    @ViewBuilder private func openSectionsFull(_ g: OrderGroup) -> some View {
         header(g, subtitle: true)
         DiscountBar(subtotal: store.subtotal, host: hostFirst)
         if !g.personal && store.subtotal >= DiscountBar.goal { latestActivity }
@@ -172,8 +184,7 @@ extension GroupView {
 
     func changeQty(_ item: Item, to q: Int, split: Split?) {
         if q == 0 {
-            confirm = Confirm(title: "Remove \(item.name)?", message: split == nil ? "It comes out of your order." : "The split on it is cancelled too.",
-                              button: "Remove") { try await store.remove(item) }
+            confirm = removeItemConfirm(store, item) { try await store.remove(item) }
         } else {
             Task { await act("Couldn't change the quantity") { try await store.update(item, qty: q) } }
         }

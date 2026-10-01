@@ -319,7 +319,7 @@ extension GroupView {
                 } label: { Label("Replace", systemImage: "arrow.triangle.2.circlepath") }
                 .buttonStyle(BarPillStyle(kind: .dark, height: 52))
                 Button {
-                    confirm = Confirm(title: "Remove \(item.name)?", message: "It comes out of your order.", button: "Remove") {
+                    confirm = removeItemConfirm(store, item) {
                         try await store.remove(item)
                         removedInRound = true
                     }

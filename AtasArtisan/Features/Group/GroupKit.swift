@@ -35,6 +35,15 @@ extension View {
 func edges(_ v: CGFloat, _ h: CGFloat) -> EdgeInsets { EdgeInsets(top: v, leading: h, bottom: v, trailing: h) }
 
 /// "2 Pain Au Chocolate", "2 Pain Au Chocolate and 1 Brioche Bun".
+/// 6-13: "Remove Burnt Cheesecake?", naming who loses a share when the item is split.
+func removeItemConfirm(_ store: GroupStore, _ item: Item, action: @escaping () async throws -> Void) -> Confirm {
+    let others = store.liveSplit(item).map { store.shares($0).map(\.user_id).filter { $0 != item.owner_id }.map(store.name) } ?? []
+    let names = others.count > 1 ? others.dropLast().joined(separator: ", ") + " and " + others.last! : others.first ?? ""
+    return Confirm(title: "Remove \(item.name)?",
+                   message: others.isEmpty ? "It comes out of your order." : "It’s split with \(names). Removing it cancels the split and clears their shares.",
+                   button: "Remove item", keep: "Keep it", action: action)
+}
+
 func itemPhrase(_ items: [Item]) -> String {
     let parts = items.map { "\($0.qty) \($0.name)" }
     switch parts.count {
