@@ -19,8 +19,8 @@ enum Links {
     static let terms = supabaseURL.appending(path: "functions/v1/legal/terms")
     static let support = supabaseURL.appending(path: "functions/v1/legal/support")
     static let supportEmail = "bayu.johar25@gmail.com"
-    /// Public TestFlight link, set once the first build passes beta review.
-    static let getTheApp = "https://testflight.apple.com/join/ataste"
+    /// Public TestFlight link (external group "Public"); testers can join once a build passes beta review.
+    static let getTheApp = "https://testflight.apple.com/join/U65TErQM"
 
     /// Invite links: the web page on the VPS (repo `web/`, design 2-7) for people without the app; with the app
     /// installed the same link opens Ataste directly (universal link, `applinks:` in the entitlements).

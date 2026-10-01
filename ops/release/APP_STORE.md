@@ -1,7 +1,7 @@
 # Ataste: App Store Connect checklist
 
 ## Before release
-- [ ] Public TestFlight link in `Links.getTheApp` once beta review passes.
+- [x] Public TestFlight link https://testflight.apple.com/join/U65TErQM (group "Public"; build 3 submitted for beta review 2026-10-01) in `Links.getTheApp` and `web/index.html`.
 - Atas Artisan permission: not needed (user's decision, 2026-10-01). Ataste only links customers to Atas's own
   WhatsApp ordering; the "not affiliated" disclaimer stays in the app, listing and terms. If App Review raises
   guideline 5.2, answer with that.
