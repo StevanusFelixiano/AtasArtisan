@@ -1,0 +1,15 @@
+# verify_jwt per function; the ones with it off check a secret or need no caller identity.
+[functions.otp]
+verify_jwt = false
+[functions.wa-inbound]
+verify_jwt = false
+[functions.push]
+verify_jwt = false
+[functions.join]
+verify_jwt = false
+[functions.legal]
+verify_jwt = false
+[functions.menu-ingest]
+verify_jwt = false
+[functions.account]
+verify_jwt = true

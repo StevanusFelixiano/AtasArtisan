@@ -1,0 +1,9 @@
+xcuserdata/
+*.xcuserstate
+.DS_Store
+build/
+DerivedData/
+CLAUDE.md
+.claude/
+legal/build/
+supabase/.temp/
