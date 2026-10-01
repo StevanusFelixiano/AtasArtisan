@@ -242,7 +242,7 @@ struct GroupView: View {
         switch m {
         case .open:
             if g.personal || store.isHost {
-                GlassBar {
+                GroupBar {
                     addCircle
                     Button { lock(g) } label: {
                         Label(g.personal ? "Send to Atas" : "Lock order", systemImage: g.personal ? "paperplane" : "lock")
@@ -250,10 +250,10 @@ struct GroupView: View {
                     .buttonStyle(.pill(.primary)).disabled(store.items.isEmpty)
                 }
             } else {
-                GlassBar { Button { sheet = .menu } label: { Label("Add items", systemImage: "plus") }.buttonStyle(.pill(.primary)) }
+                GroupBar { Button { sheet = .menu } label: { Label("Add items", systemImage: "plus") }.buttonStyle(.pill(.primary)) }
             }
         case .review:
-            GlassBar {
+            GroupBar {
                 FlexRow(weights: g.personal ? [1] : [1, 1.2]) {
                     if !g.personal {
                         Button { sheet = .requestEdit(RequestSeed()) } label: { Label("Request edits", systemImage: "pencil") }
@@ -264,12 +264,12 @@ struct GroupView: View {
                 }
             }
         case .editsHost:
-            GlassBar {
+            GroupBar {
                 Button { lock(g) } label: { Label("Lock again", systemImage: "lock") }
                     .buttonStyle(.pill(.primary)).disabled(store.items.contains { $0.flagged_at != nil })
             }
         case .fixing:
-            GlassBar {
+            GroupBar {
                 Button { Task { await doneEditing() } } label: {
                     if store.hasFlagsForMe { Text("Done editing") } else { Label("Done editing", systemImage: "checkmark") }
                 }
@@ -277,10 +277,10 @@ struct GroupView: View {
             }
         case .sent:
             if store.isHost {
-                GlassBar { Button("Atas replied · enter final bill") { sheet = .confirmAtas }.buttonStyle(.pill(.primary)) }
+                GroupBar { Button("Atas replied · enter final bill") { sheet = .confirmAtas }.buttonStyle(.pill(.primary)) }
             }
         case .confirmed:
-            GlassBar {
+            GroupBar {
                 if let b = unpaid {
                     Button { sheet = .bill } label: { Label("Pay \(hostFirst) · \(Rupiah.format(b.total))", systemImage: "receipt") }
                         .buttonStyle(.pill(.primary))
@@ -290,12 +290,12 @@ struct GroupView: View {
             }
         case .delivered:
             if store.isHost {
-                GlassBar {
+                GroupBar {
                     Button("Close order") { Task { await act("Couldn't close") { try await store.rpc("close_group", ["g": .string(id.uuidString)]) } } }
                         .buttonStyle(.pill(.dark))
                 }
             } else if let b = unpaid {
-                GlassBar {
+                GroupBar {
                     Button { sheet = .bill } label: { Label("Pay \(hostFirst) · \(Rupiah.format(b.total))", systemImage: "receipt") }
                         .buttonStyle(.pill(.primary))
                 }

@@ -85,6 +85,45 @@ struct IconCircle: View {
     }
 }
 
+// MARK: Icons
+
+/// The design's `wa` icon (speech bubble with a handset), stroked like the other line icons.
+struct WhatsAppGlyph: View {
+    var size: CGFloat = 20
+    var color: Color? = nil
+    var lineWidth: CGFloat = 2
+    var body: some View {
+        let shape = WhatsAppShape().stroke(style: StrokeStyle(lineWidth: lineWidth * size / 24, lineCap: .round, lineJoin: .round))
+        Group { if let color { shape.foregroundStyle(color) } else { shape } }
+            .frame(width: size, height: size)
+            .accessibilityHidden(true)
+    }
+}
+
+struct WhatsAppShape: Shape {
+    func path(in rect: CGRect) -> Path {
+        let s = rect.width / 24
+        func p(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: rect.minX + x * s, y: rect.minY + y * s) }
+        var path = Path()
+        // Bubble: a circle r 9 around (12, 12) from the tail's lower edge round to its upper edge, tail at (2, 22).
+        path.move(to: p(7.9, 20))
+        path.addArc(center: p(12, 12), radius: 9 * s, startAngle: .degrees(117.1), endAngle: .degrees(152.9), clockwise: true)
+        path.addLine(to: p(2, 22))
+        path.closeSubpath()
+        // Handset.
+        path.move(to: p(9, 9.2))
+        path.addCurve(to: p(14.8, 15), control1: p(9.2, 11.8), control2: p(12, 14.6))
+        path.addLine(to: p(16, 13.6))
+        path.addLine(to: p(14.1, 12.6))
+        path.addLine(to: p(13.2, 13.3))
+        path.addCurve(to: p(11.2, 11.3), control1: p(12.3, 12.9), control2: p(11.6, 12.2))
+        path.addLine(to: p(11.9, 10.4))
+        path.addLine(to: p(10.9, 8.5))
+        path.closeSubpath()
+        return path
+    }
+}
+
 // MARK: Tags and state
 
 enum TagSize { case regular, small, large }

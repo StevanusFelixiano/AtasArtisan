@@ -60,38 +60,6 @@ func shareGlyph(_ pct: Double) -> String {
     }
 }
 
-/// The design's WhatsApp glyph (`at-icon name="wa"`): a round bubble with a tail and a handset, on a 24 grid.
-struct WhatsAppGlyph: View {
-    var size: CGFloat = 15
-    var color: Color = Brand.cocoa
-    var body: some View {
-        Canvas { ctx, sz in
-            let k = sz.width / 24
-            var bubble = Path()
-            bubble.move(to: CGPoint(x: 7.9 * k, y: 20 * k))
-            bubble.addArc(center: CGPoint(x: 12 * k, y: 12 * k), radius: 9 * k, startAngle: .degrees(117.1), endAngle: .degrees(152.9), clockwise: true)
-            bubble.addLine(to: CGPoint(x: 2 * k, y: 22 * k))
-            bubble.closeSubpath()
-            var phone = Path()
-            func p(_ x: CGFloat, _ y: CGFloat) -> CGPoint { CGPoint(x: x * k, y: y * k) }
-            phone.move(to: p(9, 9.2))
-            phone.addCurve(to: p(14.8, 15), control1: p(9.2, 11.8), control2: p(12, 14.6))
-            phone.addLine(to: p(16, 13.6))
-            phone.addLine(to: p(14.1, 12.6))
-            phone.addLine(to: p(13.2, 13.3))
-            phone.addCurve(to: p(11.2, 11.3), control1: p(12.3, 12.9), control2: p(11.6, 12.2))
-            phone.addLine(to: p(11.9, 10.4))
-            phone.addLine(to: p(10.9, 8.5))
-            phone.closeSubpath()
-            let style = StrokeStyle(lineWidth: 2 * k, lineCap: .round, lineJoin: .round)
-            ctx.stroke(bubble, with: .color(color), style: style)
-            ctx.stroke(phone, with: .color(color), style: style)
-        }
-        .frame(width: size, height: size)
-        .accessibilityHidden(true)
-    }
-}
-
 /// 28pt pastel circle holding a glyph, with a 44pt tap area (the member rows' pie and WhatsApp buttons).
 struct RoundIcon<Glyph: View>: View {
     var fill: Color
@@ -111,7 +79,7 @@ func icon(_ name: String, _ size: CGFloat, _ color: Color = Brand.cocoa, weight:
 
 /// The Liquid Glass action bar at the bottom of the group screen (`at-glass radius 36`, 12pt inset).
 /// Offline (6-8), the buttons are disabled and a line under them says why.
-struct GlassBar<Content: View>: View {
+struct GroupBar<Content: View>: View {
     @ViewBuilder var content: Content
     var body: some View {
         let offline = groupOffline
