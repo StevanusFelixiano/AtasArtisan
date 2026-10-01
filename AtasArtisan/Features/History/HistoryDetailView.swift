@@ -42,6 +42,7 @@ struct HistoryDetailView: View {
         .navigationTitle(store.group?.name ?? "Order")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(removing: .title)
+        .toolbar(.hidden, for: .tabBar)
         .toolbar {
             ToolbarItem(placement: .primaryAction) {
                 Button { presentShare([summary]) } label: { Image(systemName: "square.and.arrow.up") }

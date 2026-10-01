@@ -110,6 +110,7 @@ struct SplashView: View {
                     .accessibilityLabel("Ataste")
             }
         }
+        .preferredColorScheme(.dark)
         .overlay(alignment: .bottom) {
             Text("Proofing the dough…").obText(.title2, 20, Brand.cream).padding(.bottom, 50)
         }

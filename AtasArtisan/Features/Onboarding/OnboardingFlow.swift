@@ -74,10 +74,11 @@ struct WelcomeStep: View {
             ObCaption(title: "Girl with a Croissant").padding(.top, 24)
             Spacer(minLength: Brand.s4)
             VStack(alignment: .leading, spacing: 14) {
-                Text("One order for the whole group.")
+                // The board balances the heading over two lines: "One order for / the whole group."
+                Text("One order for\nthe whole group.")
                     .obText(.display, 36, tracking: -0.02)
                     .lineSpacing(-4)
-                    .frame(maxWidth: 280, alignment: .leading)
+                    .accessibilityLabel("One order for the whole group.")
                     .fixedSize(horizontal: false, vertical: true)
                 Text("Ataste collects everyone’s Atas Artisan order, checks it, splits the bill and writes the WhatsApp message for you.")
                     .obText(.body, 16, Brand.ink2).lineSpacing(4)
@@ -210,6 +211,7 @@ struct VerifyStep: View {
                 .overlay(RoundedRectangle(cornerRadius: Brand.rHero, style: .continuous).strokeBorder(Brand.caramel, style: StrokeStyle(lineWidth: 2, dash: [6, 4])))
                 Text("Send it from the WhatsApp you want to log in with. We read your number from the message.")
                     .obText(.callout, 14, Brand.ink2).lineSpacing(3).multilineTextAlignment(.center).frame(maxWidth: 320)
+                    .fixedSize(horizontal: false, vertical: true)
             }
             .padding(.horizontal, Brand.s2)
         }
@@ -294,6 +296,7 @@ struct VerifyStep: View {
         Text(start?.code ?? "ATASTE ····")
             .obText(.display, size, tracking: tracking, start == nil ? Brand.liquorice400 : Brand.cocoa)
             .lineLimit(1).minimumScaleFactor(0.6)
+            .fixedSize(horizontal: false, vertical: true)
             .padding(.horizontal, Brand.s3)
             .accessibilityLabel(start.map { "Code \($0.code)" } ?? "Getting your code")
     }

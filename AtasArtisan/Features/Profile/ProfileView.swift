@@ -61,7 +61,7 @@ struct ProfileView: View {
     private var header: some View {
         VStack(spacing: Brand.s2) {
             Button { pickingAvatar = true } label: {
-                Avatar(name: app.profile?.name ?? "?", index: 0, size: 84, art: app.profile?.avatar)
+                Avatar(name: app.profile?.name ?? "?", index: 0, size: 84, art: app.profile?.avatar, bg: app.profile?.avatar_bg)
                     .overlay(alignment: .bottomTrailing) {
                         Image(systemName: "pencil").font(.system(size: 12, weight: .bold)).foregroundStyle(Brand.cream)
                             .frame(width: 30, height: 30)
@@ -332,6 +332,7 @@ struct NotificationSettingsView: View {
         .screen()
         .navigationTitle("Notifications")
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
     }
 
     private func binding(_ kinds: [String]) -> Binding<Bool> {
@@ -400,6 +401,7 @@ struct PayoutEditor: View {
         .screen()
         .navigationTitle(account.label.isEmpty ? "Payment method" : account.label)
         .navigationBarTitleDisplayMode(.inline)
+        .toolbar(.hidden, for: .tabBar)
         .toolbar {
             if sheet { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
         }
@@ -548,19 +550,21 @@ struct AddressEditor: View {
     }
 }
 
-// MARK: Profile picture (6-5b)
+// MARK: Profile picture (6-5b, 6-5c)
 
-/// Pick a giraffe or a painting as your profile picture (Ataste's own art, never an upload). The choice is
-/// staged and written on Save.
+/// Pick a giraffe, a painting or your initial (Ataste's own art, never an upload) and the background colour the
+/// giraffe or initial sits on. Both are staged and written on Save.
 struct AvatarPicker: View {
     @Environment(AppModel.self) private var app
     @Environment(\.dismiss) private var dismiss
     @State private var choice: String?
+    @State private var bg: String?
     @State private var started = false
     @State private var busy = false
     @State private var problem: Problem?
 
-    /// The board's pastel for each giraffe, as an index into `Brand.people` (choc-100 3, pink-100 1, lime 2, liquorice-100 4).
+    /// Each giraffe's own pastel before a background is chosen, as an index into `Brand.people`
+    /// (choc-100 3, pink-100 1, lime 2, liquorice-100 4).
     private static let poseFill: [String: Int] = [
         "pose-neutral": 3, "pose-waving": 1, "pose-cakebox": 3, "pose-waiting": 4, "pose-celebrating": 2,
         "pose-confused": 1, "pose-sleeping": 4, "pose-delivery": 3, "pose-phone": 2, "pose-splitting": 1,
@@ -580,34 +584,52 @@ struct AvatarPicker: View {
         case "paint-vangogh": "Self-Portrait as Vincent van Dough"
         case "paint-supper": "The Last Supper Club"
         case "paint-creation": "The Creation of Ataste"
-        case let a? where a.hasPrefix("pose-"): "Giraffe, " + a.dropFirst(5)
-        default: "Your initial"
+        case "pose-neutral": "Classic giraffe"
+        case "pose-cakebox": "Cake-box giraffe"
+        case let a? where a.hasPrefix("pose-"): a.dropFirst(5).capitalized + " giraffe"
+        default: "Initial"
         }
+    }
+
+    /// "Cake-box giraffe · Sour lime"; a painting fills its circle, so it shows its name alone.
+    private var caption: String {
+        let name = Self.title(choice)
+        guard choice?.hasPrefix("paint-") != true, let colour = Art.backgrounds.first(where: { $0.key == bg })?.name else { return name }
+        return "\(name) · \(colour)"
     }
 
     var body: some View {
         let me = app.profile?.name ?? "?"
         ScrollView {
-            VStack(alignment: .leading, spacing: 14) {
+            VStack(alignment: .leading, spacing: 12) {
                 VStack(spacing: 6) {
-                    Avatar(name: me, index: index(choice), size: 96, art: choice)
-                    Text(Self.title(choice)).obText(.headline, 15)
-                    Text("Shown next to your name in every group").obText(.footnote, 12, Brand.ink3)
+                    Avatar(name: me, index: index(choice), size: 120, art: choice, bg: bg)
+                    Text(caption).obText(.headline, 15)
                 }
                 .frame(maxWidth: .infinity)
                 .accessibilityElement(children: .combine)
-                section("Giraffes", Art.poses)
-                section("Paintings", Self.paintings)
+                .accessibilityLabel("Preview, \(caption)")
+                Text("Background").brand(.label).padding(.horizontal, 4).padding(.top, 2)
+                swatches
+                section("Giraffes", Art.poses, onColour: true)
+                section("Paintings", Self.paintings, onColour: false)
                 Button { choice = nil } label: {
                     HStack(spacing: 12) {
-                        Avatar(name: me, index: 0, size: 40)
+                        Avatar(name: me, index: 0, size: 40, bg: bg)
                         Text("Use my initial instead").obText(.headline, 15, weight: 600).frame(maxWidth: .infinity, alignment: .leading)
-                        Circle().strokeBorder(choice == nil ? Brand.caramel : Brand.liquorice400, lineWidth: 2)
-                            .overlay { if choice == nil { Circle().fill(Brand.caramel).padding(5) } }
-                            .frame(width: 22, height: 22)
+                        ZStack {
+                            if choice == nil {
+                                Circle().fill(Brand.caramel)
+                                Image(systemName: "checkmark").font(.system(size: 10, weight: .heavy)).foregroundStyle(Brand.cream)
+                            } else {
+                                Circle().strokeBorder(Brand.liquorice400, lineWidth: 2)
+                            }
+                        }
+                        .frame(width: 22, height: 22)
                     }
                     .padding(.horizontal, 14).padding(.vertical, 10)
                     .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Brand.card))
+                    .overlay { if choice == nil { RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(Brand.caramel, lineWidth: 2.5) } }
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(choice == nil ? .isSelected : [])
@@ -623,20 +645,59 @@ struct AvatarPicker: View {
             ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
             ToolbarItem(placement: .confirmationAction) { Button("Save") { Task { await save() } }.disabled(busy).bold() }
         }
-        .onAppear { if !started { choice = app.profile?.avatar; started = true } }
+        .onAppear {
+            guard !started else { return }
+            choice = app.profile?.avatar
+            bg = app.profile?.avatar_bg
+            // DEBUG `ATASTE_PICK=<art|initial>:<background key>` stages a choice for screenshots (nothing is saved).
+            if let pick = DebugScreens.value("ATASTE_PICK")?.split(separator: ":").map(String.init), pick.count == 2 {
+                choice = pick[0] == "initial" ? nil : pick[0]
+                bg = pick[1]
+            }
+            started = true
+        }
         .problemAlert($problem)
+    }
+
+    /// Seven 36 pt swatches in 44 pt tap areas, spread across the row; the chosen one has a cream gap, a cocoa
+    /// ring and a check (cream on Caramel).
+    private var swatches: some View {
+        HStack(spacing: 0) {
+            ForEach(Art.backgrounds.indices, id: \.self) { i in
+                let s = Art.backgrounds[i]
+                let selected = bg == s.key
+                if i > 0 { Spacer(minLength: 0) }
+                Button { bg = s.key } label: {
+                    ZStack {
+                        Circle().fill(s.color)
+                        Circle().strokeBorder(Brand.cocoa.opacity(0.12), lineWidth: 1.5)
+                        if selected {
+                            Image(systemName: "checkmark").font(.system(size: 14, weight: .heavy))
+                                .foregroundStyle(s.key == "caramel" ? Brand.cream : Brand.cocoa)
+                        }
+                    }
+                    .frame(width: 36, height: 36)
+                    .overlay { if selected { Circle().strokeBorder(Brand.cocoa, lineWidth: 2.5).padding(-5.5) } }
+                    .frame(width: 44, height: 44)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityLabel(s.name)
+                .accessibilityAddTraits(selected ? .isSelected : [])
+            }
+        }
     }
 
     private func index(_ art: String?) -> Int { art.flatMap { Self.poseFill[$0] } ?? 0 }
 
-    private func section(_ title: String, _ arts: [String]) -> some View {
-        VStack(alignment: .leading, spacing: 14) {
-            Text(title).brand(.label).padding(.horizontal, 4).padding(.top, 4)
+    private func section(_ title: String, _ arts: [String], onColour: Bool) -> some View {
+        VStack(alignment: .leading, spacing: 12) {
+            Text(title).brand(.label).padding(.horizontal, 4).padding(.top, 2)
             LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: 10), count: 5), spacing: 10) {
                 ForEach(arts, id: \.self) { art in
                     let selected = choice == art
                     Button { choice = art } label: {
-                        Avatar(name: "", index: index(art), size: 58, art: art)
+                        Avatar(name: "", index: index(art), size: 58, art: art, bg: onColour ? bg : nil)
                             .overlay { if selected { Circle().strokeBorder(Brand.caramel, lineWidth: 3).padding(-6) } }
                             .overlay(alignment: .bottomTrailing) {
                                 if selected {
@@ -661,7 +722,7 @@ struct AvatarPicker: View {
         defer { busy = false }
         await attempt($problem, "Couldn't save") {
             guard let id = app.userID else { return }
-            try await supabase.from("profiles").update(["avatar": Nullable(choice)]).eq("id", value: id).execute()
+            try await supabase.from("profiles").update(["avatar": Nullable(choice), "avatar_bg": Nullable(bg)]).eq("id", value: id).execute()
             await app.loadProfile()
             dismiss()
         }
