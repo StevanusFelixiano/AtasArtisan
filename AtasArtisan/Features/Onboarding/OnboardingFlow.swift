@@ -66,8 +66,8 @@ struct WelcomeStep: View {
                 .onLongPressGesture(minimumDuration: 1.2) { askReview = true }
                 .padding(.top, 8)
             ZStack(alignment: .top) {
-                ObPainting(art: "paint-croissant", width: 218, height: 276, mat: 12, inset: 6, tilt: -2.5, label: "Girl with a Croissant")
-                    .shadow(color: Brand.cocoa.opacity(0.1), radius: 10, y: 4)
+                PaintingFrame(art: "paint-croissant", width: 218, height: 276, frame: 12, mat: 6, tilt: -2.5)
+                    .accessibilityElement().accessibilityLabel("Girl with a Croissant, a giraffe painting")
                 Marquee(tilt: -3).padding(.top, 290)
             }
             .padding(.top, 20)
@@ -77,12 +77,12 @@ struct WelcomeStep: View {
                 Text("One order for the whole group.")
                     .obText(.display, 36, tracking: -0.02)
                     .lineSpacing(-4)
-                    .frame(maxWidth: 300, alignment: .leading)
+                    .frame(maxWidth: 280, alignment: .leading)
                     .fixedSize(horizontal: false, vertical: true)
                 Text("Ataste collects everyone’s Atas Artisan order, checks it, splits the bill and writes the WhatsApp message for you.")
                     .obText(.body, 16, Brand.ink2).lineSpacing(4)
                     .fixedSize(horizontal: false, vertical: true)
-                Button(action: next) { ObIconLabel(title: "Continue with WhatsApp", whatsApp: true) }
+                Button(action: next) { ObWhatsAppLabel(title: "Continue with WhatsApp") }
                     .buttonStyle(.pill(.dark))
                     .padding(.top, 10)
                 LegalNote().frame(maxWidth: .infinity)
@@ -153,6 +153,7 @@ struct VerifyStep: View {
     @State private var expiresAt = Date()
     @State private var wait: Wait = .starting
     @State private var problem: Problem?
+    @State private var wentAway = false
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
 
@@ -173,10 +174,15 @@ struct VerifyStep: View {
         .padding(.bottom, Brand.s4)
         .screen()
         .navigationTitle("Verify")
+        .navigationBarTitleDisplayMode(.inline)
         .toolbar(removing: .title)
         .task { await debugOrBegin() }
         .task(id: wait) { if wait == .waiting, DebugScreens.value("ATASTE_ONBOARD") == nil { await poll() } }
-        .onChange(of: scenePhase) { _, p in if p == .active, wait == .ready, start != nil { wait = .waiting } }
+        .onChange(of: scenePhase) { _, p in
+            // Back from WhatsApp without using our button (e.g. the code was typed by hand): start checking.
+            if p == .background { wentAway = true }
+            if p == .active, wentAway, wait == .ready, start != nil { wait = .waiting }
+        }
         .problemAlert($problem)
     }
 
@@ -193,7 +199,7 @@ struct VerifyStep: View {
             .padding(.top, 6)
             Spacer(minLength: Brand.s4).frame(maxHeight: 74)
             VStack(spacing: 18) {
-                ObArtCircle(pose: "pose-phone", size: 140, fill: Brand.lime)
+                Mascot(pose: "pose-phone", size: 140, fill: Brand.lime)
                 VStack(spacing: Brand.s2) {
                     Text("Your code").brand(.label, Brand.ink3)
                     codeText(size: 40, tracking: 0.05)
@@ -214,7 +220,7 @@ struct VerifyStep: View {
         VStack(spacing: 30) {
             ZStack {
                 ObSpinRing(size: 250)
-                ObArtCircle(pose: "pose-waiting", size: 206, fill: Brand.choc100)
+                Mascot(pose: "pose-waiting", size: 206, fill: Brand.choc100)
             }
             VStack(spacing: 10) {
                 Text("Checking your WhatsApp…").obText(.title1, 28).multilineTextAlignment(.center)
@@ -237,7 +243,7 @@ struct VerifyStep: View {
     // 1-4c: the old code ran out; a fresh one is already fetched and shown.
     private var expired: some View {
         VStack(spacing: 20) {
-            ObArtCircle(pose: "pose-confused", size: 180, fill: Brand.pink100)
+            Mascot(pose: "pose-confused", size: 180, fill: Brand.pink100)
             Text("We didn’t get your message").obText(.title1, 28).multilineTextAlignment(.center)
             Text("Codes last 10 minutes and this one ran out. Here’s a fresh one — send it the same way.")
                 .obText(.body, 15, Brand.ink2).lineSpacing(4).multilineTextAlignment(.center).frame(maxWidth: 320)
@@ -254,7 +260,7 @@ struct VerifyStep: View {
     // 1-4d
     private var noWhatsApp: some View {
         VStack(spacing: 20) {
-            ObArtCircle(pose: "pose-confused", size: 180, fill: Brand.pink100)
+            Mascot(pose: "pose-confused", size: 180, fill: Brand.pink100)
             Text("WhatsApp isn’t on this iPhone").obText(.title1, 28).multilineTextAlignment(.center)
             Text("Ataste logs you in with one WhatsApp message, and the group order goes to Atas on WhatsApp too. Install it, then come back — your code will still be here.")
                 .obText(.body, 15, Brand.ink2).lineSpacing(4).multilineTextAlignment(.center).frame(maxWidth: 320)
@@ -267,19 +273,19 @@ struct VerifyStep: View {
         switch wait {
         case .starting, .ready:
             VStack(spacing: 12) {
-                Button { send() } label: { ObIconLabel(title: "Open WhatsApp", whatsApp: true) }
+                Button { send() } label: { ObWhatsAppLabel(title: "Open WhatsApp") }
                     .buttonStyle(.pill(.dark)).disabled(start == nil)
                 Text("Code works for this iPhone only, for 10 minutes").obText(.footnote, 12, Brand.ink3)
             }
         case .waiting:
-            Button { send() } label: { ObIconLabel(title: "Open WhatsApp again", whatsApp: true) }.buttonStyle(ObOutlinePill())
+            Button { send() } label: { ObWhatsAppLabel(title: "Open WhatsApp again") }.buttonStyle(.pill(.secondary))
         case .expired:
-            Button { if start == nil { Task { await renew() } } else { send() } } label: { ObIconLabel(title: "Send new code", whatsApp: true) }
+            Button { if start == nil { Task { await renew() } } else { send() } } label: { ObWhatsAppLabel(title: "Send new code") }
                 .buttonStyle(.pill(.dark))
         case .noWhatsApp:
             VStack(spacing: 10) {
                 Button("Get WhatsApp") { openURL(Self.whatsAppStore) }.buttonStyle(.pill(.primary))
-                Button("I’ve installed it") { send() }.buttonStyle(ObOutlinePill())
+                Button("I’ve installed it") { send() }.buttonStyle(.pill(.secondary))
             }
         }
     }
@@ -368,7 +374,7 @@ struct VerifiedStep: View {
     var body: some View {
         VStack(spacing: 0) {
             ZStack {
-                Sunburst().fill(Brand.lime).frame(width: 500, height: 500)
+                Rays().frame(width: 500, height: 500)
                 Circle().fill(Brand.lime).frame(width: 300, height: 300)
                 Image("pose-celebrating").resizable().scaledToFill()
                     .frame(width: 270, height: 270)
@@ -376,6 +382,7 @@ struct VerifiedStep: View {
                     .accessibilityHidden(true)
             }
             .frame(height: 500)
+            .frame(maxWidth: .infinity)
             .padding(.top, 28)
             VStack(spacing: 12) {
                 Text("You’re in!").obText(.accent, 52, Brand.lime)
@@ -389,7 +396,7 @@ struct VerifiedStep: View {
             Spacer(minLength: Brand.s4)
             VStack(spacing: 12) {
                 Button("Continue") { Task { await finish() } }
-                    .buttonStyle(ObOutlinePill(fill: Brand.lime, border: Brand.limeDeep))
+                    .buttonStyle(.pill(.success))
                     .disabled(busy)
                 Button(action: notMe) {
                     (Text("Not you? ").foregroundStyle(Brand.liquorice400) + Text("Try again").bold().foregroundStyle(Brand.choc100))
@@ -402,7 +409,6 @@ struct VerifiedStep: View {
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Brand.cocoa.ignoresSafeArea())
-        .clipped()
         .navigationTitle("Verified")
         .toolbar(.hidden, for: .navigationBar)
         .navigationBarBackButtonHidden()
@@ -416,21 +422,6 @@ struct VerifiedStep: View {
         defer { busy = false }
         await attempt($problem, "Couldn't sign in") {
             try await supabase.auth.verifyOTP(tokenHash: token, type: .magiclink)
-        }
-    }
-
-    /// `repeating-conic-gradient(lime 0 9deg, transparent 9deg 18deg)`: 20 rays.
-    private struct Sunburst: Shape {
-        func path(in rect: CGRect) -> Path {
-            var p = Path()
-            let c = CGPoint(x: rect.midX, y: rect.midY), r = rect.width / 2
-            for i in 0..<20 {
-                let a = Double(i) * 18 - 90
-                p.move(to: c)
-                p.addArc(center: c, radius: r, startAngle: .degrees(a), endAngle: .degrees(a + 9), clockwise: false)
-                p.closeSubpath()
-            }
-            return p
         }
     }
 }
@@ -486,7 +477,8 @@ struct NameStep: View {
     @ViewBuilder private var nameContent: some View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: Brand.s2) {
-                ObPainting(art: "paint-vangogh", width: 120, height: 149, label: "Self-Portrait as Vincent van Dough")
+                PaintingFrame(art: "paint-vangogh", width: 120, height: 149, tilt: -2)
+                    .accessibilityElement().accessibilityLabel("Self-Portrait as Vincent van Dough, a giraffe painting")
                 ObCaption(title: "Self-Portrait as Vincent van Dough")
             }
             Text("What should the group call you?").obText(.title1, 32, tracking: -0.01)
@@ -519,7 +511,7 @@ struct NameStep: View {
     @ViewBuilder private var primerContent: some View {
         VStack(alignment: .leading, spacing: 14) {
             HStack(spacing: 14) {
-                ObArtCircle(pose: "pose-waving", size: 84, fill: Brand.choc100)
+                Mascot(pose: "pose-waving", size: 84, fill: Brand.choc100)
                 Text("Psst!").obText(.accent, 30, Brand.caramel)
             }
             Text("Want a nudge when it matters?").obText(.title1, 32, tracking: -0.01).fixedSize(horizontal: false, vertical: true)
@@ -540,7 +532,8 @@ struct NameStep: View {
                 HStack(spacing: 14) {
                     Image(systemName: rows[i].0).font(.system(size: 16, weight: .medium)).foregroundStyle(Brand.cocoa)
                         .frame(width: 36, height: 36).background(Circle().fill(rows[i].2))
-                    Text(rows[i].1).obText(.headline, 15, weight: 600).lineSpacing(2).frame(maxWidth: .infinity, alignment: .leading)
+                    Text(rows[i].1).obText(.headline, 15, weight: 600).lineSpacing(2)
+                        .frame(maxWidth: .infinity, alignment: .leading).fixedSize(horizontal: false, vertical: true)
                 }
                 .padding(.vertical, 13)
                 .overlay(alignment: .bottom) { if i < rows.count - 1 { Rectangle().fill(Brand.liquorice100).frame(height: 1) } }
@@ -550,7 +543,7 @@ struct NameStep: View {
         .background(RoundedRectangle(cornerRadius: Brand.rHero, style: .continuous).fill(Brand.card))
         Spacer(minLength: Brand.s4)
         VStack(spacing: 10) {
-            Button { Task { await Notices.shared.requestPermission(); await save() } } label: { ObIconLabel(title: "Turn on notifications", symbol: "bell") }
+            Button { Task { await Notices.shared.requestPermission(); await save() } } label: { Label("Turn on notifications", systemImage: "bell") }
                 .buttonStyle(.pill(.primary))
             Button("Not now") { Task { await save() } }
                 .obText(.headline, 16, weight: 600, Brand.ink2).frame(maxWidth: .infinity, minHeight: 44)
