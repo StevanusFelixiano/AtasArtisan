@@ -681,9 +681,7 @@ struct ReceiptView: View {
         .safeAreaInset(edge: .bottom) {
             if store.isHost, let row, row.paid_at == nil {
                 HStack(spacing: 10) {
-                    // TODO(root cause): there is no RPC to reject a "says paid" claim (clear proof_at and tell
-                    // the member). Until it exists, "Not received" sends the existing payment reminder.
-                    Button("Not received") { Task { await act("nudge", "Couldn't send the reminder") } }
+                    Button("Not received") { Task { await act("reject_paid", "Couldn't tell them") } }
                         .buttonStyle(WidePill(fill: Brand.cream.opacity(0.12), ink: Brand.cream, size: 17, padding: 18))
                     Button("Mark paid", systemImage: "checkmark") { Task { await act("confirm_paid", "Couldn't mark paid") } }
                         .buttonStyle(.pill(.success))

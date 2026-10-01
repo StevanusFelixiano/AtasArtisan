@@ -292,7 +292,7 @@ struct NotificationSettingsView: View {
         ("Money", [
             ("Bill is final", ["bill_final"]),
             ("Payment confirmed", ["payment_confirmed"]),
-            ("Payment reminders from the host", ["nudge"]),
+            ("Payment reminders from the host", ["nudge", "payment_not_received"]),
         ]),
         ("When you host", [
             ("Someone joined", ["joined"]),
