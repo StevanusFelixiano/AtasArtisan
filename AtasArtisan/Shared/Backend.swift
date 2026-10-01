@@ -22,7 +22,10 @@ enum Links {
     /// Public TestFlight link, set once the first build passes beta review.
     static let getTheApp = "https://testflight.apple.com/join/ataste"
 
-    static func join(_ code: String) -> URL { supabaseURL.appending(path: "functions/v1/join/\(code)") }
+    /// Invite links: the web page on the VPS (repo `web/`, design 2-7) for people without the app; with the app
+    /// installed the same link opens Ataste directly (universal link, `applinks:` in the entitlements).
+    static let inviteHost = "ataste.51-79-240-114.sslip.io"
+    static func join(_ code: String) -> URL { URL(string: "https://\(inviteHost)/j/\(code)")! }
 
     static func whatsApp(_ phone: String, text: String = "") -> URL {
         var c = URLComponents(string: "https://wa.me/\(phone)")!

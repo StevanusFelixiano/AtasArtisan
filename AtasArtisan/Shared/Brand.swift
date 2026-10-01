@@ -22,6 +22,22 @@ enum Brand {
     static let ink3 = Color(rgb: 0x7A6257)         // footnotes, metadata
     static let ink4 = Color(rgb: 0xA08A80)         // upcoming timeline steps
 
+    // Design-system states that have no role of their own (buttons' pressed and disabled cells, tags, mats).
+    static let limeInk = Color(rgb: 0x5E7A00)          // "Open" dot, success text on white
+    static let editsInk = Color(rgb: 0xB0005A)         // "Edits requested" dot
+    static let cancelledFill = Color(rgb: 0xFDE3E5)    // "Cancelled" / "Declined" tag
+    static let cancelledInk = Color(rgb: 0xB00010)
+    static let destructiveSoft = Color(rgb: 0xF6C7CB)  // disabled destructive border
+    static let trashFill = Color(rgb: 0xFBE0E3)        // stepper delete at quantity 1
+    static let splitFill = Color(rgb: 0xFFF0F6)        // split block inside a row
+    static let selectedFill = Color(rgb: 0xFDF5EE)     // selected choice card / saved place
+    static let caramelPressed = Color(rgb: 0xB5773A)
+    static let creamPressed = Color(rgb: 0xFDF8F2), choc100Pressed = Color(rgb: 0xFCE3D0)
+    static let cocoaPressed = Color(rgb: 0x4A3329)
+    static let limePressed = Color(rgb: 0xF2FFB8), limeDeepPressed = Color(rgb: 0xD3E886)
+    static let destructivePressed = Color(rgb: 0xEE4D5B)
+    static let stripe = Color(rgb: 0xF6AE78)           // second colour of the "close to Rp 200k" bar
+
     /// Avatar pastels, assigned in join order.
     static let people: [Color] = [choc400, pink100, lime, choc100, liquorice100, liquorice400]
 
