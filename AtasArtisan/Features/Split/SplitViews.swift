@@ -100,6 +100,12 @@ struct SplitProposeView: View {
             guard chosen.isEmpty else { return }
             chosen = [item.owner_id] + (mineToAsk ? store.me.map { [$0] } ?? [] : [])
             splitEvenly()
+            // DEBUG screenshot hook (nil in release): ATASTE_SPLIT = three (4-1, 6/3/3) | short (4-1e, one slice missing).
+            if let mode = DebugScreens.value("ATASTE_SPLIT"), mode == "three" || mode == "short" {
+                if let third = people.first(where: { !chosen.contains($0) }) { chosen.append(third) }
+                for (u, n) in zip(sharing, [6, 3, 3]) { slices[u] = n }
+                if mode == "short", sharing.count > 1 { slices[sharing[1]] = 2 }
+            }
         }
         .problemAlert($problem)
     }
@@ -122,13 +128,14 @@ struct SplitProposeView: View {
         let on = chosen.contains(u)
         let locked = u == item.owner_id
         return Button {
+            guard !locked else { return }
             withAnimation(.snappy) {
                 if on { chosen.removeAll { $0 == u } } else { chosen.append(u) }
                 splitEvenly()
             }
         } label: {
             HStack(spacing: 6) {
-                Avatar(name: store.name(u), index: store.colorIndex(u), size: 24, art: store.people[u]?.avatar)
+                Avatar(name: store.name(u), index: store.colorIndex(u), size: 24, art: store.people[u]?.avatar, bg: store.people[u]?.avatar_bg)
                 Text(u == store.me ? "You" : store.name(u)).font(MenuFont.manrope(14, 600)).lineLimit(1)
             }
             .foregroundStyle(on ? Brand.cream : Brand.cocoa)
@@ -138,7 +145,6 @@ struct SplitProposeView: View {
             .contentShape(Capsule())
         }
         .buttonStyle(.plain)
-        .disabled(locked)
         .accessibilityLabel(u == store.me ? "You" : store.name(u))
         .accessibilityValue(locked ? "Owner, always sharing" : on ? "Sharing" : "Not sharing")
         .accessibilityAddTraits(on ? .isSelected : [])
@@ -149,7 +155,7 @@ struct SplitProposeView: View {
             ForEach(Array(sharing.enumerated()), id: \.element) { i, u in
                 let n = slices[u] ?? 0
                 HStack(spacing: 10) {
-                    Avatar(name: store.name(u), index: store.colorIndex(u), size: 32, art: store.people[u]?.avatar)
+                    Avatar(name: store.name(u), index: store.colorIndex(u), size: 32, art: store.people[u]?.avatar, bg: store.people[u]?.avatar_bg)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(u == store.me ? "You" : store.name(u)).font(MenuFont.manrope(15, 700)).foregroundStyle(Brand.cocoa)
                         Text("\(Slices.pctText(Double(n) * 100 / Double(Slices.total))) \u{00B7} \(Rupiah.format(amount(i)))")
@@ -177,11 +183,13 @@ struct SplitProposeView: View {
                 .labelStyle(StatusLabel(icon: 12))
                 .font(MenuFont.manrope(13, 600)).foregroundStyle(Brand.limeInk)
                 .padding(.leading, 4)
+        } else if sharing.count < 2 {
+            Text("Pick who\u{2019}s sharing it with \(mineToAsk ? store.name(item.owner_id) : "you").")
+                .font(MenuFont.manrope(13, 600)).foregroundStyle(Brand.ink3)
+                .padding(.leading, 4)
         } else {
             let left = Slices.total - allocated
-            let text = sharing.count < 2
-                ? "Pick at least one person to share it with."
-                : "\(allocated) of \(Slices.total) slices. Give the last \(left == 1 ? "slice" : "\(left) slices") to someone so the shares add up to 100%."
+            let text = "\(allocated) of \(Slices.total) slices. Give the last \(left == 1 ? "slice" : "\(left) slices") to someone so the shares add up to 100%."
             Label { Text(text) } icon: { Image(systemName: "exclamationmark.triangle") }
                 .labelStyle(StatusLabel(icon: 15))
                 .font(MenuFont.manrope(14, 600)).lineSpacing(3).foregroundStyle(Brand.destructive)

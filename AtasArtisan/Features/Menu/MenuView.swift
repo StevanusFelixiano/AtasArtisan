@@ -17,6 +17,7 @@ struct MenuView: View {
     @State private var failed: String?
     @State private var showCart = false
     @State private var width: CGFloat = 402
+    @State private var debugSplit: Item?
 
     var body: some View {
         Group {
@@ -50,6 +51,7 @@ struct MenuView: View {
             NavigationStack { ProductView(store: store, product: p, alternatives: alternatives(to: p)) }
         }
         .sheet(isPresented: $showCart) { MyOrderView(store: store) }
+        .sheet(item: $debugSplit) { i in NavigationStack { SplitProposeView(store: store, item: i) } }
     }
 
     // MARK: Content
@@ -239,16 +241,20 @@ struct MenuView: View {
         loaded = true
     }
 
-    /// DEBUG screenshot hooks (compiled to nil in release): ATASTE_MENU = skeleton | stale | cart,
+    /// DEBUG screenshot hooks (compiled to nil in release): ATASTE_MENU = skeleton | stale | cart | split (someone
+    /// else's item) | soldout (marks ATASTE_PRODUCT sold out locally),
     /// ATASTE_PRODUCT = part of a product name.
     private func debugHooks() {
         switch DebugScreens.value("ATASTE_MENU") {
         case "stale": synced = Wita.calendar.date(bySettingHour: 12, minute: 10, second: 0, of: Date().addingTimeInterval(-86_400))
         case "cart": showCart = true
+        case "split": debugSplit = store.items.first { $0.owner_id != store.me && store.liveSplit($0) == nil }
         default: break
         }
-        if let name = DebugScreens.value("ATASTE_PRODUCT")?.lowercased() {
-            picked = products.first { $0.name.lowercased().contains(name) }
+        if let name = DebugScreens.value("ATASTE_PRODUCT")?.lowercased(),
+           let i = products.firstIndex(where: { $0.name.lowercased().contains(name) }) {
+            if DebugScreens.value("ATASTE_MENU") == "soldout" { products[i].available = false }
+            picked = products[i]
         }
     }
 }

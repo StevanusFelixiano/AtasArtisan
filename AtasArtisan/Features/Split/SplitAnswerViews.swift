@@ -159,7 +159,7 @@ enum SplitAnswer {
         return VStack(spacing: 0) {
             ForEach(Array(shares.enumerated()), id: \.element.user_id) { i, s in
                 HStack(spacing: 10) {
-                    Avatar(name: store.name(s.user_id), index: store.colorIndex(s.user_id), size: 34, art: store.people[s.user_id]?.avatar)
+                    Avatar(name: store.name(s.user_id), index: store.colorIndex(s.user_id), size: 34, art: store.people[s.user_id]?.avatar, bg: store.people[s.user_id]?.avatar_bg)
                     VStack(alignment: .leading, spacing: 1) {
                         Text(s.user_id == store.me ? "You" : store.name(s.user_id)).font(MenuFont.manrope(15, 700))
                         Text("\(Slices.of(s.pct)) of \(Slices.total) slices \u{00B7} \(Slices.pctText(s.pct))")
