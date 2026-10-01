@@ -73,8 +73,10 @@ final class AppModel {
     }
 
     func open(_ url: URL) {
-        // ataste://join/ABC123 (from the join function's redirect)
-        guard url.scheme == "ataste", url.host() == "join", let code = url.pathComponents.last, code.count == 6 else { return }
+        // https://<invite host>/j/ABC123 (universal link) or ataste://join/ABC123 (the web page's Open button)
+        let invite = (url.scheme == "https" && url.host() == Links.inviteHost && url.pathComponents.dropLast().last == "j")
+            || (url.scheme == "ataste" && url.host() == "join")
+        guard invite, let code = url.pathComponents.last, code.count == 6 else { return }
         pendingJoin = code.uppercased()
     }
 }
