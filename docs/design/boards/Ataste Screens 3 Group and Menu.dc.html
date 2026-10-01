@@ -1,0 +1,545 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=roundo@1&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&family=Shrikhand&display=swap">
+<script src="./image-slot.js"></script>
+<script src="./ataste-art.js"></script>
+<style>body{margin:0;background:#F2E9DF;color:#2B1A12;font-family:Manrope,sans-serif;-webkit-font-smoothing:antialiased}a{color:#9D5C1D;text-decoration:none}a:hover{color:#2B1A12}</style>
+</helmet>
+
+<section style="padding:56px 64px 32px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid rgba(43,26,18,.1)">
+  <span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase;color:#9D5C1D">Ataste · Screens · 3 of 6</span>
+  <h1 style="margin:0;font:700 56px/1 Roundo,sans-serif;letter-spacing:-.02em">Group order, menu &amp; product</h1>
+  <p style="margin:0;max-width:760px;font:500 15px/1.5 Manrope;color:#5A4237">Sections 4.6 to 4.8. The group is at Rp 155.000 with six members; Putri is the member viewpoint, Rani the host. All times are WITA (Bali). Boards: <a href="Ataste Screens 1 Onboarding.dc.html">1 Onboarding</a> · <a href="Ataste Screens 2 Home and Groups.dc.html">2 Home &amp; groups</a> · <a href="Ataste Screens 4 Split and Review.dc.html">4 Split &amp; review</a> · <a href="Ataste Screens 5 Send Bill and After.dc.html">5 Send, bill &amp; after</a> · <a href="Ataste Screens 6 History Profile and States.dc.html">6 History &amp; profile</a> · <a href="Ataste Notifications.dc.html">Notifications</a> · <a href="Ataste Flow Map.dc.html">Flow map</a></p>
+</section>
+
+<section style="padding:48px 64px 24px">
+  <h2 style="margin:0 0 28px;font:700 28px/1 Roundo,sans-serif">4.6 Group order screen</h2>
+  <div style="display:flex;flex-wrap:wrap;gap:56px 48px;align-items:flex-start">
+
+    <div id="3-1" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#3-1" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">3-1</a><b style="color:#2B1A12">Group · member</b> · Open, Rp 45.000 to go · full scroll</div>
+      <div data-screen-label="3-1 Group member" style="position:relative;width:402px;height:1500px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back right="share,more" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:116px;left:16px;right:16px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;flex-direction:column;gap:8px;padding:0 4px">
+            <div style="display:flex;justify-content:space-between;align-items:center"><at-tag kind="open"></at-tag><span style="display:inline-flex;align-items:center;gap:6px;font:700 14px Manrope;color:#9D5C1D"><at-icon name="clock" size="15"></at-icon>Locks in 1h 24m</span></div>
+            <span style="font:700 32px/1.05 Roundo,sans-serif;letter-spacing:-.01em">Academy Bali Friday Treats</span>
+            <span style="display:flex;align-items:center;gap:8px;font:500 13px Manrope;color:#5A4237"><at-avatar i="R" size="24"></at-avatar>Hosted by Rani · Fri 3 Oct, 10:00 WITA · Academy Bali</span>
+          </div>
+          <div style="background:#fff;border-radius:32px;padding:20px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:baseline;gap:6px"><span style="font:700 38px/1 Roundo,sans-serif">Rp 155.000</span><span style="font:600 14px Manrope;color:#7A6257">/ 200.000</span></div>
+            <div style="height:20px;border-radius:999px;background:#EDE2E4;overflow:hidden"><div style="width:77.5%;height:100%;border-radius:999px;background:repeating-linear-gradient(-45deg,#F39E60 0 10px,#F6AE78 10px 20px)"></div></div>
+            <span style="font:600 15px/1.35 Manrope"><b style="color:#9D5C1D">Rp 45.000 more</b> to unlock the ongkir discount</span>
+          </div>
+          <div style="background:#fff;border-radius:32px;padding:18px 18px 8px;display:flex;flex-direction:column">
+            <div style="display:flex;justify-content:space-between;align-items:center;padding-bottom:10px"><span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase">My items</span><span style="font:700 18px Roundo,sans-serif">Rp 32.000</span></div>
+            <div style="display:flex;gap:12px;align-items:center;padding:10px 0">
+              <at-photo size="56" bg="#F9CFAF"></at-photo>
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font:700 15px Manrope">Pain Au Chocolate</span><span style="font:500 13px Manrope;color:#5A4237">Rp 16.000 each · “warm if possible”</span></div>
+              <div style="display:inline-flex;align-items:center;gap:10px;padding:3px;border-radius:999px;background:#FBF3EA"><span style="width:28px;height:28px;border-radius:50%;background:#F9CFAF;display:flex;align-items:center;justify-content:center"><at-icon name="minus" size="15" sw="2.5"></at-icon></span><span style="font:700 16px Roundo,sans-serif">2</span><span style="width:28px;height:28px;border-radius:50%;background:#F9CFAF;display:flex;align-items:center;justify-content:center"><at-icon name="plus" size="15" sw="2.5"></at-icon></span></div>
+            </div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;padding:6px 4px 0"><span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase">Everyone · 6</span><span style="font:500 12px Manrope;color:#7A6257">Tap <at-icon name="pie" size="12"></at-icon> to propose a split</span></div>
+          <div style="background:#fff;border-radius:32px;padding:4px 18px">
+            <sc-for list="{{ members }}" as="m" hint-placeholder-count="5">
+              <div style="display:flex;gap:12px;padding:14px 0;border-bottom:1px solid #EDE2E4">
+                <at-avatar i="{{ m.i }}" size="40"></at-avatar>
+                <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+                  <div style="display:flex;justify-content:space-between;align-items:center"><span style="font:700 16px Manrope">{{ m.name }} <span style="font:500 12px Manrope;color:#7A6257">{{ m.role }}</span></span><span style="font:700 16px Roundo,sans-serif">{{ m.sub }}</span></div>
+                  <span style="font:500 13px/1.45 Manrope;color:{{ m.ink }}">{{ m.items }}</span>
+                </div>
+                <span style="align-self:center;width:28px;height:28px;border-radius:50%;background:#F9B7D2;display:flex;align-items:center;justify-content:center;opacity:{{ m.splitOp }}"><at-icon name="pie" size="14"></at-icon></span>
+              </div>
+            </sc-for>
+          </div>
+          <span style="align-self:center;padding:10px 0;font:600 14px Manrope;color:#E40014">Leave group</span>
+        </div>
+        <at-glass radius="36" style="position:absolute;left:12px;right:12px;bottom:26px;padding:12px">
+          <span style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 0;border-radius:999px;background:#9D5C1D;border:4px solid #9D5C1D;color:#FBF3EA;font:600 17px/1.25 Manrope"><at-icon name="plus" size="18"></at-icon>Add items</span>
+        </at-glass>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+
+    <div id="3-2" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#3-2" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">3-2</a><b style="color:#2B1A12">Group · host</b> · WhatsApp per member, Lock order</div>
+      <div data-screen-label="3-2 Group host" style="position:relative;width:402px;height:1500px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back right="share,more" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:116px;left:16px;right:16px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;flex-direction:column;gap:8px;padding:0 4px">
+            <div style="display:flex;justify-content:space-between;align-items:center"><at-tag kind="open"></at-tag><span style="display:inline-flex;align-items:center;gap:6px;font:700 14px Manrope;color:#9D5C1D"><at-icon name="clock" size="15"></at-icon>Locks in 1h 24m</span></div>
+            <span style="font:700 32px/1.05 Roundo,sans-serif;letter-spacing:-.01em">Academy Bali Friday Treats</span>
+            <span style="display:flex;align-items:center;gap:8px;font:500 13px Manrope;color:#5A4237"><at-avatar i="R" size="24"></at-avatar>You’re hosting · Fri 3 Oct, 10:00 WITA · Order first</span>
+          </div>
+          <div style="background:#fff;border-radius:32px;padding:20px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:baseline;gap:6px"><span style="font:700 38px/1 Roundo,sans-serif">Rp 155.000</span><span style="font:600 14px Manrope;color:#7A6257">/ 200.000</span></div>
+            <div style="height:20px;border-radius:999px;background:#EDE2E4;overflow:hidden"><div style="width:77.5%;height:100%;border-radius:999px;background:repeating-linear-gradient(-45deg,#F39E60 0 10px,#F6AE78 10px 20px)"></div></div>
+            <span style="font:600 15px/1.35 Manrope"><b style="color:#9D5C1D">Rp 45.000 more</b> to unlock the ongkir discount</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:baseline;padding:6px 4px 0"><span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase">Members · 6</span><span style="display:inline-flex;align-items:center;gap:4px;font:600 13px Manrope;color:#9D5C1D"><at-icon name="share" size="14"></at-icon>Invite</span></div>
+          <div style="background:#fff;border-radius:32px;padding:4px 18px">
+            <sc-for list="{{ hostMembers }}" as="m" hint-placeholder-count="6">
+              <div style="display:flex;gap:12px;padding:14px 0;border-bottom:1px solid #EDE2E4">
+                <at-avatar i="{{ m.i }}" size="40"></at-avatar>
+                <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:4px">
+                  <div style="display:flex;justify-content:space-between;align-items:center"><span style="font:700 16px Manrope">{{ m.name }} <span style="font:500 12px Manrope;color:#7A6257">{{ m.role }}</span></span><span style="font:700 16px Roundo,sans-serif">{{ m.sub }}</span></div>
+                  <span style="font:500 13px/1.45 Manrope;color:{{ m.ink }}">{{ m.items }}</span>
+                </div>
+                <span style="align-self:center;width:28px;height:28px;border-radius:50%;background:#E9FF83;display:flex;align-items:center;justify-content:center;opacity:{{ m.waOp }}"><at-icon name="wa" size="15"></at-icon></span>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <at-glass radius="36" style="position:absolute;left:12px;right:12px;bottom:26px;padding:12px;display:flex">
+          <div style="display:flex;gap:10px">
+            <span style="width:60px;display:flex;align-items:center;justify-content:center;border-radius:999px;background:#FBF3EA;border:4px solid #F9CFAF"><at-icon name="plus" size="20"></at-icon></span>
+            <span style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 0;border-radius:999px;background:#9D5C1D;border:4px solid #9D5C1D;color:#FBF3EA;font:600 17px/1.25 Manrope"><at-icon name="lock" size="18"></at-icon>Lock order</span>
+          </div>
+        </at-glass>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+
+    <div id="3-3" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#3-3" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">3-3</a><b style="color:#2B1A12">Discount unlocked</b> · Nadia’s Banana Cake tipped it to Rp 205.000</div>
+      <div data-screen-label="3-3 Discount unlocked" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back right="share,more" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:116px;left:16px;right:16px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;flex-direction:column;gap:8px;padding:0 4px">
+            <div style="display:flex;justify-content:space-between;align-items:center"><at-tag kind="open"></at-tag><span style="display:inline-flex;align-items:center;gap:6px;font:700 14px Manrope;color:#9D5C1D"><at-icon name="clock" size="15"></at-icon>Locks in 52m</span></div>
+            <span style="font:700 32px/1.05 Roundo,sans-serif;letter-spacing:-.01em">Academy Bali Friday Treats</span>
+          </div>
+          <div style="position:relative;background:#E9FF83;border-radius:32px;overflow:hidden;box-shadow:inset 0 0 0 2px #BCD947">
+            <div style="position:absolute;right:-60px;top:-60px;width:260px;height:260px;border-radius:50%;background:repeating-conic-gradient(#fff 0 10deg,transparent 10deg 20deg);opacity:.7"></div>
+            <div style="position:absolute;right:6px;top:10px;width:130px;height:130px;border-radius:50%;overflow:hidden"><image-slot id="pose-celebrating" src="uploads/art/pose-celebrating.png" fit="cover" shape="circle" placeholder="celebrating" style="width:130px;height:130px"></image-slot></div>
+            <div style="position:relative;padding:22px 20px 18px;display:flex;flex-direction:column;gap:12px">
+              <span style="font:400 36px/1 Shrikhand,cursive;max-width:200px">Discount unlocked!</span>
+              <div style="display:flex;align-items:baseline;gap:6px"><span style="font:700 30px/1 Roundo,sans-serif">Rp 205.000</span><span style="font:600 13px Manrope">/ 200.000</span></div>
+              <div style="height:20px;border-radius:999px;background:#2B1A12"></div>
+              <span style="font:600 14px/1.4 Manrope">Atas applies the ongkir discount when Rani sends the order.</span>
+            </div>
+            <at-marquee text="DISCOUNT UNLOCKED • ONGKIR SORTED • KEEP ADDING • " bg="#2B1A12" fg="#E9FF83" size="13" speed="18"></at-marquee>
+          </div>
+          <div style="background:#fff;border-radius:24px;padding:14px 16px;display:flex;gap:12px;align-items:center">
+            <at-avatar i="N" size="36"></at-avatar>
+            <span style="flex:1;font:500 14px/1.4 Manrope"><b>Nadia</b> added Banana Cake · Rp 50.000</span>
+            <span style="font:500 12px Manrope;color:#7A6257">now</span>
+          </div>
+          <div style="background:#fff;border-radius:32px;padding:18px;display:flex;justify-content:space-between;align-items:center"><span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase">My items</span><span style="font:600 14px Manrope">2× Pain Au Chocolate · <b style="font-family:Roundo">Rp 32.000</b></span></div>
+        </div>
+        <at-glass radius="36" style="position:absolute;left:12px;right:12px;bottom:26px;padding:12px">
+          <span style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 0;border-radius:999px;background:#9D5C1D;border:4px solid #9D5C1D;color:#FBF3EA;font:600 17px/1.25 Manrope"><at-icon name="plus" size="18"></at-icon>Add items</span>
+        </at-glass>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+
+    <div id="3-4" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#3-4" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">3-4</a><b style="color:#2B1A12">Host menu</b> · from the ••• button</div>
+      <div data-screen-label="3-4 Host menu" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back right="share,more" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:116px;left:20px;right:20px;display:flex;flex-direction:column;gap:8px;filter:blur(3px);opacity:.6">
+          <at-tag kind="open"></at-tag>
+          <span style="font:700 32px/1.05 Roundo,sans-serif">Academy Bali Friday Treats</span>
+          <div style="height:160px;border-radius:32px;background:#fff;margin-top:8px"></div>
+          <div style="height:300px;border-radius:32px;background:#fff"></div>
+        </div>
+        <at-glass radius="28" style="position:absolute;top:110px;right:16px;width:270px;padding:6px">
+          <div style="display:flex;flex-direction:column">
+            <sc-for list="{{ hostMenu }}" as="h" hint-placeholder-count="7">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:13px 14px;border-radius:18px;color:{{ h.c }};border-bottom:{{ h.sep }}"><span style="font:600 16px Manrope">{{ h.label }}</span><at-icon name="{{ h.icon }}" size="19"></at-icon></div>
+            </sc-for>
+          </div>
+        </at-glass>
+      </div>
+    </div>
+
+    <div id="3-5" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#3-5" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">3-5</a><b style="color:#2B1A12">Locked · member</b> · waiting for host review, timeline</div>
+      <div data-screen-label="3-5 Locked member" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back right="more" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:116px;left:16px;right:16px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;flex-direction:column;gap:8px;padding:0 4px">
+            <div style="display:flex;justify-content:space-between;align-items:center"><at-tag kind="locked"></at-tag><span style="font:600 13px Manrope;color:#5A4237">Locked at 13:00</span></div>
+            <span style="font:700 32px/1.05 Roundo,sans-serif;letter-spacing:-.01em">Academy Bali Friday Treats</span>
+          </div>
+          <div style="display:flex;gap:14px;align-items:center;background:#fff;border-radius:32px;padding:16px">
+            <div style="width:72px;height:72px;border-radius:50%;background:#EDE2E4;overflow:hidden;flex:none"><image-slot id="pose-waiting" src="uploads/art/pose-waiting.png" fit="cover" shape="circle" placeholder="waiting" style="width:72px;height:72px"></image-slot></div>
+            <div style="display:flex;flex-direction:column;gap:4px"><span style="font:700 17px/1.2 Roundo,sans-serif">Rani is checking the order</span><span style="font:500 13px/1.45 Manrope;color:#5A4237">You can’t change items now. If something needs fixing, she’ll ask you.</span></div>
+          </div>
+          <div style="background:#fff;border-radius:32px;padding:20px 20px 4px">
+            <sc-for list="{{ timelineLocked }}" as="s" hint-placeholder-count="7">
+              <div style="display:flex;gap:14px">
+                <div style="display:flex;flex-direction:column;align-items:center;width:22px">
+                  <span style="width:22px;height:22px;border-radius:50%;background:{{ s.dot }};box-shadow:{{ s.ring }};display:flex;align-items:center;justify-content:center;color:{{ s.ic }};flex:none"><at-icon name="{{ s.icon }}" size="12" sw="3"></at-icon></span>
+                  <span style="width:2px;flex:1;min-height:14px;background:{{ s.line }}"></span>
+                </div>
+                <div style="display:flex;flex-direction:column;gap:2px;padding-bottom:12px"><span style="font:700 15px/22px Manrope;color:{{ s.ink }}">{{ s.label }}</span><span style="font:500 12px/1.4 Manrope;color:#7A6257">{{ s.meta }}</span></div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+
+    <div id="3-6" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#3-6" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">3-6</a><b style="color:#2B1A12">Leave group</b> · destructive confirm, Open only</div>
+      <div data-screen-label="3-6 Leave group" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <div style="position:absolute;top:116px;left:20px;right:20px;display:flex;flex-direction:column;gap:8px">
+          <at-tag kind="open"></at-tag>
+          <span style="font:700 32px/1.05 Roundo,sans-serif">Academy Bali Friday Treats</span>
+          <div style="height:160px;border-radius:32px;background:#fff;margin-top:8px"></div>
+        </div>
+        <div style="position:absolute;inset:0;background:rgba(43,26,18,.3)"></div>
+        <at-glass radius="40" style="position:absolute;left:8px;right:8px;bottom:8px;padding:10px 20px 36px">
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <span style="align-self:center;width:36px;height:5px;border-radius:3px;background:#D1B6BB"></span>
+            <span style="font:700 24px/1.1 Roundo,sans-serif">Leave Friday Treats?</span>
+            <span style="font:500 15px/1.5 Manrope;color:#5A4237">Your 2 Pain Au Chocolate come out of the order and Rani gets a heads-up. You can rejoin with the link while the group is open.</span>
+            <div style="display:flex;gap:10px;margin-top:6px">
+              <span style="flex:1;text-align:center;padding:13px 0;border-radius:999px;background:#FBF3EA;border:4px solid #EDE2E4;font:600 16px Manrope">Stay</span>
+              <span style="flex:1;text-align:center;padding:13px 0;border-radius:999px;background:#E40014;border:4px solid #E40014;color:#fff;font:600 16px Manrope">Leave group</span>
+            </div>
+          </div>
+        </at-glass>
+      </div>
+    </div>
+
+    <div id="3-7" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#3-7" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">3-7</a><b style="color:#2B1A12">Group · loading</b> · skeleton</div>
+      <div data-screen-label="3-7 Group skeleton" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:120px;left:16px;right:16px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;flex-direction:column;gap:10px;padding:0 4px"><div style="width:80px;height:24px;border-radius:999px;background:#EDE2E4"></div><div style="width:290px;height:30px;border-radius:10px;background:#EDE2E4"></div><div style="width:200px;height:30px;border-radius:10px;background:#EDE2E4"></div></div>
+          <div style="background:#fff;border-radius:32px;padding:20px;display:flex;flex-direction:column;gap:14px"><div style="width:180px;height:34px;border-radius:10px;background:#EDE2E4"></div><div style="height:20px;border-radius:999px;background:#EDE2E4"></div><div style="width:240px;height:14px;border-radius:7px;background:#EDE2E4"></div></div>
+          <div style="background:#fff;border-radius:32px;padding:6px 18px">
+            <div style="display:flex;gap:12px;padding:14px 0;border-bottom:1px solid #EDE2E4"><div style="width:40px;height:40px;border-radius:50%;background:#EDE2E4"></div><div style="flex:1;display:flex;flex-direction:column;gap:8px"><div style="height:14px;width:60%;border-radius:7px;background:#EDE2E4"></div><div style="height:12px;border-radius:6px;background:#EDE2E4"></div></div></div>
+            <div style="display:flex;gap:12px;padding:14px 0;border-bottom:1px solid #EDE2E4"><div style="width:40px;height:40px;border-radius:50%;background:#EDE2E4"></div><div style="flex:1;display:flex;flex-direction:column;gap:8px"><div style="height:14px;width:45%;border-radius:7px;background:#EDE2E4"></div><div style="height:12px;width:80%;border-radius:6px;background:#EDE2E4"></div></div></div>
+            <div style="display:flex;gap:12px;padding:14px 0"><div style="width:40px;height:40px;border-radius:50%;background:#EDE2E4"></div><div style="flex:1;display:flex;flex-direction:column;gap:8px"><div style="height:14px;width:55%;border-radius:7px;background:#EDE2E4"></div><div style="height:12px;width:70%;border-radius:6px;background:#EDE2E4"></div></div></div>
+          </div>
+        </div>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+
+    <div id="3-8" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#3-8" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">3-8</a><b style="color:#2B1A12">Personal order</b> · same screen, no share or members</div>
+      <div data-screen-label="3-8 Personal order" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back right="more" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:116px;left:16px;right:16px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;flex-direction:column;gap:8px;padding:0 4px">
+            <div style="display:flex;gap:8px"><at-tag kind="open"></at-tag><at-tag kind="closed" text="Just me"></at-tag></div>
+            <span style="font:700 32px/1.05 Roundo,sans-serif">Weekend loaf</span>
+            <span style="font:500 13px Manrope;color:#5A4237">Sat 4 Oct, 08:00 · Kos Putri, Canggu</span>
+          </div>
+          <div style="background:#fff;border-radius:32px;padding:20px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;align-items:baseline;gap:6px"><span style="font:700 38px/1 Roundo,sans-serif">Rp 103.000</span><span style="font:600 14px Manrope;color:#7A6257">/ 200.000</span></div>
+            <div style="height:20px;border-radius:999px;background:#EDE2E4;overflow:hidden"><div style="width:51.5%;height:100%;border-radius:999px;background:#F39E60"></div></div>
+            <span style="font:600 15px/1.35 Manrope"><b style="color:#9D5C1D">Rp 97.000 more</b> for the ongkir discount — or <a href="#2-5">turn it into a group</a></span>
+          </div>
+          <div style="background:#fff;border-radius:32px;padding:8px 18px">
+            <div style="display:flex;gap:12px;align-items:center;padding:10px 0;border-bottom:1px solid #EDE2E4"><at-photo size="52" bg="#F9CFAF"></at-photo><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font:700 15px Manrope">Brioche Toast 1000 gr</span><span style="font:500 13px Manrope;color:#5A4237">Rp 70.000</span></div><span style="font:700 16px Roundo,sans-serif">1</span></div>
+            <div style="display:flex;gap:12px;align-items:center;padding:10px 0"><at-photo size="52" bg="#EDE2E4"></at-photo><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font:700 15px Manrope">Classic Sourdough · 1000 gr · Whole Sourdough</span><span style="font:500 13px Manrope;color:#5A4237">Rp 33.000</span></div><span style="font:700 16px Roundo,sans-serif">1</span></div>
+          </div>
+        </div>
+        <at-glass radius="36" style="position:absolute;left:12px;right:12px;bottom:26px;padding:12px">
+          <div style="display:flex;gap:10px">
+            <span style="width:60px;display:flex;align-items:center;justify-content:center;border-radius:999px;background:#FBF3EA;border:4px solid #F9CFAF"><at-icon name="plus" size="20"></at-icon></span>
+            <span style="flex:1;display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 0;border-radius:999px;background:#9D5C1D;border:4px solid #9D5C1D;color:#FBF3EA;font:600 17px/1.25 Manrope"><at-icon name="send" size="18"></at-icon>Send to Atas</span>
+          </div>
+        </at-glass>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding:48px 64px 24px">
+  <h2 style="margin:0 0 28px;font:700 28px/1 Roundo,sans-serif">4.7 Menu</h2>
+  <div style="display:flex;flex-wrap:wrap;gap:56px 48px;align-items:flex-start">
+
+    <div id="3-9" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#3-9" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">3-9</a><b style="color:#2B1A12">Menu</b> · tabs, tags, floating cart · full scroll</div>
+      <div data-screen-label="3-9 Menu" style="position:relative;width:402px;height:1380px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back close title="Atas Artisan menu" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:114px;left:16px;right:16px;display:flex;flex-direction:column;gap:12px">
+          <div style="height:46px;border-radius:999px;background:#fff;box-shadow:inset 0 0 0 1.5px #EDE2E4;display:flex;align-items:center;gap:10px;padding:0 16px;font:500 15px Manrope;color:#A08A80"><at-icon name="search" size="18" color="#7A6257"></at-icon>Search croissant, sourdough…</div>
+          <div style="display:flex;gap:8px;margin-right:-16px;overflow:hidden">
+            <sc-for list="{{ tabs }}" as="t" hint-placeholder-count="5">
+              <span style="flex:none;padding:9px 16px;border-radius:999px;background:{{ t.bg }};color:{{ t.fg }};font:600 14px Manrope;white-space:nowrap">{{ t.name }}</span>
+            </sc-for>
+          </div>
+          <span style="display:flex;align-items:center;gap:6px;font:500 12px Manrope;color:#7A6257;padding-left:4px"><at-icon name="refresh" size="12"></at-icon>Menu updated 2 hours ago</span>
+          <span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase;padding:8px 4px 0">Viennoiseries</span>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <sc-for list="{{ viennoiseries }}" as="p" hint-placeholder-count="4">
+              <div style="background:#fff;border-radius:24px;padding:12px 12px 14px;display:flex;flex-direction:column;gap:10px;opacity:{{ p.op }}">
+                <div style="position:relative;align-self:center"><at-photo size="150" bg="{{ p.bg }}"></at-photo><span style="position:absolute;left:-2px;top:-2px"><at-tag kind="{{ p.tag }}" size="s"></at-tag></span></div>
+                <span style="font:700 15px/1.25 Manrope;min-height:38px">{{ p.name }}</span>
+                <div style="display:flex;justify-content:space-between;align-items:flex-end">
+                  <div style="display:flex;flex-direction:column;gap:1px"><span style="font:500 11px Manrope;color:#A08A80;text-decoration:line-through">{{ p.was }}</span><span style="font:700 16px/1 Roundo,sans-serif">{{ p.price }}</span></div>
+                  <span style="width:28px;height:28px;border-radius:50%;background:{{ p.btn }};display:flex;align-items:center;justify-content:center"><at-icon name="{{ p.btnIcon }}" size="15" sw="2.5"></at-icon></span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase;padding:12px 4px 0">Pastry cakes</span>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <sc-for list="{{ cakes }}" as="p" hint-placeholder-count="2">
+              <div style="background:#fff;border-radius:24px;padding:12px 12px 14px;display:flex;flex-direction:column;gap:10px">
+                <div style="position:relative;align-self:center"><at-photo size="150" bg="{{ p.bg }}"></at-photo><span style="position:absolute;left:-2px;top:-2px"><at-tag kind="{{ p.tag }}" size="s"></at-tag></span></div>
+                <span style="font:700 15px/1.25 Manrope;min-height:38px">{{ p.name }}</span>
+                <div style="display:flex;justify-content:space-between;align-items:flex-end">
+                  <div style="display:flex;flex-direction:column;gap:1px"><span style="font:500 11px Manrope;color:#A08A80;text-decoration:line-through">{{ p.was }}</span><span style="font:700 16px/1 Roundo,sans-serif">{{ p.price }}</span></div>
+                  <span style="width:28px;height:28px;border-radius:50%;background:#F9CFAF;display:flex;align-items:center;justify-content:center"><at-icon name="plus" size="15" sw="2.5"></at-icon></span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <div style="position:absolute;left:50%;bottom:40px;transform:translateX(-50%);display:flex;align-items:center;gap:12px;padding:8px 8px 8px 20px;border-radius:999px;background:#2B1A12;color:#FBF3EA;box-shadow:0 12px 30px rgba(43,26,18,.35);white-space:nowrap">
+          <at-icon name="bag" size="20"></at-icon><span style="font:600 15px Manrope">3 items</span><span style="padding:9px 16px;border-radius:999px;background:#9D5C1D;font:700 15px Roundo,sans-serif">Rp 44.000</span>
+        </div>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+
+    <div id="3-10" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#3-10" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">3-10</a><b style="color:#2B1A12">Menu</b> · stale warning, Sourdough tab</div>
+      <div data-screen-label="3-10 Menu stale" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back close title="Atas Artisan menu" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:114px;left:16px;right:16px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;align-items:center;gap:10px;padding:10px 10px 10px 16px;border-radius:16px;background:#F9CFAF">
+            <at-icon name="alert" size="18"></at-icon>
+            <span style="flex:1;font:600 13px/1.35 Manrope">Menu last updated yesterday, 12:10. Prices or stock may have changed.</span>
+            <span style="padding:7px 14px;border-radius:999px;background:#fff;font:600 13px Manrope">Refresh</span>
+          </div>
+          <div style="display:flex;gap:8px;margin-right:-16px;overflow:hidden">
+            <span style="flex:none;padding:9px 16px;border-radius:999px;background:#2B1A12;color:#FBF3EA;font:600 14px Manrope">Sourdough</span>
+            <span style="flex:none;padding:9px 16px;border-radius:999px;background:#fff;font:600 14px Manrope">Bakes</span>
+            <span style="flex:none;padding:9px 16px;border-radius:999px;background:#fff;font:600 14px Manrope">Viennoiseries</span>
+            <span style="flex:none;padding:9px 16px;border-radius:999px;background:#fff;font:600 14px Manrope">Pastry cakes</span>
+          </div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+            <sc-for list="{{ sourdough }}" as="p" hint-placeholder-count="4">
+              <div style="background:#fff;border-radius:24px;padding:12px 12px 14px;display:flex;flex-direction:column;gap:10px">
+                <div style="position:relative;align-self:center"><at-photo size="150" bg="{{ p.bg }}"></at-photo><span style="position:absolute;left:-2px;top:-2px"><at-tag kind="{{ p.tag }}" size="s"></at-tag></span></div>
+                <span style="font:700 15px/1.25 Manrope;min-height:38px">{{ p.name }}</span>
+                <div style="display:flex;justify-content:space-between;align-items:flex-end"><span style="font:700 16px/1 Roundo,sans-serif">{{ p.price }}</span><span style="width:28px;height:28px;border-radius:50%;background:#F9CFAF;display:flex;align-items:center;justify-content:center"><at-icon name="plus" size="15" sw="2.5"></at-icon></span></div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+
+    <div id="3-11" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#3-11" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">3-11</a><b style="color:#2B1A12">Menu</b> · skeleton</div>
+      <div data-screen-label="3-11 Menu skeleton" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back close title="Atas Artisan menu" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:114px;left:16px;right:16px;display:flex;flex-direction:column;gap:12px">
+          <div style="height:46px;border-radius:999px;background:#fff"></div>
+          <div style="display:flex;gap:8px"><div style="width:110px;height:36px;border-radius:999px;background:#EDE2E4"></div><div style="width:70px;height:36px;border-radius:999px;background:#EDE2E4"></div><div style="width:120px;height:36px;border-radius:999px;background:#EDE2E4"></div></div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:20px">
+            <sc-for list="{{ skel }}" as="k" hint-placeholder-count="4">
+              <div style="background:#fff;border-radius:24px;padding:12px;display:flex;flex-direction:column;gap:10px">
+                <div style="align-self:center;width:150px;height:150px;border-radius:50%;border:1.5px dashed #D1B6BB;padding:8px;box-sizing:border-box"><div style="width:100%;height:100%;border-radius:50%;background:#EDE2E4"></div></div>
+                <div style="height:14px;border-radius:7px;background:#EDE2E4"></div><div style="height:14px;width:{{ k.w }};border-radius:7px;background:#EDE2E4"></div>
+              </div>
+            </sc-for>
+          </div>
+          <span style="align-self:center;padding-top:16px;font:700 17px Roundo,sans-serif;color:#7A6257">Asking the oven…</span>
+        </div>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+
+    <div id="3-12" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#3-12" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">3-12</a><b style="color:#2B1A12">My cart</b> · empty state</div>
+      <div data-screen-label="3-12 Empty cart" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <div style="position:absolute;inset:0;background:rgba(43,26,18,.3)"></div>
+        <at-glass radius="40" style="position:absolute;left:8px;right:8px;top:200px;bottom:8px;padding:10px 20px">
+          <div style="display:flex;flex-direction:column;align-items:center;gap:14px;text-align:center">
+            <span style="width:36px;height:5px;border-radius:3px;background:#D1B6BB"></span>
+            <div style="align-self:stretch;display:flex;justify-content:space-between;align-items:center;text-align:left"><span style="font:700 22px/1 Roundo,sans-serif">My order</span><span style="font:500 13px Manrope;color:#7A6257">Friday Treats</span></div>
+            <div style="display:flex;flex-direction:column;align-items:center;gap:8px;align-self:center"><div style="transform:rotate(-1.5deg);padding:10px;background:#9D5C1D;border-radius:10px;box-shadow:0 14px 30px rgba(43,26,18,.25)"><div style="border:2px dashed rgba(251,243,234,.6);padding:5px;border-radius:4px"><image-slot id="paint-sonofbun" src="uploads/art/paint-sonofbun.png" fit="cover" shape="rect" placeholder="The Son of Bun" style="display:block;width:150px;height:186px;background:#9AA3AD"></image-slot></div></div><span style="font:500 12px Manrope;color:#7A6257"><i>The Son of Bun</i> · oil on canvas</span></div>
+            <span style="font:700 26px/1.1 Roundo,sans-serif">Nothing in the oven…yet!</span>
+            <span style="font:500 15px/1.5 Manrope;color:#5A4237;max-width:290px">Add something from the menu. It joins the group order under your name.</span>
+            <span style="margin-top:8px;display:inline-flex;align-items:center;gap:8px;padding:12px 32px;border-radius:999px;background:#9D5C1D;border:4px solid #9D5C1D;color:#FBF3EA;font:600 16px Manrope">Browse the menu</span>
+          </div>
+        </at-glass>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding:48px 64px 64px">
+  <h2 style="margin:0 0 28px;font:700 28px/1 Roundo,sans-serif">4.8 Product detail</h2>
+  <div style="display:flex;flex-wrap:wrap;gap:56px 48px;align-items:flex-start">
+
+    <div id="3-13" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#3-13" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">3-13</a><b style="color:#2B1A12">Product</b> · Burnt Cheesecake, note field</div>
+      <div data-screen-label="3-13 Product detail" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <div style="position:absolute;top:0;left:0;right:0;height:360px;background:#F9CFAF;border-radius:0 0 48px 48px"></div>
+        <at-nav back close right="share" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <at-photo size="250" bg="#FBF3EA" label="Burnt Cheesecake photo" style="position:absolute;top:96px;left:76px"></at-photo>
+        <span style="position:absolute;top:110px;left:60px"><at-tag kind="best"></at-tag></span>
+        <div style="position:absolute;top:384px;left:20px;right:20px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><span style="font:700 28px/1.1 Roundo,sans-serif">Burnt Cheesecake 20 cm</span><span style="font:700 22px/1.2 Roundo,sans-serif;white-space:nowrap">Rp 260.000</span></div>
+          <span style="font:500 15px/1.5 Manrope;color:#5A4237">Basque-style, caramelised top and a soft centre. Serves 10 to 12. A good one to split.</span>
+                    <div style="display:flex;gap:12px;align-items:center">
+            <div style="flex:1;height:48px;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1.5px #EDE2E4;display:flex;align-items:center;gap:8px;padding:0 14px;font:500 15px Manrope"><at-icon name="note" size="17" color="#9D5C1D"></at-icon>sliced please</div>
+            <div style="display:inline-flex;align-items:center;gap:12px;padding:4px;border-radius:999px;background:#fff"><span style="width:28px;height:28px;border-radius:50%;background:#F9CFAF;display:flex;align-items:center;justify-content:center"><at-icon name="minus" size="15" sw="2.5"></at-icon></span><span style="font:700 17px Roundo,sans-serif">1</span><span style="width:28px;height:28px;border-radius:50%;background:#F9CFAF;display:flex;align-items:center;justify-content:center"><at-icon name="plus" size="15" sw="2.5"></at-icon></span></div>
+          </div>
+          <span style="display:flex;align-items:center;gap:6px;font:500 13px Manrope;color:#5A4237"><at-icon name="pie" size="14"></at-icon>Sharing it? Propose a split from the group after adding.</span>
+        </div>
+        <at-glass radius="36" style="position:absolute;left:12px;right:12px;bottom:26px;padding:12px">
+          <span style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 0;border-radius:999px;background:#9D5C1D;border:4px solid #9D5C1D;color:#FBF3EA;font:600 17px/1.25 Manrope">Add to my order · Rp 260.000</span>
+        </at-glass>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+
+    <div id="3-14" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#3-14" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">3-14</a><b style="color:#2B1A12">Product</b> · promo price (illustrative)</div>
+      <div data-screen-label="3-14 Product promo" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <div style="position:absolute;top:0;left:0;right:0;height:360px;background:#F9B7D2;border-radius:0 0 48px 48px"></div>
+        <at-nav back close right="share" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <at-photo size="250" bg="#FBF3EA" label="Brownie photo" style="position:absolute;top:96px;left:76px"></at-photo>
+        <span style="position:absolute;top:110px;left:60px"><at-tag kind="promo"></at-tag></span>
+        <div style="position:absolute;top:384px;left:20px;right:20px;display:flex;flex-direction:column;gap:14px">
+          <span style="font:700 28px/1.1 Roundo,sans-serif">Classic Brownie with Salted Caramel 20x20cm</span>
+          <div style="display:flex;align-items:baseline;gap:10px"><span style="font:700 26px/1 Roundo,sans-serif">Rp 144.500</span><span style="font:600 16px Manrope;color:#A08A80;text-decoration:line-through">Rp 170.000</span><span style="font:700 13px Manrope;color:#B0005A">Save Rp 25.500</span></div>
+          <span style="font:500 15px/1.5 Manrope;color:#5A4237">Fudgy brownie tray with a salted caramel layer. Cut into 16 squares.</span>
+          <div style="display:flex;gap:12px;align-items:center">
+            <div style="flex:1;height:48px;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1.5px #EDE2E4;display:flex;align-items:center;gap:8px;padding:0 14px;font:500 15px Manrope;color:#A08A80"><at-icon name="note" size="17" color="#9D5C1D"></at-icon>Note for Atas</div>
+            <div style="display:inline-flex;align-items:center;gap:12px;padding:4px;border-radius:999px;background:#fff"><span style="width:28px;height:28px;border-radius:50%;background:#F9CFAF;display:flex;align-items:center;justify-content:center"><at-icon name="minus" size="15" sw="2.5"></at-icon></span><span style="font:700 17px Roundo,sans-serif">1</span><span style="width:28px;height:28px;border-radius:50%;background:#F9CFAF;display:flex;align-items:center;justify-content:center"><at-icon name="plus" size="15" sw="2.5"></at-icon></span></div>
+          </div>
+        </div>
+        <at-glass radius="36" style="position:absolute;left:12px;right:12px;bottom:26px;padding:12px">
+          <span style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 0;border-radius:999px;background:#9D5C1D;border:4px solid #9D5C1D;color:#FBF3EA;font:600 17px/1.25 Manrope">Add to my order · Rp 144.500</span>
+        </at-glass>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+
+    <div id="3-15" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#3-15" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">3-15</a><b style="color:#2B1A12">Product</b> · sold out (illustrative)</div>
+      <div data-screen-label="3-15 Product sold out" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <div style="position:absolute;top:0;left:0;right:0;height:360px;background:#EDE2E4;border-radius:0 0 48px 48px"></div>
+        <at-nav back close right="share" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <at-photo size="250" bg="#FBF3EA" label="Almond Croissant photo" style="position:absolute;top:96px;left:76px;filter:grayscale(.8);opacity:.7"></at-photo>
+        <span style="position:absolute;top:110px;left:60px"><at-tag kind="soldout"></at-tag></span>
+        <div style="position:absolute;top:384px;left:20px;right:20px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><span style="font:700 28px/1.1 Roundo,sans-serif">Almond Croissant</span><span style="font:700 22px/1.2 Roundo,sans-serif;color:#A08A80">Rp 24.000</span></div>
+          <span style="font:500 15px/1.5 Manrope;color:#5A4237">Twice-baked croissant with almond frangipane and toasted flakes.</span>
+          <div style="display:flex;gap:10px;padding:14px;border-radius:16px;background:#EDE2E4"><at-icon name="alert" size="18"></at-icon><span style="font:600 14px/1.45 Manrope">Sold out on the Atas menu today. Try Pain Au Chocolate or Butter Croissant.</span></div>
+        </div>
+        <at-glass radius="36" style="position:absolute;left:12px;right:12px;bottom:26px;padding:12px">
+          <span style="display:flex;align-items:center;justify-content:center;padding:14px 0;border-radius:999px;background:#D1B6BB;border:4px solid #D1B6BB;color:#FBF3EA;font:600 17px/1.25 Manrope">Sold out today</span>
+        </at-glass>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+
+    <div id="3-16" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 8px;max-width:402px;font:400 12px Manrope;color:#7A6257"><a href="#3-16" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">3-16</a><b style="color:#2B1A12">Product · option groups</b> · Classic Sourdough, 1000 gr + Sliced 15mm, price follows the weight</div>
+      <div data-screen-label="3-16 Sourdough options" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <div style="position:absolute;top:0;left:0;right:0;height:300px;background:#F9CFAF;border-radius:0 0 48px 48px"></div>
+        <at-nav back close right="share" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <at-photo size="200" bg="#FBF3EA" label="Classic Sourdough photo" style="position:absolute;top:88px;left:101px"></at-photo>
+        <span style="position:absolute;top:100px;left:84px"><at-tag kind="best"></at-tag></span>
+        <div style="position:absolute;top:322px;left:20px;right:20px;display:flex;flex-direction:column;gap:16px">
+          <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px"><span style="font:700 28px/1.1 Roundo,sans-serif">Classic Sourdough</span><span style="font:700 22px/1.2 Roundo,sans-serif;white-space:nowrap">Rp 33.000</span></div>
+          <span style="font:500 14px/1.45 Manrope;color:#5A4237">Long-fermented country loaf with a crackly crust.</span>
+          <div style="display:flex;flex-direction:column;gap:8px"><span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase">Weight</span>
+            <div style="display:flex;gap:8px;flex-wrap:wrap"><span style="display:flex;flex-direction:column;align-items:center;gap:1px;padding:8px 18px;border-radius:999px;background:#fff;box-shadow:inset 0 0 0 1.5px #D1B6BB;font:600 14px/1.2 Manrope;white-space:nowrap">600 gr<span style="font:500 11px Manrope;opacity:.75">Rp 21.000</span></span><span style="display:flex;flex-direction:column;align-items:center;gap:1px;padding:8px 18px;border-radius:999px;background:#2B1A12;color:#FBF3EA;font:600 14px/1.2 Manrope;white-space:nowrap">1000 gr<span style="font:500 11px Manrope;opacity:.75">Rp 33.000</span></span></div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px"><span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase">Slice</span>
+            <div style="display:flex;gap:8px;flex-wrap:wrap"><span style="display:flex;flex-direction:column;align-items:center;gap:1px;padding:11px 18px;border-radius:999px;background:#fff;box-shadow:inset 0 0 0 1.5px #D1B6BB;font:600 14px/1.2 Manrope;white-space:nowrap">Whole Sourdough</span><span style="display:flex;flex-direction:column;align-items:center;gap:1px;padding:11px 18px;border-radius:999px;background:#2B1A12;color:#FBF3EA;font:600 14px/1.2 Manrope;white-space:nowrap">Sliced 15mm</span></div>
+          </div>
+          <div style="height:48px;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1.5px #EDE2E4;display:flex;align-items:center;gap:8px;padding:0 14px;font:500 15px Manrope;color:#A08A80"><at-icon name="note" size="17" color="#9D5C1D"></at-icon>Note for Atas</div>
+        </div>
+        <at-glass radius="36" style="position:absolute;left:12px;right:12px;bottom:26px;padding:12px">
+          <div style="display:flex;gap:10px;align-items:center">
+            <div style="display:inline-flex;align-items:center;gap:12px;padding:6px;border-radius:999px;background:#fff"><span style="width:28px;height:28px;border-radius:50%;background:#F9CFAF;display:flex;align-items:center;justify-content:center"><at-icon name="minus" size="15" sw="2.5"></at-icon></span><span style="font:700 17px Roundo,sans-serif">1</span><span style="width:28px;height:28px;border-radius:50%;background:#F9CFAF;display:flex;align-items:center;justify-content:center"><at-icon name="plus" size="15" sw="2.5"></at-icon></span></div>
+            <span style="flex:1;display:flex;align-items:center;justify-content:center;padding:14px 0;border-radius:999px;background:#9D5C1D;border:4px solid #9D5C1D;color:#FBF3EA;font:600 16px/1.25 Manrope;white-space:nowrap">Add · Rp 33.000</span>
+          </div>
+        </at-glass>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+  </div>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const M = [
+      ['R','Rani','· host','Rp 57.000','2× Butter Croissant · 1× Classic Sourdough · 1000 gr · Sliced 15mm'],
+      ['D','Dimas','','Rp 44.000','1× Almond Croissant · 2× Cinnamon Roll 60 gr'],
+      ['K','Kevin','','Rp 22.000','1× Brioche Bun · 1× English Muffin · 1× Pretzel 120 gr'],
+      ['N','Nadia','','Rp 0',''],
+      ['A','Arief','','Rp 0','']
+    ];
+    const members = M.map(([i,name,role,sub,items]) => ({ i, name, role, sub, items: items || 'Nothing in the oven…yet!', ink: items ? '#5A4237' : '#A08A80', splitOp: items ? 1 : 0 }));
+    const hostMembers = [['R','Rani','· you','Rp 57.000','2× Butter Croissant · 1× Classic Sourdough · 1000 gr · Sliced 15mm'], M[1], ['P','Putri','','Rp 32.000','2× Pain Au Chocolate'], M[2], M[3], M[4]]
+      .map(([i,name,role,sub,items]) => ({ i, name, role, sub, items: items || 'Nothing in the oven…yet!', ink: items ? '#5A4237' : '#A08A80', waOp: name === 'Rani' ? 0 : 1 }));
+    const hostMenu = [
+      ['Lock order','lock','#2B1A12'],['Request edits','edit','#2B1A12'],['Edit delivery details','pin','#2B1A12'],['Share invite','share','#2B1A12'],['Remove a member','user','#2B1A12'],['Cancel group','trash','#E40014']
+    ].map(([label,icon,c],i,a) => ({ label, icon, c, sep: i===3 ? '1px solid rgba(43,26,18,.1)' : 'none' }));
+    const tl = [['Open','check','Thu 2 Oct, 08:02','done'],['Locked','lock','Thu 2 Oct, 13:00 · at cutoff','now'],['Sent to Atas','','','todo'],['Confirmed by Atas','','','todo'],['Delivered','','Fri 3 Oct, 10:00 WITA','todo'],['Closed','','','todo']];
+    const timelineLocked = tl.map(([label,icon,meta,st],i) => ({ label, meta, icon: icon || 'more', ic: st==='now' ? '#FBF3EA' : '#2B1A12',
+      dot: st==='done' ? '#E9FF83' : st==='now' ? '#9D5C1D' : '#fff', ring: st==='todo' ? 'inset 0 0 0 2px #D1B6BB' : st==='now' ? '0 0 0 5px #F9CFAF' : 'inset 0 0 0 1.5px #BCD947',
+      line: i===tl.length-1 ? 'transparent' : (st==='done' ? '#BCD947' : '#EDE2E4'), ink: st==='todo' ? '#A08A80' : '#2B1A12' }));
+    const tabs = ['Viennoiseries','Pastry cakes','Sourdough','Bakes','Gluten-free'].map((name,i) => ({ name, bg: i===0 ? '#2B1A12' : '#fff', fg: i===0 ? '#FBF3EA' : '#2B1A12' }));
+    const viennoiseries = [
+      ['Butter Croissant','Rp 12.000','','best','#F9CFAF',1,'#F9CFAF','plus'],
+      ['Almond Croissant','Rp 24.000','','soldout','#EDE2E4',.55,'#EDE2E4','x'],
+      ['Pain Au Chocolate','Rp 16.000','','none','#F9CFAF',1,'#E9FF83','check'],
+      ['Cinnamon Roll 60 gr','Rp 10.000','','new','#E9FF83',1,'#F9CFAF','plus']
+    ].map(([name,price,was,tag,bg,op,btn,btnIcon]) => ({ name, price, was, tag, bg, op, btn, btnIcon }));
+    const cakes = [
+      ['Burnt Cheesecake 20 cm','Rp 260.000','','best','#F9CFAF'],
+      ['Classic Brownie with Salted Caramel 20x20cm','Rp 144.500','Rp 170.000','promo','#F9B7D2']
+    ].map(([name,price,was,tag,bg]) => ({ name, price, was, tag, bg }));
+    const sourdough = [
+      ['Classic Sourdough','from Rp 21.000','best','#F9CFAF'],['Wholewheat Sourdough 1000 gr','Rp 37.000','none','#EDE2E4'],
+      ['Multigrain Sourdough 1000 gr','Rp 40.000','none','#E9FF83'],['Focaccia','Rp 35.000','new','#F9B7D2']
+    ].map(([name,price,tag,bg]) => ({ name, price, tag, bg }));
+    const skel = ['60%','40%','70%','50%'].map(w => ({ w }));
+    return { members, hostMembers, hostMenu, timelineLocked, tabs, viennoiseries, cakes, sourdough, skel };
+  }
+}
+</script>
+</body>
+</html>

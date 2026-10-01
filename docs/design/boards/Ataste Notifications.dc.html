@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=roundo@1&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&family=Shrikhand&display=swap">
+<script src="./image-slot.js"></script>
+<script src="./ataste-art.js"></script>
+<style>body{margin:0;background:#F2E9DF;color:#2B1A12;font-family:Manrope,sans-serif;-webkit-font-smoothing:antialiased}a{color:#9D5C1D;text-decoration:none}a:hover{color:#2B1A12}</style>
+</helmet>
+
+<section style="padding:56px 64px 32px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid rgba(43,26,18,.1)">
+  <span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase;color:#9D5C1D">Ataste · Notifications</span>
+  <h1 style="margin:0;font:700 56px/1 Roundo,sans-serif;letter-spacing:-.02em">Lock screen &amp; banners</h1>
+  <p style="margin:0;max-width:780px;font:500 15px/1.5 Manrope;color:#5A4237">All 22 events from section 5, plus the pay-first and order-first versions of #3 and #14. Titles lead with what happened; bodies say what to do next. System font, Ataste icon (the icon slot mirrors the brand board). All times are WITA (Bali). Boards: <a href="Ataste Screens 1 Onboarding.dc.html">1</a> · <a href="Ataste Screens 2 Home and Groups.dc.html">2</a> · <a href="Ataste Screens 3 Group and Menu.dc.html">3</a> · <a href="Ataste Screens 4 Split and Review.dc.html">4</a> · <a href="Ataste Screens 5 Send Bill and After.dc.html">5</a> · <a href="Ataste Screens 6 History Profile and States.dc.html">6</a> · <a href="Ataste Flow Map.dc.html">Flow map</a></p>
+</section>
+
+<section style="padding:48px 64px 24px">
+  <h2 style="margin:0 0 28px;font:700 28px/1 Roundo,sans-serif">On the lock screen</h2>
+  <div style="display:flex;flex-wrap:wrap;gap:56px 48px;align-items:flex-start">
+    <sc-for list="{{ locks }}" as="L" hint-placeholder-count="2">
+      <div id="{{ L.id }}" style="display:flex;flex-direction:column;gap:14px">
+        <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><span style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">{{ L.id }}</span><b style="color:#2B1A12">{{ L.title }}</b> · {{ L.note }}</div>
+        <div data-screen-label="{{ L.id }} lock screen" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:{{ L.wall }};box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+          <div style="position:absolute;width:560px;height:560px;left:-80px;top:120px;border-radius:50%;border:2px dashed rgba(251,243,234,.25)"></div>
+          <div style="position:absolute;width:300px;height:300px;right:-90px;top:-60px;border-radius:50%;background:rgba(249,207,175,.18)"></div>
+          <at-status dark style="position:absolute;top:0;left:0;z-index:2"></at-status>
+          <div style="position:absolute;top:70px;left:0;right:0;display:flex;flex-direction:column;align-items:center;color:#FBF3EA">
+            <span style="font:600 19px -apple-system,system-ui,sans-serif">{{ L.date }}</span>
+            <span style="font:700 96px/1 Roundo,sans-serif;letter-spacing:-.02em">{{ L.time }}</span>
+          </div>
+          <div style="position:absolute;left:10px;right:10px;bottom:100px;display:flex;flex-direction:column;gap:8px">
+            <sc-for list="{{ L.items }}" as="n" hint-placeholder-count="5">
+              <div style="display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:24px;background:rgba(251,243,234,.74);backdrop-filter:blur(22px) saturate(1.6);-webkit-backdrop-filter:blur(22px) saturate(1.6);box-shadow:inset 0 1px 0 rgba(255,255,255,.8)">
+                <div style="position:relative;width:38px;height:38px;border-radius:9px;background:#9D5C1D;overflow:hidden;flex:none"><image-slot id="icon-head" src="uploads/art/icon-head.png" fit="cover" shape="rect" placeholder=" " style="position:absolute;left:6px;top:3px;width:26px;height:26px"></image-slot><span style="position:absolute;left:5px;right:5px;top:27px;height:7px;border-radius:5px;background:#FBF3EA;box-shadow:0 1.5px 0 #2B1A12"></span></div>
+                <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
+                  <div style="display:flex;justify-content:space-between;gap:8px"><span style="font:600 15px/1.3 -apple-system,system-ui,sans-serif;color:#000">{{ n.title }}</span><span style="font:400 13px/1.3 -apple-system,system-ui,sans-serif;color:rgba(0,0,0,.5);white-space:nowrap">{{ n.t }}</span></div>
+                  <span style="font:400 15px/1.3 -apple-system,system-ui,sans-serif;color:#000">{{ n.body }}</span>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <div style="position:absolute;left:44px;right:44px;bottom:42px;display:flex;justify-content:space-between">
+            <span style="width:50px;height:50px;border-radius:50%;background:rgba(0,0,0,.25);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center"><at-icon name="sliders" size="20" color="#fff"></at-icon></span>
+            <span style="width:50px;height:50px;border-radius:50%;background:rgba(0,0,0,.25);backdrop-filter:blur(10px);display:flex;align-items:center;justify-content:center"><at-icon name="camera" size="20" color="#fff"></at-icon></span>
+          </div>
+          <at-homebar dark style="position:absolute;bottom:0;left:0"></at-homebar>
+        </div>
+      </div>
+    </sc-for>
+
+    <div id="N-3" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><span style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">N-3</span><b style="color:#2B1A12">Banner over the app</b> · #5 reaches Dimas while he browses</div>
+      <div data-screen-label="N-3 Banner in app" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <div style="position:absolute;top:122px;left:20px;right:20px;display:flex;flex-direction:column;gap:2px"><span style="font:500 15px Manrope;color:#5A4237">Thursday, 2 October</span><h2 style="margin:0;font:700 40px/1.05 Roundo,sans-serif">Hi, Dimas</h2></div>
+        <at-marquee text="FRESH FROM ATAS • GROUP UP • SAVE ON ONGKIR • " bg="#2B1A12" fg="#FBF3EA" speed="30" style="position:absolute;top:214px;left:0;right:0"></at-marquee>
+        <div style="position:absolute;top:278px;left:16px;right:16px;display:grid;grid-template-columns:1fr 1fr;gap:12px"><div style="height:200px;border-radius:32px;background:#F9B7D2"></div><div style="height:200px;border-radius:32px;background:#9D5C1D"></div></div>
+        <div style="position:absolute;top:500px;left:16px;right:16px;height:220px;border-radius:32px;background:#fff"></div>
+        <div style="position:absolute;top:54px;left:10px;right:10px;display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:24px;background:rgba(251,243,234,.82);backdrop-filter:blur(22px) saturate(1.6);-webkit-backdrop-filter:blur(22px) saturate(1.6);box-shadow:inset 0 1px 0 rgba(255,255,255,.9),0 12px 30px rgba(43,26,18,.22)">
+          <div style="position:relative;width:38px;height:38px;border-radius:9px;background:#9D5C1D;overflow:hidden;flex:none"><image-slot id="icon-head" src="uploads/art/icon-head.png" fit="cover" shape="rect" placeholder=" " style="position:absolute;left:6px;top:3px;width:26px;height:26px"></image-slot><span style="position:absolute;left:5px;right:5px;top:27px;height:7px;border-radius:5px;background:#FBF3EA;box-shadow:0 1.5px 0 #2B1A12"></span></div>
+          <div style="flex:1;display:flex;flex-direction:column;gap:1px"><div style="display:flex;justify-content:space-between"><span style="font:600 15px/1.3 -apple-system,system-ui,sans-serif">Rani asked you to edit an item</span><span style="font:400 13px -apple-system,system-ui,sans-serif;color:rgba(0,0,0,.5)">now</span></div><span style="font:400 15px/1.3 -apple-system,system-ui,sans-serif">Almond Croissant: “Croissant sold out today, can you swap it?”</span></div>
+        </div>
+        <at-tabbar active="home" style="position:absolute;left:0;right:0;bottom:30px"></at-tabbar>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding:48px 64px 64px">
+  <h2 style="margin:0 0 8px;font:700 28px/1 Roundo,sans-serif">Every notification</h2>
+  <p style="margin:0 0 28px;font:500 14px Manrope;color:#7A6257">Numbered as in the brief. Pay-first and order-first wording shown for #3 and #14.</p>
+  <div style="background:#2B1A12;border-radius:40px;padding:40px;display:grid;grid-template-columns:repeat(3,380px);gap:28px 28px;width:max-content">
+    <sc-for list="{{ all }}" as="n" hint-placeholder-count="24">
+      <div style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:8px;color:#FBF3EA">
+          <span style="min-width:28px;height:22px;padding:0 6px;box-sizing:border-box;border-radius:999px;background:{{ n.badge }};color:#2B1A12;display:flex;align-items:center;justify-content:center;font:700 12px Roundo,sans-serif">{{ n.no }}</span>
+          <span style="flex:1;font:600 13px Manrope">{{ n.event }}</span>
+          <span style="font:600 10px/1 Manrope;letter-spacing:.04em;text-transform:uppercase;color:#D1B6BB;white-space:nowrap">{{ n.who }}</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:24px;background:rgba(251,243,234,.9);box-shadow:inset 0 1px 0 rgba(255,255,255,.8)">
+          <div style="position:relative;width:38px;height:38px;border-radius:9px;background:#9D5C1D;overflow:hidden;flex:none"><image-slot id="icon-head" src="uploads/art/icon-head.png" fit="cover" shape="rect" placeholder=" " style="position:absolute;left:6px;top:3px;width:26px;height:26px"></image-slot><span style="position:absolute;left:5px;right:5px;top:27px;height:7px;border-radius:5px;background:#FBF3EA;box-shadow:0 1.5px 0 #2B1A12"></span></div>
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
+            <div style="display:flex;justify-content:space-between;gap:8px"><span style="font:600 15px/1.3 -apple-system,system-ui,sans-serif;color:#000">{{ n.title }}</span><span style="font:400 13px/1.3 -apple-system,system-ui,sans-serif;color:rgba(0,0,0,.5)">{{ n.t }}</span></div>
+            <span style="font:400 15px/1.3 -apple-system,system-ui,sans-serif;color:#000">{{ n.body }}</span>
+          </div>
+          <sc-if value="{{ n.thumb }}" hint-placeholder-val="{{ false }}"><span style="position:relative;width:44px;height:44px;border-radius:10px;overflow:hidden;background:#EDE2E4;flex:none"><span style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(43,26,18,.1) 0 4px,transparent 4px 8px)"></span><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:500 7px ui-monospace,Menlo,monospace;color:#7A6257">photo</span></span></sc-if>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const N = {
+      1:['Someone joined your group','Host','Nadia joined Friday Treats','6 members now · Rp 155.000 of Rp 200.000.','11:58'],
+      2:['Cutoff in 30 minutes','All members','Friday Treats locks in 30 minutes','Get your order in before 13:00. Rp 45.000 to go for the ongkir discount.','12:30'],
+      '3a':['Order locked · order first','All members','Friday Treats is locked','Rani is checking the order. The order is in — pay when you can, once the bill is final.','13:00'],
+      '3b':['Order locked · pay first','All members','Friday Treats is locked','Pay now so Rani can order. Your items come to Rp 97.000.','13:00'],
+      4:['Host unlocked the group','All members','Rani unlocked Friday Treats','New cutoff 14:30. Add or change items until then.','13:10'],
+      5:['Host asked you to edit an item','That member','Rani asked you to edit an item','Almond Croissant: “Croissant sold out today, can you swap it?”','13:06'],
+      6:['Member finished editing','Host','Dimas finished editing','Every edit is done. Lock Friday Treats again to send it.','13:21'],
+      7:['Item sold out on the menu','Member, host','Almond Croissant just sold out','It’s in your Friday Treats order. Swap it before Rani sends the order.','12:52'],
+      8:['Someone proposed splitting your item','Item owner','Putri wants to split your Burnt Cheesecake','You 50%, Putri 25%, Kevin 25%. Accept or decline.','12:14'],
+      9:['You were invited to share an item','Invitees','Putri invited you to share a Burnt Cheesecake','Your share: 3 of 12 slices · Rp 65.000.','12:20'],
+      '10a':['Split accepted','Proposer, owner','Kevin accepted the cheesecake split','All 3 are in. Burnt Cheesecake is split 3 ways under Rani.','12:31'],
+      '10b':['Split declined','Proposer, owner','Rani declined the split','Burnt Cheesecake stays whole on Rani’s order.','12:18'],
+      11:['Split cancelled (item removed)','Everyone in the split','Cheesecake split cancelled','Rani removed Burnt Cheesecake 20 cm, so your Rp 65.000 share is gone.','12:40'],
+      12:['Rp 200k reached','All members','Discount unlocked!','Friday Treats hit Rp 205.000. The ongkir discount applies when Rani sends the order.','12:08'],
+      13:['Order sent to Atas','All members','Order sent to Atas','Rani sent Friday Treats to Atas Artisan. Delivery Fri 3 Oct, 10:00 WITA.','13:42'],
+      '14a':['Bill final · order first','All members','Atas confirmed — your bill is final: Rp 99.500','The order is in — pay when you can. Transfer to Rani, BCA.','14:05'],
+      '14b':['Bill final · pay first','All members','Atas confirmed — your bill is final: Rp 99.500','Pay now so Rani can order.','14:05'],
+      15:['Member says they’ve paid','Host','Putri says she’s paid Rp 99.500','Receipt attached. Check BCA and mark it paid.','14:22'],
+      16:['Payment confirmed by host','That member','Rani confirmed your payment','Rp 99.500 received. You’re all set for Friday.','14:40'],
+      17:['Payment reminder (nudge)','That member','Reminder from Rani: Rp 89.500','Friday Treats is waiting on your payment. BCA 5271 0099 34.','15:15'],
+      18:['Everyone has paid','Host','Everyone has paid','Rp 306.500 collected for Friday Treats.','Fri 08:02'],
+      19:['Order delivered','All members','Your Atas order arrived','Kevin confirmed delivery at Academy Bali, 10:12.','10:12'],
+      20:['You were removed','That member','You were removed from Friday Treats','Rani removed you, so your 2 Cookies 100 gr are out of the order.','12:45'],
+      21:['Group cancelled','All members','Friday Treats was cancelled','Rani cancelled the group. Nothing was sent to Atas.','13:30'],
+      22:['Order closed','All members','Friday Treats is closed','Thanks for ordering together. Reorder anytime from History.','10:40']
+    };
+    const order = [1,2,'3a','3b',4,5,6,7,8,9,'10a','10b',11,12,13,'14a','14b',15,16,17,18,19,20,21,22];
+    const badges = { host:'#F39E60', member:'#F9CFAF', all:'#E9FF83', split:'#F9B7D2' };
+    const all = order.map(k => { const [event,who,title,body,t] = N[k];
+      const b = who==='Host' ? badges.host : who==='All members' ? badges.all : /split|owner|Invitee|Proposer/i.test(who) ? badges.split : badges.member;
+      return { no: '#'+k, event, who, title, body, t, badge: b, thumb: k===19 }; });
+    const pick = (ks, times) => ks.map((k,i) => ({ title: N[k][2], body: N[k][3], t: times[i] }));
+    const locks = [
+      { id:'N-1', title:'Member lock screen', note:'Putri, Friday morning', wall:'#9D5C1D', date:'Friday 3 October', time:'10:14', items: pick([19,16,'14a',13,12],['now','Thu','Thu','Thu','Thu']) },
+      { id:'N-2', title:'Host lock screen', note:'Rani, Thursday evening', wall:'#2B1A12', date:'Thursday 2 October', time:'14:24', items: pick([15,6,8,1],['now','1h ago','2h ago','2h ago']) }
+    ];
+    return { all, locks };
+  }
+}
+</script>
+</body>
+</html>

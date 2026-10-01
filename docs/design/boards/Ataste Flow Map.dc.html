@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=roundo@1&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&family=Shrikhand&display=swap">
+<script src="./ataste-art.js"></script>
+<style>body{margin:0;background:#F2E9DF;color:#2B1A12;font-family:Manrope,sans-serif;-webkit-font-smoothing:antialiased}a{color:#9D5C1D;text-decoration:none}a:hover{color:#2B1A12}</style>
+</helmet>
+
+<section style="padding:56px 64px 32px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid rgba(43,26,18,.1)">
+  <span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase;color:#9D5C1D">Ataste · Flow map</span>
+  <h1 style="margin:0;font:700 56px/1 Roundo,sans-serif;letter-spacing:-.02em">How the screens connect</h1>
+  <p style="margin:0;max-width:780px;font:500 15px/1.5 Manrope;color:#5A4237">Left to right follows one group order from login to closed. The band on top shows which order state each phase lives in. Every card links to its screen. State variants (errors, empty, skeleton, confirms) sit next to their parent screen on the boards and aren’t drawn here.</p>
+  <div style="display:flex;gap:16px;flex-wrap:wrap;margin-top:6px;font:600 12px Manrope;white-space:nowrap">
+    <span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;border-radius:4px;background:#fff;box-shadow:inset 0 0 0 1.5px #D1B6BB"></span>Anyone</span>
+    <span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;border-radius:4px;background:#F39E60"></span>Host only</span>
+    <span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;border-radius:4px;background:#F9B7D2"></span>Member only</span>
+    <span style="display:flex;align-items:center;gap:6px"><span style="width:22px;height:0;border-top:2px solid #9D5C1D"></span>Main path</span>
+    <span style="display:flex;align-items:center;gap:6px"><span style="width:22px;height:0;border-top:2px dashed #A08A80"></span>Branch</span>
+  </div>
+</section>
+
+<section style="padding:40px 64px 72px">
+  <div style="position:relative;width:{{ W }};height:{{ H }};background:#FBF3EA;border-radius:40px;box-shadow:0 1px 3px rgba(43,26,18,.08)">
+    <sc-for list="{{ phases }}" as="p" hint-placeholder-count="7">
+      <div style="position:absolute;left:{{ p.x }};top:24px;width:220px;display:flex;flex-direction:column;gap:8px">
+        <span style="font:700 20px/1 Roundo,sans-serif">{{ p.name }}</span>
+        <div style="display:flex;gap:4px;flex-wrap:wrap;min-height:22px">
+          <sc-for list="{{ p.states }}" as="s" hint-placeholder-count="1"><at-tag kind="{{ s }}" size="s"></at-tag></sc-for>
+        </div>
+      </div>
+    </sc-for>
+    {{ edges }}
+    <sc-for list="{{ nodes }}" as="n" hint-placeholder-count="40">
+      <a href="{{ n.href }}" style="position:absolute;left:{{ n.x }};top:{{ n.y }};width:220px;height:64px;box-sizing:border-box;border-radius:20px;background:{{ n.bg }};box-shadow:{{ n.ring }};padding:10px 14px;display:flex;flex-direction:column;justify-content:center;gap:3px;color:#2B1A12">
+        <div style="display:flex;align-items:center;gap:8px;width:100%"><span style="flex:none;font:600 10px ui-monospace,Menlo,monospace;padding:2px 6px;border-radius:5px;background:rgba(43,26,18,.08)">{{ n.id }}</span><span style="flex:1;min-width:0;font:700 14px/1.2 Manrope;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ n.name }}</span></div>
+        <span style="font:500 11px/1.2 Manrope;color:#5A4237;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ n.note }}</span>
+      </a>
+    </sc-for>
+  </div>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const CW = 270, X0 = 32, Y0 = 110, RH = 92, NW = 220, NH = 64;
+    const files = { '1':'Ataste Screens 1 Onboarding.dc.html','2':'Ataste Screens 2 Home and Groups.dc.html','3':'Ataste Screens 3 Group and Menu.dc.html','4':'Ataste Screens 4 Split and Review.dc.html','5':'Ataste Screens 5 Send Bill and After.dc.html','6':'Ataste Screens 6 History Profile and States.dc.html' };
+    const N = [
+      ['1-1','Splash','Giraffe loader','any',0,0],['1-2','Welcome','Continue with WhatsApp','any',0,1],['1-3','Verify via WhatsApp','Code ATASTE 4K9X · no number typed','any',0,2],
+      ['1-4a','Waiting','timed out 1-4c · no WhatsApp 1-4d','any',0,3],['1-4b','Verified','Not you? → try again','any',0,4],['1-5','Your name','','any',0,5],['1-6','Notification primer','then system prompt','any',0,6],
+      ['2-1','Home','active orders · empty 2-2','any',1,0],['2-3','Paste a join link','clipboard detected','any',1,1],['6-1','History','empty 6-3 · skeleton 6-4','any',1,3],['6-2','History detail','Reorder my items','any',1,4],['6-5','Profile','picture 6-5b/c · payment · language','any',1,5],
+      ['2-4','Create group','late cutoff 2-4e · address 2-4f · created 2-4d','host',2,0],['2-5','Share / invite','link · QR · copy','host',2,1],['2-7','Web fallback','Safari · TestFlight','member',2,2],['2-6','Join preview','logged out · locked · already in','member',2,3],['3-8','Personal order','Order for myself','any',2,5],
+      ['3-1','Group order','member 3-1 · host 3-2 · unlocked 3-3','any',3,0],['3-9','Menu','stale 3-10 · skeleton 3-11','any',3,1],['3-13','Product detail','options 3-16 · promo 3-14 · sold out 3-15','any',3,2],
+      ['4-1','Propose split','custom shares · error 4-1e','any',3,3],['4-2','Owner review','accept / decline','any',3,4],['4-3','Invitee accept','each named person','any',3,5],['3-6','Leave group','Open only','member',3,6],
+      ['4-5','Lock & review','grouped by person','host',4,0],['4-6','Request edits','member · item · reason','host',4,1],['4-9','Member edit request','replace or remove','member',4,2],['4-7','Waiting on edits','Edits requested','host',4,3],['4-8','Lock again','all edits done','host',4,4],
+      ['5-1','WhatsApp preview','Bahasa Indonesia · English 5-1b','host',5,0],['5-2','Sent to Atas','waiting for reply','host',5,1],['5-3','Confirm with Atas','ongkir + discount','host',5,2],
+      ['5-4','Confirmed by Atas','bill frozen · timeline','any',6,0],['5-5','My bill','not final 5-6 · says paid 5-7 · paid 5-8','member',6,1],['5-9','Payment board','collected vs outstanding','host',6,2],['5-10','Receipt','Mark paid','host',6,3],['5-11','Confirm delivery','camera → preview 5-12','any',6,4],['5-13','Delivered','host closes → Closed','any',6,5]
+    ];
+    const pos = {};
+    const nodes = N.map(([id,name,note,role,c,r]) => {
+      const x = X0 + c*CW, y = Y0 + r*RH; pos[id] = { x, y, c, r };
+      return { id, name, note, x: x+'px', y: y+'px', href: files[id[0]] + '#' + id,
+        bg: role==='host' ? '#FDE4D2' : role==='member' ? '#FDE6F0' : '#fff',
+        ring: role==='host' ? 'inset 0 0 0 2px #F39E60' : role==='member' ? 'inset 0 0 0 2px #F9B7D2' : 'inset 0 0 0 1.5px #D1B6BB' };
+    });
+    const E = [
+      ['1-1','1-2',1],['1-2','1-3',1],['1-3','1-4a',1,'Open WhatsApp'],['1-4a','1-4b',1,'message arrives'],['1-4b','1-5',1],['1-5','1-6',1],['1-6','2-1',1],['1-4b','1-3',0,'Not you?'],
+      ['2-1','2-3'],['2-3','2-6',0,'link'],['2-1','6-1'],['6-1','6-2'],['2-1','6-5'],['2-1','3-8',0,'for myself'],
+      ['2-1','2-4',1,'start group'],['2-4','2-5',1],['2-5','2-7',0,'no app'],['2-7','2-6'],['2-5','3-1',1],['2-6','3-1',0,'Join'],['3-8','3-9'],
+      ['3-1','3-9',1,'Add items'],['3-9','3-13',1],['3-13','3-1'],['3-1','4-1'],['4-1','4-2'],['4-2','4-3'],['3-1','3-6'],
+      ['3-1','4-5',1,'Lock order'],['4-5','4-6'],['4-6','4-9'],['4-9','4-7'],['4-7','4-8'],['4-5','5-1',1,'Send to Atas'],['4-8','5-1'],
+      ['5-1','5-2',1,'Open WhatsApp'],['5-2','5-3',1],['5-3','5-4',1,'Atas confirmed'],
+      ['5-4','5-5'],['5-5','5-9',0,'I’ve paid'],['5-9','5-10'],['5-10','5-11'],['5-11','5-13',1],['5-13','6-2',0,'Closed → History']
+    ];
+    const h = React.createElement;
+    const els = [h('defs',{key:'d'},
+      h('marker',{id:'am',viewBox:'0 0 10 10',refX:8,refY:5,markerWidth:7,markerHeight:7,orient:'auto-start-reverse'},h('path',{d:'M0 0L10 5L0 10z',fill:'#9D5C1D'})),
+      h('marker',{id:'ab',viewBox:'0 0 10 10',refX:8,refY:5,markerWidth:7,markerHeight:7,orient:'auto-start-reverse'},h('path',{d:'M0 0L10 5L0 10z',fill:'#A08A80'})))];
+    E.forEach(([a,b,main,label],i) => {
+      const A = pos[a], B = pos[b]; let d, lx, ly;
+      if (A.c === B.c) {
+        if (B.r === A.r+1) { const x = A.x+NW/2; d = `M${x} ${A.y+NH} L${x} ${B.y-2}`; lx = x+8; ly = (A.y+NH+B.y)/2+4; }
+        else { const x1 = A.x+NW, y1 = A.y+NH/2, y2 = B.y+NH/2, bulge = 34 + Math.abs(B.r-A.r)*6; d = `M${x1} ${y1} C${x1+bulge} ${y1} ${x1+bulge} ${y2} ${x1+3} ${y2}`; lx = x1+bulge-4; ly = (y1+y2)/2; }
+      } else if (B.c > A.c) {
+        const x1 = A.x+NW, y1 = A.y+NH/2, x2 = B.x-3, y2 = B.y+NH/2, m = (x1+x2)/2;
+        d = `M${x1} ${y1} C${m} ${y1} ${m} ${y2} ${x2} ${y2}`; lx = m; ly = (y1+y2)/2 - 6;
+      } else {
+        const x1 = A.x+NW/2, y1 = A.y+NH, x2 = B.x+NW/2, y2 = B.y+NH, low = Math.max(y1,y2)+120;
+        d = `M${x1} ${y1} C${x1} ${low} ${x2} ${low} ${x2} ${y2+3}`; lx = (x1+x2)/2; ly = low-26;
+      }
+      els.push(h('path',{key:'e'+i,d,fill:'none',stroke: main ? '#9D5C1D' : '#A08A80',strokeWidth: main ? 2.2 : 1.6,strokeDasharray: main ? null : '5 4',markerEnd: main ? 'url(#am)' : 'url(#ab)'}));
+      if (label) els.push(h('text',{key:'t'+i,x:lx,y:ly,textAnchor: A.c===B.c ? 'start' : 'middle',style:{font:'600 11px Manrope,sans-serif',fill:'#5A4237',paintOrder:'stroke',stroke:'#FBF3EA',strokeWidth:5,strokeLinejoin:'round'}},label));
+    });
+    const W = X0 + 7*CW, Hh = Y0 + 7*RH + 160;
+    const edges = h('svg',{width:W,height:Hh,style:{position:'absolute',left:0,top:0,overflow:'visible',pointerEvents:'none'}},els);
+    const phases = [['Log in',[]],['Home',[]],['Start or join',[]],['Order together',['open']],['Review',['locked','edits']],['Send',['sent']],['Pay & receive',['confirmed','delivered','closed']]]
+      .map(([name,states],c) => ({ name, states, x: (X0 + c*CW)+'px' }));
+    return { nodes, edges, phases, W: W+'px', H: Hh+'px' };
+  }
+}
+</script>
+</body>
+</html>

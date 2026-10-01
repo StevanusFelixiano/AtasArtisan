@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=roundo@1&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&family=Shrikhand&display=swap">
+<script src="./image-slot.js"></script>
+<script src="./ataste-art.js"></script>
+<style>body{margin:0;background:#F2E9DF;color:#2B1A12;font-family:Manrope,sans-serif;-webkit-font-smoothing:antialiased}a{color:#9D5C1D;text-decoration:none}a:hover{color:#2B1A12}</style>
+</helmet>
+
+<section style="padding:56px 64px 32px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid rgba(43,26,18,.1)">
+  <span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase;color:#9D5C1D">Ataste · Screens · 4 of 6</span>
+  <h1 style="margin:0;font:700 56px/1 Roundo,sans-serif;letter-spacing:-.02em">Split an item, review &amp; edits</h1>
+  <p style="margin:0;max-width:780px;font:500 15px/1.5 Manrope;color:#5A4237">Sections 4.9 to 4.11. Rani’s Burnt Cheesecake 20 cm (Rp 260.000) is split with Putri and Kevin; it stays under Rani’s name for Atas. The order then totals Rp 489.000. All times are WITA (Bali). Boards: <a href="Ataste Screens 1 Onboarding.dc.html">1 Onboarding</a> · <a href="Ataste Screens 2 Home and Groups.dc.html">2 Home &amp; groups</a> · <a href="Ataste Screens 3 Group and Menu.dc.html">3 Group &amp; menu</a> · <a href="Ataste Screens 5 Send Bill and After.dc.html">5 Send, bill &amp; after</a> · <a href="Ataste Screens 6 History Profile and States.dc.html">6 History &amp; profile</a> · <a href="Ataste Notifications.dc.html">Notifications</a> · <a href="Ataste Flow Map.dc.html">Flow map</a></p>
+</section>
+
+<section style="padding:48px 64px 24px">
+  <h2 style="margin:0 0 28px;font:700 28px/1 Roundo,sans-serif">4.9 Split an item</h2>
+  <div style="display:flex;flex-wrap:wrap;gap:56px 48px;align-items:flex-start">
+
+    <div id="4-1" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#4-1" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">4-1</a><b style="color:#2B1A12">Propose split</b> · Putri, custom shares adding to 100%</div>
+      <div data-screen-label="4-1 Propose split" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <div style="position:absolute;inset:0;background:rgba(43,26,18,.3)"></div>
+        <at-glass radius="40" style="position:absolute;left:8px;right:8px;top:62px;bottom:8px;padding:10px 18px">
+          <div style="display:flex;flex-direction:column;gap:14px">
+            <span style="align-self:center;width:36px;height:5px;border-radius:3px;background:#D1B6BB"></span>
+            <div style="display:flex;justify-content:space-between;align-items:center"><span style="font:600 16px Manrope;color:#9D5C1D">Cancel</span><span style="font:700 17px Manrope">Propose a split</span><span style="width:52px"></span></div>
+            <div style="display:flex;gap:12px;align-items:center;padding:12px;border-radius:24px;background:#fff">
+              <at-photo size="56" bg="#F9CFAF"></at-photo>
+              <div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font:700 16px Manrope">Burnt Cheesecake 20 cm</span><span style="font:500 13px Manrope;color:#5A4237">Rp 260.000 · under Rani’s name</span></div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase;padding-left:4px">Who’s sharing</span>
+              <div style="display:flex;gap:8px;flex-wrap:wrap">
+                <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px 5px 5px;border-radius:999px;background:#2B1A12;color:#FBF3EA;font:600 14px Manrope"><at-avatar i="R" size="24"></at-avatar>Rani</span>
+                <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px 5px 5px;border-radius:999px;background:#2B1A12;color:#FBF3EA;font:600 14px Manrope"><at-avatar i="P" size="24"></at-avatar>You</span>
+                <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px 5px 5px;border-radius:999px;background:#2B1A12;color:#FBF3EA;font:600 14px Manrope"><at-avatar i="K" size="24"></at-avatar>Kevin</span>
+                <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px 5px 5px;border-radius:999px;background:#fff;box-shadow:inset 0 0 0 1.5px #D1B6BB;font:600 14px Manrope"><at-avatar i="D" size="24"></at-avatar>Dimas</span>
+                <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px 5px 5px;border-radius:999px;background:#fff;box-shadow:inset 0 0 0 1.5px #D1B6BB;font:600 14px Manrope"><at-avatar i="N" size="24"></at-avatar>Nadia</span>
+                <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px 5px 5px;border-radius:999px;background:#fff;box-shadow:inset 0 0 0 1.5px #D1B6BB;font:600 14px Manrope"><at-avatar i="A" size="24"></at-avatar>Arief</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <div style="display:flex;justify-content:space-between;align-items:baseline;padding:0 4px"><span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase">Shares · in slices of 12</span><span style="font:600 12px Manrope;color:#9D5C1D">Split evenly</span></div>
+              <div style="display:flex;height:16px;border-radius:999px;overflow:hidden;gap:2px">
+                <span style="flex:6;background:#F39E60"></span><span style="flex:3;background:#E9FF83"></span><span style="flex:3;background:#F9B7D2"></span>
+              </div>
+              <div style="background:#fff;border-radius:24px;padding:2px 14px">
+                <sc-for list="{{ shares }}" as="s" hint-placeholder-count="3">
+                  <div style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:{{ s.sep }}">
+                    <at-avatar i="{{ s.i }}" size="32"></at-avatar>
+                    <div style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font:700 15px Manrope">{{ s.name }}</span><span style="font:500 12px Manrope;color:#5A4237">{{ s.pct }} · {{ s.rp }}</span></div>
+                    <div style="display:inline-flex;align-items:center;gap:10px;padding:3px;border-radius:999px;background:#FBF3EA"><span style="width:28px;height:28px;border-radius:50%;background:#F9CFAF;display:flex;align-items:center;justify-content:center"><at-icon name="minus" size="14" sw="2.5"></at-icon></span><span style="font:700 15px Roundo,sans-serif;min-width:52px;text-align:center">{{ s.slices }}</span><span style="width:28px;height:28px;border-radius:50%;background:#F9CFAF;display:flex;align-items:center;justify-content:center"><at-icon name="plus" size="14" sw="2.5"></at-icon></span></div>
+                  </div>
+                </sc-for>
+              </div>
+              <span style="display:flex;align-items:center;gap:6px;padding-left:4px;font:600 13px Manrope;color:#5E7A00"><at-icon name="check" size="14" sw="3"></at-icon>12 of 12 slices · 100%</span>
+            </div>
+          </div>
+        </at-glass>
+        <div style="position:absolute;left:24px;right:24px;bottom:28px"><span style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 0;border-radius:999px;background:#9D5C1D;border:4px solid #9D5C1D;color:#FBF3EA;font:600 17px/1.25 Manrope"><at-icon name="pie" size="18"></at-icon>Send to Rani for approval</span></div>
+      </div>
+    </div>
+
+    <div id="4-1e" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#4-1e" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">4-1e</a><b style="color:#2B1A12">Propose split</b> · shares don’t add up</div>
+      <div data-screen-label="4-1e Split error" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <div style="position:absolute;inset:0;background:rgba(43,26,18,.3)"></div>
+        <at-glass radius="40" style="position:absolute;left:8px;right:8px;top:300px;bottom:8px;padding:18px 18px">
+          <div style="display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline;padding:0 4px"><span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase">Shares · in slices of 12</span><span style="font:600 12px Manrope;color:#9D5C1D">Split evenly</span></div>
+            <div style="display:flex;height:16px;border-radius:999px;overflow:hidden;gap:2px;background:repeating-linear-gradient(135deg,#EDE2E4 0 5px,#fff 5px 10px)">
+              <span style="flex:6;background:#F39E60"></span><span style="flex:2;background:#E9FF83"></span><span style="flex:3;background:#F9B7D2"></span><span style="flex:1"></span>
+            </div>
+            <div style="background:#fff;border-radius:24px;padding:2px 14px">
+              <div style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #EDE2E4"><at-avatar i="R" size="32"></at-avatar><div style="flex:1;display:flex;flex-direction:column"><span style="font:700 15px Manrope">Rani</span><span style="font:500 12px Manrope;color:#5A4237">50% · Rp 130.000</span></div><span style="font:700 15px Roundo,sans-serif">6 slices</span></div>
+              <div style="display:flex;align-items:center;gap:10px;padding:11px 0;border-bottom:1px solid #EDE2E4"><at-avatar i="P" size="32"></at-avatar><div style="flex:1;display:flex;flex-direction:column"><span style="font:700 15px Manrope">You</span><span style="font:500 12px Manrope;color:#5A4237">16.7% · Rp 43.333</span></div><span style="font:700 15px Roundo,sans-serif">2 slices</span></div>
+              <div style="display:flex;align-items:center;gap:10px;padding:11px 0"><at-avatar i="K" size="32"></at-avatar><div style="flex:1;display:flex;flex-direction:column"><span style="font:700 15px Manrope">Kevin</span><span style="font:500 12px Manrope;color:#5A4237">25% · Rp 65.000</span></div><span style="font:700 15px Roundo,sans-serif">3 slices</span></div>
+            </div>
+            <span style="display:flex;align-items:flex-start;gap:8px;padding:0 4px;font:600 14px/1.4 Manrope;color:#E40014"><at-icon name="alert" size="17"></at-icon>11 of 12 slices. Give the last slice to someone so the shares add up to 100%.</span>
+            <span style="margin-top:6px;display:flex;align-items:center;justify-content:center;padding:14px 0;border-radius:999px;background:#D1B6BB;border:4px solid #D1B6BB;color:#FBF3EA;font:600 17px/1.25 Manrope">Send to Rani for approval</span>
+          </div>
+        </at-glass>
+      </div>
+    </div>
+
+    <div id="4-2" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#4-2" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">4-2</a><b style="color:#2B1A12">Owner review</b> · Rani accepts or declines</div>
+      <div data-screen-label="4-2 Owner review" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back close style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:110px;left:50%;margin-left:-160px;transform:rotate(1.5deg);padding:10px;background:#9D5C1D;border-radius:10px;box-shadow:0 14px 30px rgba(43,26,18,.25)">
+          <div style="border:2px dashed rgba(251,243,234,.6);padding:5px;border-radius:4px"><image-slot id="paint-creation" src="uploads/art/paint-creation.png" fit="cover" shape="rect" placeholder="The Creation of Ataste" style="width:288px;height:166px;background:#F9CFAF"></image-slot></div>
+        </div>
+        <div style="position:absolute;top:338px;left:16px;right:16px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;flex-direction:column;gap:6px;padding:0 4px"><span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase;color:#9D5C1D">Putri proposed a split</span><span style="font:700 28px/1.1 Roundo,sans-serif">Share your Burnt Cheesecake?</span></div>
+          <div style="background:#fff;border-radius:32px;padding:6px 18px">
+            <sc-for list="{{ sharesOwner }}" as="s" hint-placeholder-count="3">
+              <div style="display:flex;align-items:center;gap:10px;padding:12px 0;border-bottom:{{ s.sep }}"><at-avatar i="{{ s.i }}" size="34"></at-avatar><div style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font:700 15px Manrope">{{ s.name }}</span><span style="font:500 12px Manrope;color:#5A4237">{{ s.slices }} · {{ s.pct }}</span></div><span style="font:700 16px Roundo,sans-serif">{{ s.rp }}</span></div>
+            </sc-for>
+          </div>
+          <span style="font:500 13px/1.45 Manrope;color:#5A4237;padding:0 4px">The cake stays under your name on the Atas order. Each person pays their share on their own bill.</span>
+        </div>
+        <div style="position:absolute;left:16px;right:16px;bottom:44px;display:flex;gap:10px">
+          <span style="flex:1;text-align:center;padding:14px 0;border-radius:999px;background:#FBF3EA;border:4px solid #F9CFAF;font:600 17px Manrope">Decline</span>
+          <span style="flex:1.4;display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 0;border-radius:999px;background:#9D5C1D;border:4px solid #9D5C1D;color:#FBF3EA;font:600 17px Manrope"><at-icon name="check" size="18" sw="3"></at-icon>Accept split</span>
+        </div>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+
+    <div id="4-3" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#4-3" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">4-3</a><b style="color:#2B1A12">Invitee accept</b> · Kevin’s share</div>
+      <div data-screen-label="4-3 Invitee accept" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back close style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:130px;left:24px;right:24px;display:flex;flex-direction:column;align-items:center;gap:16px;text-align:center">
+          <div style="width:170px;height:170px;border-radius:50%;background:#F9B7D2;overflow:hidden"><image-slot id="pose-splitting" src="uploads/art/pose-splitting.png" fit="cover" shape="circle" placeholder="giraffe · splitting cake" style="width:170px;height:170px"></image-slot></div>
+          <span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase;color:#9D5C1D">Putri invited you to share</span>
+          <span style="font:700 28px/1.1 Roundo,sans-serif">Burnt Cheesecake 20 cm</span>
+          <span style="font:500 14px Manrope;color:#5A4237">Under Rani · split 3 ways</span>
+        </div>
+        <div style="position:absolute;top:470px;left:16px;right:16px;background:#fff;border-radius:32px;padding:20px;display:flex;flex-direction:column;gap:12px;align-items:center">
+          <span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase">Your share</span>
+          <span style="font:700 48px/1 Roundo,sans-serif">Rp 65.000</span>
+          <span style="font:600 14px Manrope;color:#5A4237">3 of 12 slices · 25%</span>
+          <div style="align-self:stretch;display:flex;height:12px;border-radius:999px;overflow:hidden;gap:2px"><span style="flex:6;background:#EDE2E4"></span><span style="flex:3;background:#EDE2E4"></span><span style="flex:3;background:#F9B7D2;box-shadow:inset 0 0 0 2px #2B1A12;border-radius:0 999px 999px 0"></span></div>
+          <div style="align-self:stretch;display:flex;justify-content:space-between;font:500 12px Manrope;color:#7A6257"><span>Rani 6 · accepted</span><span>Putri 3 · accepted</span><span style="color:#2B1A12;font-weight:700">You 3</span></div>
+        </div>
+        <div style="position:absolute;left:16px;right:16px;bottom:44px;display:flex;gap:10px">
+          <span style="flex:1;text-align:center;padding:14px 0;border-radius:999px;background:#FBF3EA;border:4px solid #F9CFAF;font:600 17px Manrope">No thanks</span>
+          <span style="flex:1.4;display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 0;border-radius:999px;background:#9D5C1D;border:4px solid #9D5C1D;color:#FBF3EA;font:600 17px Manrope">I’m in</span>
+        </div>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+
+    <div id="4-4" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#4-4" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">4-4</a><b style="color:#2B1A12">Split states</b> · how the item reads in the group list</div>
+      <div style="width:400px;display:flex;flex-direction:column;gap:14px">
+        <sc-for list="{{ splitStates }}" as="s" hint-placeholder-count="5">
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="font:600 11px/1 Manrope;letter-spacing:.03em;text-transform:uppercase;color:#7A6257;padding-left:6px">{{ s.title }}</span>
+            <div style="background:#fff;border-radius:24px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;opacity:{{ s.op }}">
+              <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font:700 15px Manrope;text-decoration:{{ s.strike }}">Burnt Cheesecake 20 cm</span><at-tag kind="{{ s.tag }}" text="{{ s.tagText }}" size="s"></at-tag></div>
+              <span style="display:flex;align-items:center;gap:6px;font:500 13px Manrope;color:#5A4237"><at-icon name="pie" size="13"></at-icon>{{ s.line }}</span>
+              <div style="display:flex;gap:6px;flex-wrap:wrap">
+                <sc-for list="{{ s.people }}" as="p" hint-placeholder-count="3">
+                  <span style="display:inline-flex;align-items:center;gap:6px;padding:3px 10px 3px 3px;border-radius:999px;background:{{ p.bg }};box-shadow:{{ p.ring }};font:600 12px Manrope"><at-avatar i="{{ p.i }}" size="20"></at-avatar>{{ p.label }}</span>
+                </sc-for>
+              </div>
+            </div>
+          </div>
+        </sc-for>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding:48px 64px 24px">
+  <h2 style="margin:0 0 28px;font:700 28px/1 Roundo,sans-serif">4.10 Lock &amp; review <span style="font:500 14px Manrope;color:#7A6257">· host</span></h2>
+  <div style="display:flex;flex-wrap:wrap;gap:56px 48px;align-items:flex-start">
+
+    <div id="4-5" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#4-5" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">4-5</a><b style="color:#2B1A12">Review order</b> · grouped by person · full scroll</div>
+      <div data-screen-label="4-5 Review" style="position:relative;width:402px;height:1560px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back right="more" title="Review order" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:116px;left:16px;right:16px;display:flex;flex-direction:column;gap:14px">
+          <div style="background:#2B1A12;color:#FBF3EA;border-radius:32px;padding:20px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;justify-content:space-between;align-items:center"><at-tag kind="locked"></at-tag><span style="font:500 13px Manrope;color:#D1B6BB">6 people · 13 items</span></div>
+            <span style="font:700 44px/1 Roundo,sans-serif">Rp 489.000</span>
+            <div style="height:12px;border-radius:999px;background:#E9FF83"></div>
+            <span style="display:flex;align-items:center;gap:6px;font:600 14px Manrope;color:#E9FF83"><at-icon name="check" size="15" sw="3"></at-icon>Rp 289.000 past the Rp 200.000 ongkir discount</span>
+          </div>
+          <div style="display:flex;gap:10px;align-items:center;padding:12px 14px;border-radius:16px;background:#F9CFAF"><at-icon name="alert" size="18"></at-icon><span style="flex:1;font:600 13px/1.4 Manrope">Almond Croissant is now sold out on the menu.</span><span style="font:700 13px Manrope;color:#9D5C1D">Ask Dimas</span></div>
+          <sc-for list="{{ review }}" as="m" hint-placeholder-count="6">
+            <div style="background:#fff;border-radius:28px;padding:14px 16px;display:flex;flex-direction:column;gap:6px">
+              <div style="display:flex;align-items:center;gap:10px;padding-bottom:6px;border-bottom:1px solid #EDE2E4"><at-avatar i="{{ m.i }}" size="30"></at-avatar><span style="flex:1;font:700 16px Manrope">{{ m.name }}</span><span style="font:700 16px Roundo,sans-serif">{{ m.sub }}</span></div>
+              <sc-for list="{{ m.items }}" as="it" hint-placeholder-count="2">
+                <div style="display:flex;align-items:center;gap:10px;padding:5px 0;border-radius:10px;background:{{ it.bg }}">
+                  <span style="font:700 14px Roundo,sans-serif;width:22px;color:#9D5C1D">{{ it.q }}</span>
+                  <div style="flex:1;min-width:0;display:flex;flex-direction:column"><span style="font:600 14px/1.3 Manrope">{{ it.name }}</span><span style="font:500 12px Manrope;color:{{ it.metaC }}">{{ it.meta }}</span></div>
+                  <span style="font:600 13px Manrope">{{ it.rp }}</span>
+                  <span style="width:28px;height:28px;border-radius:50%;background:#EDE2E4;display:flex;align-items:center;justify-content:center;flex:none"><at-icon name="edit" size="13"></at-icon></span>
+                </div>
+              </sc-for>
+            </div>
+          </sc-for>
+        </div>
+        <at-glass radius="36" style="position:absolute;left:12px;right:12px;bottom:26px;padding:12px">
+          <div style="display:flex;gap:10px">
+            <span style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:13px 0;border-radius:999px;background:#FBF3EA;border:4px solid #F9CFAF;font:600 15px Manrope"><at-icon name="edit" size="16"></at-icon>Request edits</span>
+            <span style="flex:1.2;display:flex;align-items:center;justify-content:center;gap:6px;padding:13px 0;border-radius:999px;background:#9D5C1D;border:4px solid #9D5C1D;color:#FBF3EA;font:600 15px Manrope"><at-icon name="send" size="16"></at-icon>Send to Atas</span>
+          </div>
+        </at-glass>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+
+    <div id="4-6" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#4-6" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">4-6</a><b style="color:#2B1A12">Request edits</b> · member, item, reason</div>
+      <div data-screen-label="4-6 Request edits" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <div style="position:absolute;inset:0;background:rgba(43,26,18,.3)"></div>
+        <at-glass radius="40" style="position:absolute;left:8px;right:8px;top:62px;bottom:8px;padding:10px 18px">
+          <div style="display:flex;flex-direction:column;gap:16px">
+            <span style="align-self:center;width:36px;height:5px;border-radius:3px;background:#D1B6BB"></span>
+            <div style="display:flex;justify-content:space-between;align-items:center"><span style="font:600 16px Manrope;color:#9D5C1D">Cancel</span><span style="font:700 17px Manrope">Request an edit</span><span style="width:52px"></span></div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase;padding-left:4px">Member</span>
+              <div style="display:flex;gap:8px;overflow:hidden">
+                <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px 5px 5px;border-radius:999px;background:#2B1A12;color:#FBF3EA;font:600 14px Manrope;flex:none"><at-avatar i="D" size="24"></at-avatar>Dimas</span>
+                <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px 5px 5px;border-radius:999px;background:#fff;font:600 14px Manrope;flex:none"><at-avatar i="P" size="24"></at-avatar>Putri</span>
+                <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px 5px 5px;border-radius:999px;background:#fff;font:600 14px Manrope;flex:none"><at-avatar i="K" size="24"></at-avatar>Kevin</span>
+                <span style="display:inline-flex;align-items:center;gap:6px;padding:5px 12px 5px 5px;border-radius:999px;background:#fff;font:600 14px Manrope;flex:none"><at-avatar i="N" size="24"></at-avatar>Nadia</span>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase;padding-left:4px">Item</span>
+              <div style="background:#fff;border-radius:24px;padding:4px 14px">
+                <div style="display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid #EDE2E4"><span style="width:22px;height:22px;border-radius:50%;background:#9D5C1D;display:flex;align-items:center;justify-content:center;color:#fff;flex:none"><at-icon name="check" size="13" sw="3"></at-icon></span><div style="flex:1;display:flex;flex-direction:column"><span style="font:700 15px Manrope">1× Almond Croissant</span><span style="font:600 12px Manrope;color:#9D5C1D">Sold out on the menu</span></div><span style="font:600 13px Manrope">Rp 24.000</span></div>
+                <div style="display:flex;align-items:center;gap:12px;padding:10px 0"><span style="width:22px;height:22px;border-radius:50%;box-shadow:inset 0 0 0 2px #D1B6BB;flex:none"></span><span style="flex:1;font:700 15px Manrope">2× Cinnamon Roll 60 gr</span><span style="font:600 13px Manrope">Rp 20.000</span></div>
+              </div>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:8px">
+              <span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase;padding-left:4px">Reason</span>
+              <div style="display:flex;gap:8px;flex-wrap:wrap"><span style="padding:6px 14px;border-radius:999px;background:#F9CFAF;font:600 13px Manrope">Sold out today</span><span style="padding:6px 14px;border-radius:999px;background:#fff;font:600 13px Manrope">Pick a size</span><span style="padding:6px 14px;border-radius:999px;background:#fff;font:600 13px Manrope">Check the note</span></div>
+              <div style="min-height:76px;border-radius:16px;background:#fff;box-shadow:inset 0 0 0 2px #9D5C1D;padding:14px 16px;font:500 16px/1.4 Manrope;box-sizing:border-box">Croissant sold out today, can you swap it?</div>
+            </div>
+          </div>
+        </at-glass>
+        <div style="position:absolute;left:24px;right:24px;bottom:28px"><span style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 0;border-radius:999px;background:#9D5C1D;border:4px solid #9D5C1D;color:#FBF3EA;font:600 17px/1.25 Manrope"><at-icon name="send" size="17"></at-icon>Send to Dimas</span></div>
+      </div>
+    </div>
+
+    <div id="4-7" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#4-7" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">4-7</a><b style="color:#2B1A12">Edits requested</b> · host waiting on Dimas</div>
+      <div data-screen-label="4-7 Edits requested" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back right="more" title="Review order" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:116px;left:16px;right:16px;display:flex;flex-direction:column;gap:14px">
+          <div style="background:#fff;border-radius:32px;padding:18px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;justify-content:space-between;align-items:center"><at-tag kind="edits"></at-tag><span style="font:700 18px Roundo,sans-serif">Rp 489.000</span></div>
+            <span style="font:700 20px/1.2 Roundo,sans-serif">Waiting on 1 edit</span>
+            <span style="font:500 13px/1.45 Manrope;color:#5A4237">Everyone else is locked in. When Dimas is done, lock the order again to continue.</span>
+          </div>
+          <div style="background:#fff;border-radius:28px;padding:14px 16px;display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:center;gap:10px"><at-avatar i="D" size="30"></at-avatar><span style="flex:1;font:700 16px Manrope">Dimas</span><span style="display:inline-flex;align-items:center;gap:4px;font:600 12px Manrope;color:#B0005A"><at-icon name="clock" size="13"></at-icon>Editing</span></div>
+            <div style="display:flex;flex-direction:column;gap:6px;padding:12px;border-radius:16px;background:#FFF0F6;box-shadow:inset 0 0 0 1.5px #F9B7D2">
+              <div style="display:flex;justify-content:space-between"><span style="font:700 14px Manrope">1× Almond Croissant</span><span style="font:600 13px Manrope">Rp 24.000</span></div>
+              <span style="font:500 13px/1.4 Manrope;color:#5A4237">“Croissant sold out today, can you swap it?”</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:4px 0"><span style="font:600 14px Manrope">2× Cinnamon Roll 60 gr</span><span style="font:600 13px Manrope">Rp 20.000</span></div>
+            <span style="align-self:flex-start;display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;background:#E9FF83;font:600 13px Manrope"><at-icon name="wa" size="14"></at-icon>Message Dimas</span>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px;opacity:.6">
+            <div style="background:#fff;border-radius:24px;padding:14px 16px;display:flex;align-items:center;gap:10px"><at-avatar i="R" size="30"></at-avatar><span style="flex:1;font:700 15px Manrope">Rani</span><span style="font:600 14px Roundo,sans-serif">Rp 187.000</span><at-icon name="lock" size="14"></at-icon></div>
+            <div style="background:#fff;border-radius:24px;padding:14px 16px;display:flex;align-items:center;gap:10px"><at-avatar i="P" size="30"></at-avatar><span style="flex:1;font:700 15px Manrope">Putri</span><span style="font:600 14px Roundo,sans-serif">Rp 97.000</span><at-icon name="lock" size="14"></at-icon></div>
+          </div>
+        </div>
+        <at-glass radius="36" style="position:absolute;left:12px;right:12px;bottom:26px;padding:12px">
+          <span style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 0;border-radius:999px;background:#D1B6BB;border:4px solid #D1B6BB;color:#FBF3EA;font:600 17px/1.25 Manrope"><at-icon name="lock" size="18"></at-icon>Lock again</span>
+        </at-glass>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+
+    <div id="4-8" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#4-8" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">4-8</a><b style="color:#2B1A12">All edits done</b> · host locks again</div>
+      <div data-screen-label="4-8 Edits done" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back right="more" title="Review order" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:116px;left:16px;right:16px;display:flex;flex-direction:column;gap:14px">
+          <div style="background:#E9FF83;box-shadow:inset 0 0 0 2px #BCD947;border-radius:32px;padding:18px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;justify-content:space-between;align-items:center"><at-tag kind="edits"></at-tag><span style="font:700 18px Roundo,sans-serif">Rp 481.000</span></div>
+            <span style="font:700 20px/1.2 Roundo,sans-serif">Every edit is done</span>
+            <span style="font:500 13px/1.45 Manrope">Lock the order again, then send it to Atas.</span>
+          </div>
+          <div style="background:#fff;border-radius:28px;padding:14px 16px;display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;align-items:center;gap:10px"><at-avatar i="D" size="30"></at-avatar><span style="flex:1;font:700 16px Manrope">Dimas</span><span style="font:700 16px Roundo,sans-serif">Rp 36.000</span></div>
+            <div style="display:flex;flex-direction:column;gap:4px;padding:12px;border-radius:16px;background:#F6FFD0">
+              <div style="display:flex;justify-content:space-between"><span style="font:700 14px Manrope">1× Pain Au Chocolate</span><span style="font:600 13px Manrope">Rp 16.000</span></div>
+              <span style="font:500 12px Manrope;color:#5A4237;text-decoration:line-through">1× Almond Croissant · Rp 24.000</span>
+            </div>
+            <div style="display:flex;justify-content:space-between;padding:4px 0"><span style="font:600 14px Manrope">2× Cinnamon Roll 60 gr</span><span style="font:600 13px Manrope">Rp 20.000</span></div>
+          </div>
+        </div>
+        <at-glass radius="36" style="position:absolute;left:12px;right:12px;bottom:26px;padding:12px">
+          <span style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 0;border-radius:999px;background:#9D5C1D;border:4px solid #9D5C1D;color:#FBF3EA;font:600 17px/1.25 Manrope"><at-icon name="lock" size="18"></at-icon>Lock again</span>
+        </at-glass>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding:48px 64px 64px">
+  <h2 style="margin:0 0 28px;font:700 28px/1 Roundo,sans-serif">4.11 Member edit request <span style="font:500 14px Manrope;color:#7A6257">· Dimas</span></h2>
+  <div style="display:flex;flex-wrap:wrap;gap:56px 48px;align-items:flex-start">
+
+    <div id="4-9" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#4-9" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">4-9</a><b style="color:#2B1A12">Edit request</b> · flagged item with reason</div>
+      <div data-screen-label="4-9 Edit request" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back title="Friday Treats" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:116px;left:16px;right:16px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;flex-direction:column;gap:8px;padding:0 4px"><at-tag kind="edits"></at-tag><span style="font:700 30px/1.1 Roundo,sans-serif">Rani asked you to change an item</span></div>
+          <div style="background:#fff;border-radius:32px;padding:18px;display:flex;flex-direction:column;gap:14px;box-shadow:inset 0 0 0 2px #F9B7D2">
+            <div style="display:flex;gap:12px;align-items:center"><at-photo size="64" bg="#EDE2E4"></at-photo><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font:700 16px Manrope">1× Almond Croissant</span><span style="font:500 13px Manrope;color:#5A4237">Rp 24.000</span></div><at-tag kind="soldout" size="s"></at-tag></div>
+            <div style="display:flex;gap:10px;padding:12px 14px;border-radius:16px;background:#FFF0F6"><at-avatar i="R" size="28"></at-avatar><div style="display:flex;flex-direction:column;gap:2px"><span style="font:600 12px Manrope;color:#7A6257">Rani · 13:06</span><span style="font:600 15px/1.4 Manrope">Croissant sold out today, can you swap it?</span></div></div>
+            <div style="display:flex;gap:10px">
+              <span style="flex:1.3;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px 0;border-radius:999px;background:#2B1A12;border:4px solid #2B1A12;color:#FBF3EA;font:600 15px Manrope"><at-icon name="refresh" size="15"></at-icon>Replace</span>
+              <span style="flex:1;display:flex;align-items:center;justify-content:center;gap:6px;padding:11px 0;border-radius:999px;background:#fff;border:4px solid #F6C7CB;color:#E40014;font:600 15px Manrope"><at-icon name="trash" size="15"></at-icon>Remove</span>
+            </div>
+          </div>
+          <div style="background:#fff;border-radius:24px;padding:14px 16px;display:flex;justify-content:space-between;opacity:.7"><span style="font:600 14px Manrope">2× Cinnamon Roll 60 gr</span><span style="display:inline-flex;align-items:center;gap:6px;font:600 13px Manrope"><at-icon name="lock" size="13"></at-icon>Rp 20.000</span></div>
+        </div>
+        <at-glass radius="36" style="position:absolute;left:12px;right:12px;bottom:26px;padding:12px">
+          <span style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 0;border-radius:999px;background:#D1B6BB;border:4px solid #D1B6BB;color:#FBF3EA;font:600 17px/1.25 Manrope">Done editing</span>
+        </at-glass>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+
+    <div id="4-10" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#4-10" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">4-10</a><b style="color:#2B1A12">Edit request</b> · replaced, ready to finish</div>
+      <div data-screen-label="4-10 Edit replaced" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back title="Friday Treats" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:116px;left:16px;right:16px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;flex-direction:column;gap:8px;padding:0 4px"><at-tag kind="edits"></at-tag><span style="font:700 30px/1.1 Roundo,sans-serif">Rani asked you to change an item</span></div>
+          <div style="background:#fff;border-radius:32px;padding:18px;display:flex;flex-direction:column;gap:14px;box-shadow:inset 0 0 0 2px #BCD947">
+            <div style="display:flex;gap:12px;align-items:center"><at-photo size="64" bg="#F9CFAF"></at-photo><div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font:700 16px Manrope">1× Pain Au Chocolate</span><span style="font:500 13px Manrope;color:#5A4237">Rp 16.000 · replaces Almond Croissant</span></div><span style="width:28px;height:28px;border-radius:50%;background:#E9FF83;display:flex;align-items:center;justify-content:center"><at-icon name="check" size="15" sw="3"></at-icon></span></div>
+            <span style="font:500 13px/1.45 Manrope;color:#5A4237">Your subtotal goes from Rp 44.000 to Rp 36.000.</span>
+          </div>
+          <div style="background:#fff;border-radius:24px;padding:14px 16px;display:flex;justify-content:space-between;opacity:.7"><span style="font:600 14px Manrope">2× Cinnamon Roll 60 gr</span><span style="display:inline-flex;align-items:center;gap:6px;font:600 13px Manrope"><at-icon name="lock" size="13"></at-icon>Rp 20.000</span></div>
+        </div>
+        <at-glass radius="36" style="position:absolute;left:12px;right:12px;bottom:26px;padding:12px">
+          <span style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 0;border-radius:999px;background:#9D5C1D;border:4px solid #9D5C1D;color:#FBF3EA;font:600 17px/1.25 Manrope"><at-icon name="check" size="18" sw="3"></at-icon>Done editing</span>
+        </at-glass>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+  </div>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const sh = [['R','Rani','6 slices','50%','Rp 130.000'],['P','You','3 slices','25%','Rp 65.000'],['K','Kevin','3 slices','25%','Rp 65.000']];
+    const shares = sh.map(([i,name,slices,pct,rp],k) => ({ i, name, slices, pct, rp, sep: k<2 ? '1px solid #EDE2E4' : 'none' }));
+    const sharesOwner = [['R','You','6 of 12 slices','50%','Rp 130.000'],['P','Putri','3 of 12 slices','25%','Rp 65.000'],['K','Kevin','3 of 12 slices','25%','Rp 65.000']]
+      .map(([i,name,slices,pct,rp],k) => ({ i, name, slices, pct, rp, sep: k<2 ? '1px solid #EDE2E4' : 'none' }));
+    const P = (i,label,st) => ({ i, label, bg: st==='ok' ? '#E9FF83' : st==='no' ? '#FDE3E5' : '#FBF3EA', ring: st==='ok' ? 'inset 0 0 0 1.5px #BCD947' : 'inset 0 0 0 1.5px #EDE2E4' });
+    const splitStates = [
+      { title:'Pending owner', tag:'pending', tagText:'Waiting for Rani', line:'Putri proposed · under Rani', op:1, strike:'none', people:[P('R','Rani 6 · ?','wait'),P('P','Putri 3','ok'),P('K','Kevin 3 · ?','wait')] },
+      { title:'Declined', tag:'declined', tagText:'Declined', line:'Rani kept it whole · Rp 260.000 on Rani', op:1, strike:'none', people:[P('R','Rani · declined','no')] },
+      { title:'Partly accepted', tag:'pending', tagText:'1 to go', line:'Under Rani · split 3 ways', op:1, strike:'none', people:[P('R','Rani 6 · Rp 130.000','ok'),P('P','Putri 3 · Rp 65.000','ok'),P('K','Kevin 3 · ?','wait')] },
+      { title:'Fully accepted', tag:'accepted', tagText:'Split 3 ways', line:'Under Rani · split 3 ways', op:1, strike:'none', people:[P('R','Rani · Rp 130.000','ok'),P('P','Putri · Rp 65.000','ok'),P('K','Kevin · Rp 65.000','ok')] },
+      { title:'Cancelled · owner removed the item', tag:'cancelled', tagText:'Split cancelled', line:'Rani removed it · shares cleared', op:.7, strike:'line-through', people:[P('P','Putri','no'),P('K','Kevin','no')] }
+    ];
+    const I = (q,name,rp,meta,flag,mc) => ({ q, name, rp, meta: meta || '', bg: flag ? '#FFF0F6' : 'transparent', metaC: mc || '#7A6257' });
+    const review = [
+      { i:'R', name:'Rani', sub:'Rp 187.000', items:[I('2×','Butter Croissant','24.000'),I('1×','Classic Sourdough · 1000 gr · Sliced 15mm','33.000'),I('1×','Burnt Cheesecake 20 cm','130.000','your 50% of Rp 260.000 · split 3 ways')] },
+      { i:'D', name:'Dimas', sub:'Rp 44.000', items:[I('1×','Almond Croissant','24.000','Sold out on the menu',true,'#B0005A'),I('2×','Cinnamon Roll 60 gr','20.000')] },
+      { i:'P', name:'Putri', sub:'Rp 97.000', items:[I('2×','Pain Au Chocolate','32.000','“warm if possible”'),I('¼','Burnt Cheesecake share','65.000','under Rani')] },
+      { i:'K', name:'Kevin', sub:'Rp 87.000', items:[I('1×','Brioche Bun','8.000'),I('1×','English Muffin','5.000'),I('1×','Pretzel 120 gr','9.000'),I('¼','Burnt Cheesecake share','65.000','under Rani')] },
+      { i:'N', name:'Nadia', sub:'Rp 50.000', items:[I('1×','Banana Cake','50.000')] },
+      { i:'A', name:'Arief', sub:'Rp 24.000', items:[I('2×','Cookies 100 gr','24.000','“no nuts if possible”')] }
+    ];
+    return { shares, sharesOwner, splitStates, review };
+  }
+}
+</script>
+</body>
+</html>

@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=roundo@1&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&family=Shrikhand&display=swap">
+<script src="./image-slot.js"></script>
+<script src="./ataste-art.js"></script>
+<style>body{margin:0;background:#F2E9DF;color:#2B1A12;font-family:Manrope,sans-serif;-webkit-font-smoothing:antialiased}a{color:#9D5C1D;text-decoration:none}a:hover{color:#2B1A12}</style>
+</helmet>
+
+<section style="padding:56px 64px 32px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid rgba(43,26,18,.1)">
+  <span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase;color:#9D5C1D">Ataste · Screens · 5 of 6</span>
+  <h1 style="margin:0;font:700 56px/1 Roundo,sans-serif;letter-spacing:-.02em">Send to Atas, bill &amp; delivery</h1>
+  <p style="margin:0;max-width:800px;font:500 15px/1.5 Manrope;color:#5A4237">Sections 4.12 to 4.14. After Dimas’s swap the items total Rp 481.000. Atas replies with ongkir Rp 30.000 and an ongkir discount of Rp 15.000; the net Rp 15.000 is split equally, Rp 2.500 each, so the frozen bill is Rp 496.000. All times are WITA (Bali). Boards: <a href="Ataste Screens 1 Onboarding.dc.html">1</a> · <a href="Ataste Screens 2 Home and Groups.dc.html">2</a> · <a href="Ataste Screens 3 Group and Menu.dc.html">3</a> · <a href="Ataste Screens 4 Split and Review.dc.html">4</a> · <a href="Ataste Screens 6 History Profile and States.dc.html">6</a> · <a href="Ataste Notifications.dc.html">Notifications</a> · <a href="Ataste Flow Map.dc.html">Flow map</a></p>
+</section>
+
+<section style="padding:48px 64px 24px">
+  <h2 style="margin:0 0 28px;font:700 28px/1 Roundo,sans-serif">4.12 Send to Atas <span style="font:500 14px Manrope;color:#7A6257">· host</span></h2>
+  <div style="display:flex;flex-wrap:wrap;gap:56px 48px;align-items:flex-start">
+
+    <div id="5-1" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#5-1" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">5-1</a><b style="color:#2B1A12">WhatsApp preview</b> · Bahasa Indonesia (default) · editable · full scroll</div>
+      <div data-screen-label="5-1 WhatsApp preview" style="position:relative;width:402px;height:1340px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back title="Send to Atas" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:116px;left:16px;right:16px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;gap:12px;align-items:center;padding:0 4px">
+            <div style="width:64px;height:64px;border-radius:50%;background:#E9FF83;overflow:hidden;flex:none"><image-slot id="pose-phone" src="uploads/art/pose-phone.png" fit="cover" shape="circle" placeholder="phone" style="width:64px;height:64px"></image-slot></div>
+            <span style="font:500 14px/1.45 Manrope;color:#5A4237">This is the message Atas will get. Tap to edit anything before you open WhatsApp.</span>
+          </div>
+          <div style="display:flex;padding:4px;border-radius:999px;background:#EDE2E4">
+            <span style="flex:1;text-align:center;padding:9px 0;border-radius:999px;font:700 14px Manrope;background:#fff;box-shadow:0 1px 3px rgba(43,26,18,.12)">Bahasa Indonesia</span>
+            <span style="flex:1;text-align:center;padding:9px 0;border-radius:999px;font:600 14px Manrope;color:#5A4237">English</span>
+          </div>
+          <div style="position:relative;background:#fff;border-radius:24px 24px 6px 24px;padding:16px 18px;box-shadow:inset 0 0 0 1.5px #EDE2E4">
+            <span style="position:absolute;right:12px;top:12px;width:28px;height:28px;border-radius:50%;background:#EDE2E4;display:flex;align-items:center;justify-content:center"><at-icon name="edit" size="13"></at-icon></span>
+            <div style="font:500 14px/1.5 Manrope;white-space:pre-wrap;padding-right:24px">{{ waMessageId }}</div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-radius:16px;background:#fff"><span style="font:600 13px Manrope;color:#5A4237">To Atas Artisan</span><span style="font:700 14px Manrope">+62 821 3145 473</span></div>
+        </div>
+        <at-glass radius="36" style="position:absolute;left:12px;right:12px;bottom:26px;padding:12px">
+          <span style="display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 0;border-radius:999px;background:#2B1A12;border:4px solid #2B1A12;color:#FBF3EA;font:600 17px/1.25 Manrope"><at-icon name="wa" size="20"></at-icon>Open WhatsApp</span>
+          <span style="display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 0 2px;font:500 12px Manrope;color:#5A4237"><at-icon name="clock" size="13"></at-icon>Send before 15:00 WITA for delivery tomorrow morning</span>
+        </at-glass>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+      <div style="width:402px;box-sizing:border-box;padding:16px 18px;border-radius:24px;background:#fff;display:flex;flex-direction:column;gap:10px">
+        <span style="font:600 11px/1 Manrope;letter-spacing:.03em;text-transform:uppercase;color:#7A6257">Same line after 15:00 WITA</span>
+        <div style="display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:16px;background:#F9CFAF"><at-icon name="alert" size="18"></at-icon><span style="font:600 14px/1.4 Manrope">It’s past Atas’s 15:00 WITA cutoff. Delivery can take up to 2 days.</span></div>
+      </div>
+    </div>
+
+
+    <div id="5-1b" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#5-1b" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">5-1b</a><b style="color:#2B1A12">WhatsApp preview</b> · English selected · product names unchanged</div>
+      <div data-screen-label="5-1b WhatsApp preview English" style="position:relative;width:402px;height:1340px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back title="Send to Atas" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:116px;left:16px;right:16px;display:flex;flex-direction:column;gap:12px">
+          <div style="display:flex;gap:12px;align-items:center;padding:0 4px">
+            <div style="width:64px;height:64px;border-radius:50%;background:#E9FF83;overflow:hidden;flex:none"><image-slot id="pose-phone" src="uploads/art/pose-phone.png" fit="cover" shape="circle" placeholder="phone" style="width:64px;height:64px"></image-slot></div>
+            <span style="font:500 14px/1.45 Manrope;color:#5A4237">This is the message Atas will get. Tap to edit anything before you open WhatsApp.</span>
+          </div>
+          <div style="display:flex;padding:4px;border-radius:999px;background:#EDE2E4">
+            <span style="flex:1;text-align:center;padding:9px 0;border-radius:999px;font:600 14px Manrope;color:#5A4237">Bahasa Indonesia</span>
+            <span style="flex:1;text-align:center;padding:9px 0;border-radius:999px;font:700 14px Manrope;background:#fff;box-shadow:0 1px 3px rgba(43,26,18,.12)">English</span>
+          </div>
+          <div style="position:relative;background:#fff;border-radius:24px 24px 6px 24px;padding:16px 18px;box-shadow:inset 0 0 0 1.5px #EDE2E4">
+            <span style="position:absolute;right:12px;top:12px;width:28px;height:28px;border-radius:50%;background:#EDE2E4;display:flex;align-items:center;justify-content:center"><at-icon name="edit" size="13"></at-icon></span>
+            <div style="font:500 14px/1.5 Manrope;white-space:pre-wrap;padding-right:24px">{{ waMessageEn }}</div>
+          </div>
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:12px 16px;border-radius:16px;background:#fff"><span style="font:600 13px Manrope;color:#5A4237">To Atas Artisan</span><span style="font:700 14px Manrope">+62 821 3145 473</span></div>
+        </div>
+        <at-glass radius="36" style="position:absolute;left:12px;right:12px;bottom:26px;padding:12px">
+          <span style="display:flex;align-items:center;justify-content:center;gap:10px;padding:14px 0;border-radius:999px;background:#2B1A12;border:4px solid #2B1A12;color:#FBF3EA;font:600 17px/1.25 Manrope"><at-icon name="wa" size="20"></at-icon>Open WhatsApp</span>
+          <span style="display:flex;align-items:center;justify-content:center;gap:6px;padding:8px 0 2px;font:500 12px Manrope;color:#5A4237"><at-icon name="clock" size="13"></at-icon>Send before 15:00 WITA for delivery tomorrow morning</span>
+        </at-glass>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+
+
+    <div id="5-2" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#5-2" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">5-2</a><b style="color:#2B1A12">Sent to Atas</b> · waiting for their reply</div>
+      <div data-screen-label="5-2 Sent to Atas" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back right="more" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:116px;left:16px;right:16px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;flex-direction:column;gap:8px;padding:0 4px"><at-tag kind="sent"></at-tag><span style="font:700 32px/1.05 Roundo,sans-serif">Academy Bali Friday Treats</span></div>
+          <div style="background:#F9CFAF;border-radius:32px;padding:20px;display:flex;gap:14px;align-items:center">
+            <div style="width:110px;height:110px;border-radius:50%;background:#FBF3EA;overflow:hidden;flex:none"><image-slot id="pose-delivery" src="uploads/art/pose-delivery.png" fit="cover" shape="circle" placeholder="delivery bag" style="width:110px;height:110px"></image-slot></div>
+            <div style="display:flex;flex-direction:column;gap:6px"><span style="font:700 20px/1.15 Roundo,sans-serif">Waiting for Atas to reply</span><span style="font:500 13px/1.45 Manrope">Sent 13:42 WITA on WhatsApp, before Atas’s 15:00 cutoff. When they confirm the ongkir, enter it here so everyone’s bill is final.</span></div>
+          </div>
+          <div style="background:#fff;border-radius:24px;padding:16px;display:flex;flex-direction:column;gap:10px">
+            <div style="display:flex;justify-content:space-between"><span style="font:600 14px Manrope;color:#5A4237">Items</span><span style="font:700 15px Roundo,sans-serif">Rp 481.000</span></div>
+            <div style="display:flex;justify-content:space-between"><span style="font:600 14px Manrope;color:#5A4237">Ongkir</span><span style="font:600 14px Manrope;color:#7A6257">Waiting for Atas</span></div>
+          </div>
+          <span style="display:flex;align-items:center;justify-content:center;gap:8px;padding:12px 0;border-radius:999px;background:#FBF3EA;border:4px solid #F9CFAF;font:600 15px Manrope"><at-icon name="wa" size="17"></at-icon>Open the Atas chat</span>
+        </div>
+        <at-glass radius="36" style="position:absolute;left:12px;right:12px;bottom:26px;padding:12px">
+          <span style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 0;border-radius:999px;background:#9D5C1D;border:4px solid #9D5C1D;color:#FBF3EA;font:600 17px/1.25 Manrope">Atas replied · enter final bill</span>
+        </at-glass>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+
+    <div id="5-3" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#5-3" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">5-3</a><b style="color:#2B1A12">Confirm with Atas</b> · ongkir + discount, split equally</div>
+      <div data-screen-label="5-3 Confirm with Atas" style="position:relative;width:402px;height:1100px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back title="Final bill" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:116px;left:16px;right:16px;display:flex;flex-direction:column;gap:14px">
+          <span style="font:500 14px/1.45 Manrope;color:#5A4237;padding:0 4px">Copy the numbers from Atas’s reply. Ongkir and discount are split equally between the 6 members.</span>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase;padding-left:4px">Ongkir from Atas</span>
+            <div style="height:56px;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 1.5px #EDE2E4;display:flex;align-items:center;gap:8px;padding:0 16px;font:700 20px Roundo,sans-serif"><span style="color:#7A6257;font:600 16px Manrope">Rp</span>30.000</div>
+          </div>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase;padding-left:4px">Discount Atas applied</span>
+            <div style="height:56px;border-radius:12px;background:#fff;box-shadow:inset 0 0 0 2px #9D5C1D,0 0 0 4px #F9CFAF;display:flex;align-items:center;gap:8px;padding:0 16px;font:700 20px Roundo,sans-serif"><span style="color:#7A6257;font:600 16px Manrope">− Rp</span>15.000<span style="width:2px;height:22px;background:#9D5C1D"></span></div>
+          </div>
+          <div style="background:#2B1A12;color:#FBF3EA;border-radius:28px;padding:18px;display:flex;flex-direction:column;gap:8px">
+            <div style="display:flex;justify-content:space-between;font:600 14px Manrope"><span style="color:#D1B6BB">Items</span><span>Rp 481.000</span></div>
+            <div style="display:flex;justify-content:space-between;font:600 14px Manrope"><span style="color:#D1B6BB">Ongkir − discount</span><span>Rp 15.000</span></div>
+            <div style="display:flex;justify-content:space-between;align-items:baseline;padding-top:8px;border-top:1px dashed rgba(251,243,234,.25)"><span style="font:600 12px Manrope;letter-spacing:.03em;text-transform:uppercase">Total</span><span style="font:700 30px Roundo,sans-serif">Rp 496.000</span></div>
+            <span style="font:600 13px Manrope;color:#E9FF83">+ Rp 2.500 on each of 6 bills</span>
+          </div>
+          <div style="background:#fff;border-radius:24px;padding:4px 16px">
+            <sc-for list="{{ finalBills }}" as="b" hint-placeholder-count="6">
+              <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:{{ b.sep }}"><at-avatar i="{{ b.i }}" size="28"></at-avatar><span style="flex:1;font:600 14px Manrope">{{ b.name }}</span><span style="font:500 12px Manrope;color:#7A6257">{{ b.before }}</span><span style="font:700 15px Roundo,sans-serif;min-width:88px;text-align:right">{{ b.total }}</span></div>
+            </sc-for>
+          </div>
+        </div>
+        <at-glass radius="36" style="position:absolute;left:12px;right:12px;bottom:26px;padding:12px">
+          <span style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 0;border-radius:999px;background:#9D5C1D;border:4px solid #9D5C1D;color:#FBF3EA;font:600 17px/1.25 Manrope"><at-icon name="check" size="18" sw="3"></at-icon>Atas confirmed</span>
+          <span style="display:block;text-align:center;padding:8px 0 2px;font:500 12px Manrope;color:#5A4237">This freezes the bill and tells everyone to wait for delivery.</span>
+        </at-glass>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+
+    <div id="5-4" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#5-4" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">5-4</a><b style="color:#2B1A12">Confirmed by Atas</b> · member view</div>
+      <div data-screen-label="5-4 Confirmed" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back right="more" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:116px;left:16px;right:16px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;flex-direction:column;gap:8px;padding:0 4px"><at-tag kind="confirmed"></at-tag><span style="font:700 32px/1.05 Roundo,sans-serif">Academy Bali Friday Treats</span></div>
+          <div style="background:#9D5C1D;color:#FBF3EA;border-radius:32px;padding:20px;display:flex;flex-direction:column;gap:10px">
+            <span style="font:400 30px/1 Shrikhand,cursive;color:#F9CFAF">It’s in the oven!</span>
+            <span style="font:500 14px/1.45 Manrope">Atas confirmed the order. Delivery Fri 3 Oct around 10:00 WITA to Academy Bali.</span>
+          </div>
+          <div style="background:#fff;border-radius:32px;padding:18px;display:flex;justify-content:space-between;align-items:center">
+            <div style="display:flex;flex-direction:column;gap:4px"><span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase">You owe Rani</span><span style="font:700 34px/1 Roundo,sans-serif">Rp 99.500</span></div>
+            <at-tag kind="unpaid"></at-tag>
+          </div>
+          <div style="background:#fff;border-radius:28px;padding:20px 20px 4px">
+            <sc-for list="{{ timelineConfirmed }}" as="s" hint-placeholder-count="7">
+              <div style="display:flex;gap:14px">
+                <div style="display:flex;flex-direction:column;align-items:center;width:22px">
+                  <span style="width:22px;height:22px;border-radius:50%;background:{{ s.dot }};box-shadow:{{ s.ring }};display:flex;align-items:center;justify-content:center;color:{{ s.ic }};flex:none"><at-icon name="{{ s.icon }}" size="12" sw="3"></at-icon></span>
+                  <span style="width:2px;flex:1;min-height:10px;background:{{ s.line }}"></span>
+                </div>
+                <div style="display:flex;justify-content:space-between;flex:1;padding-bottom:10px"><span style="font:700 14px/22px Manrope;color:{{ s.ink }}">{{ s.label }}</span><span style="font:500 12px/22px Manrope;color:#7A6257">{{ s.meta }}</span></div>
+              </div>
+            </sc-for>
+          </div>
+        </div>
+        <at-glass radius="36" style="position:absolute;left:12px;right:12px;bottom:26px;padding:12px">
+          <span style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 0;border-radius:999px;background:#9D5C1D;border:4px solid #9D5C1D;color:#FBF3EA;font:600 17px/1.25 Manrope"><at-icon name="receipt" size="18"></at-icon>Pay Rani · Rp 99.500</span>
+        </at-glass>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding:48px 64px 24px">
+  <h2 style="margin:0 0 28px;font:700 28px/1 Roundo,sans-serif">4.13 Bill &amp; payments</h2>
+  <div style="display:flex;flex-wrap:wrap;gap:56px 48px;align-items:flex-start">
+
+    <div id="5-5" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#5-5" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">5-5</a><b style="color:#2B1A12">My bill · unpaid</b> · Putri · full scroll</div>
+      <div data-screen-label="5-5 Bill unpaid" style="position:relative;width:402px;height:1160px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back title="Your bill" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:116px;left:16px;right:16px;display:flex;flex-direction:column;gap:14px">
+          <div style="background:#fff;border-radius:32px;padding:20px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;justify-content:space-between;align-items:center"><at-tag kind="final"></at-tag><at-tag kind="unpaid"></at-tag></div>
+            <span style="font:700 52px/1 Roundo,sans-serif;letter-spacing:-.02em">Rp 99.500</span>
+            <span style="font:500 13px Manrope;color:#5A4237">to Rani · Friday Treats</span>
+            <div style="display:flex;flex-direction:column;gap:8px;padding-top:12px;border-top:1px dashed #D1B6BB">
+              <sc-for list="{{ myBill }}" as="l" hint-placeholder-count="4">
+                <div style="display:flex;justify-content:space-between;gap:12px"><div style="display:flex;flex-direction:column;gap:1px"><span style="font:600 14px Manrope">{{ l.label }}</span><span style="font:500 12px Manrope;color:#7A6257">{{ l.meta }}</span></div><span style="font:600 14px Manrope;color:{{ l.c }};white-space:nowrap">{{ l.rp }}</span></div>
+              </sc-for>
+            </div>
+          </div>
+          <div style="background:#2B1A12;color:#FBF3EA;border-radius:32px;padding:20px;display:flex;flex-direction:column;gap:14px">
+            <div style="display:flex;justify-content:space-between;align-items:center"><span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase;color:#D1B6BB">Transfer to</span><span style="padding:3px 12px;border-radius:999px;background:#F39E60;color:#2B1A12;font:600 11px/1.4 Manrope;letter-spacing:.03em">BCA</span></div>
+            <div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;flex-direction:column;gap:2px"><span style="font:500 12px Manrope;color:#D1B6BB">Account name</span><span style="font:700 17px Manrope">Rani Pratiwi</span></div><span style="width:32px;height:32px;border-radius:50%;background:#F9CFAF;color:#2B1A12;display:flex;align-items:center;justify-content:center"><at-icon name="copy" size="15"></at-icon></span></div>
+            <div style="display:flex;justify-content:space-between;align-items:center"><div style="display:flex;flex-direction:column;gap:2px"><span style="font:500 12px Manrope;color:#D1B6BB">Account number</span><span style="font:700 26px Roundo,sans-serif;letter-spacing:.04em">5271 0099 34</span></div><span style="width:32px;height:32px;border-radius:50%;background:#F9CFAF;color:#2B1A12;display:flex;align-items:center;justify-content:center"><at-icon name="copy" size="15"></at-icon></span></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px dashed rgba(251,243,234,.2)"><div style="display:flex;flex-direction:column;gap:2px"><span style="font:500 12px Manrope;color:#D1B6BB">Amount</span><span style="font:700 17px Manrope">Rp 99.500</span></div><span style="width:32px;height:32px;border-radius:50%;background:#F9CFAF;color:#2B1A12;display:flex;align-items:center;justify-content:center"><at-icon name="copy" size="15"></at-icon></span></div>
+            <span style="font:500 12px Manrope;color:#D1B6BB">Also accepts GoPay 0812 7788 2210</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:14px;padding:16px;border-radius:24px;background:#fff;border:2px dashed #D1B6BB">
+            <span style="width:48px;height:48px;border-radius:14px;background:#EDE2E4;display:flex;align-items:center;justify-content:center"><at-icon name="upload" size="20"></at-icon></span>
+            <div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font:700 15px Manrope">Upload transfer receipt</span><span style="font:500 12px Manrope;color:#7A6257">Optional, helps Rani check faster</span></div>
+          </div>
+        </div>
+        <span style="position:absolute;left:50%;bottom:118px;transform:translateX(-50%);display:inline-flex;align-items:center;gap:8px;padding:12px 20px;border-radius:999px;background:#2B1A12;color:#FBF3EA;font:600 14px Manrope;white-space:nowrap;box-shadow:0 8px 24px rgba(43,26,18,.25)"><at-icon name="check" size="16" color="#E9FF83" sw="3"></at-icon>Account number copied</span>
+        <at-glass radius="36" style="position:absolute;left:12px;right:12px;bottom:26px;padding:12px">
+          <span style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 0;border-radius:999px;background:#9D5C1D;border:4px solid #9D5C1D;color:#FBF3EA;font:600 17px/1.25 Manrope">I’ve paid</span>
+        </at-glass>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+
+    <div id="5-6" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#5-6" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">5-6</a><b style="color:#2B1A12">My bill · not final yet</b> · Order-first, before Atas confirms</div>
+      <div data-screen-label="5-6 Bill not final" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back title="Your bill" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:116px;left:16px;right:16px;display:flex;flex-direction:column;gap:14px">
+          <div style="background:#fff;border-radius:32px;padding:20px;display:flex;flex-direction:column;gap:12px">
+            <at-tag kind="notfinal"></at-tag>
+            <div style="display:flex;align-items:baseline;gap:8px"><span style="font:700 46px/1 Roundo,sans-serif;color:#7A6257">≈ Rp 97.000</span></div>
+            <span style="font:500 13px/1.45 Manrope;color:#5A4237">Your items so far. Ongkir and any discount get added when Atas confirms.</span>
+            <div style="display:flex;flex-direction:column;gap:8px;padding-top:12px;border-top:1px dashed #D1B6BB">
+              <div style="display:flex;justify-content:space-between"><span style="font:600 14px Manrope">2× Pain Au Chocolate</span><span style="font:600 14px Manrope">Rp 32.000</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="font:600 14px Manrope">Burnt Cheesecake · 25%</span><span style="font:600 14px Manrope">Rp 65.000</span></div>
+              <div style="display:flex;justify-content:space-between"><span style="font:600 14px Manrope;color:#7A6257">Ongkir share</span><span style="font:600 14px Manrope;color:#7A6257">After Atas confirms</span></div>
+            </div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:center;padding:16px;border-radius:24px;background:#EDE2E4">
+            <div style="width:56px;height:56px;border-radius:50%;background:#fff;overflow:hidden;flex:none"><image-slot id="pose-waiting" src="uploads/art/pose-waiting.png" fit="cover" shape="circle" placeholder="waiting" style="width:56px;height:56px"></image-slot></div>
+            <span style="font:600 14px/1.45 Manrope">The order is in — pay when you can. We’ll tell you the final amount.</span>
+          </div>
+        </div>
+        <at-glass radius="36" style="position:absolute;left:12px;right:12px;bottom:26px;padding:12px">
+          <span style="display:flex;align-items:center;justify-content:center;padding:14px 0;border-radius:999px;background:#D1B6BB;border:4px solid #D1B6BB;color:#FBF3EA;font:600 17px/1.25 Manrope">I’ve paid</span>
+        </at-glass>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+      <div style="width:402px;box-sizing:border-box;padding:16px 18px;border-radius:24px;background:#fff;display:flex;flex-direction:column;gap:8px">
+        <span style="font:600 11px/1 Manrope;letter-spacing:.03em;text-transform:uppercase;color:#7A6257">Pay-first wording for the same banner</span>
+        <span style="font:600 14px/1.45 Manrope">Pay now so Rani can order. She’ll send it to Atas once everyone has paid.</span>
+      </div>
+    </div>
+
+    <div id="5-7" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#5-7" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">5-7</a><b style="color:#2B1A12">My bill · says paid</b> · waiting for host</div>
+      <div data-screen-label="5-7 Says paid" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back title="Your bill" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:116px;left:16px;right:16px;display:flex;flex-direction:column;gap:14px">
+          <div style="background:#fff;border-radius:32px;padding:20px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;justify-content:space-between;align-items:center"><at-tag kind="final"></at-tag><at-tag kind="says"></at-tag></div>
+            <span style="font:700 52px/1 Roundo,sans-serif;letter-spacing:-.02em">Rp 99.500</span>
+            <span style="font:500 13px Manrope;color:#5A4237">to Rani · BCA · you marked it paid at 14:22</span>
+          </div>
+          <div style="display:flex;gap:14px;align-items:center;padding:14px;border-radius:24px;background:#fff">
+            <div style="position:relative;width:64px;height:84px;border-radius:12px;overflow:hidden;background:#EDE2E4;flex:none"><div style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(43,26,18,.07) 0 6px,transparent 6px 12px)"></div><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:500 8px ui-monospace,Menlo,monospace;color:#7A6257;text-align:center">receipt</span></div>
+            <div style="flex:1;display:flex;flex-direction:column;gap:2px"><span style="font:700 15px Manrope">Transfer receipt</span><span style="font:500 12px Manrope;color:#7A6257">Uploaded 14:22 · tap to view</span></div>
+            <span style="font:600 13px Manrope;color:#9D5C1D">Replace</span>
+          </div>
+          <div style="display:flex;gap:12px;align-items:center;padding:16px;border-radius:24px;background:#F9CFAF">
+            <div style="width:56px;height:56px;border-radius:50%;background:#FBF3EA;overflow:hidden;flex:none"><image-slot id="pose-waiting" src="uploads/art/pose-waiting.png" fit="cover" shape="circle" placeholder="waiting" style="width:56px;height:56px"></image-slot></div>
+            <span style="font:600 14px/1.45 Manrope">Waiting for Rani to check her account. You’ll get a ping when she confirms.</span>
+          </div>
+        </div>
+        <at-glass radius="36" style="position:absolute;left:12px;right:12px;bottom:26px;padding:12px">
+          <span style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 0;border-radius:999px;background:#FBF3EA;border:4px solid #F9CFAF;font:600 17px/1.25 Manrope"><at-icon name="wa" size="19"></at-icon>Message Rani</span>
+        </at-glass>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+
+    <div id="5-8" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#5-8" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">5-8</a><b style="color:#2B1A12">My bill · confirmed</b> · success moment, Mona Loafa</div>
+      <div data-screen-label="5-8 Paid" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:#2B1A12;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status dark style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back dark title="Your bill" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;width:700px;height:700px;left:-149px;top:-20px;border-radius:50%;background:repeating-conic-gradient(#E9FF83 0 9deg,transparent 9deg 18deg);opacity:.9"></div>
+        
+        <div style="position:absolute;left:0;right:0;top:150px;display:flex;justify-content:center"><div style="display:flex;flex-direction:column;align-items:center;gap:8px;align-self:center"><div style="transform:rotate(-2deg);padding:10px;background:#9D5C1D;border-radius:10px;box-shadow:0 14px 30px rgba(43,26,18,.25)"><div style="border:2px dashed rgba(251,243,234,.6);padding:5px;border-radius:4px"><image-slot id="paint-monalisa" src="uploads/art/paint-monalisa.png" fit="cover" shape="rect" placeholder="Mona Loafa" style="display:block;width:200px;height:248px;background:#8A8F6E"></image-slot></div></div><span style="font:500 12px Manrope;color:#F9CFAF"><i>Mona Loafa</i> · oil on canvas</span></div></div>
+        <div style="position:absolute;left:24px;right:24px;top:500px;display:flex;flex-direction:column;align-items:center;gap:10px;text-align:center">
+          <span style="font:400 54px/1 Shrikhand,cursive;color:#E9FF83">Paid up!</span>
+          <span style="font:600 16px/1.45 Manrope;color:#FBF3EA">Rani confirmed your Rp 99.500.<br>Nothing left to do but eat.</span>
+          <span style="margin-top:6px"><at-tag kind="paid"></at-tag></span>
+        </div>
+        <at-homebar dark style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+
+    <div id="5-9" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#5-9" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">5-9</a><b style="color:#2B1A12">Payment board</b> · host · full scroll</div>
+      <div data-screen-label="5-9 Payment board" style="position:relative;width:402px;height:1080px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back title="Payments" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:116px;left:16px;right:16px;display:flex;flex-direction:column;gap:14px">
+          <div style="background:#fff;border-radius:32px;padding:20px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase">Owed to you</span><span style="font:700 18px Roundo,sans-serif">Rp 306.500</span></div>
+            <div style="display:flex;height:16px;border-radius:999px;overflow:hidden;gap:2px"><span style="flex:91;background:#BCD947"></span><span style="flex:126;background:#F39E60"></span><span style="flex:89.5;background:#EDE2E4"></span></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+              <div style="display:flex;flex-direction:column;gap:2px"><span style="display:flex;align-items:center;gap:5px;font:600 11px Manrope;color:#5A4237"><span style="width:8px;height:8px;border-radius:50%;background:#BCD947"></span>Collected</span><span style="font:700 17px Roundo,sans-serif">Rp 91.000</span></div>
+              <div style="display:flex;flex-direction:column;gap:2px"><span style="display:flex;align-items:center;gap:5px;font:600 11px Manrope;color:#5A4237"><span style="width:8px;height:8px;border-radius:50%;background:#F39E60"></span>To check</span><span style="font:700 17px Roundo,sans-serif">Rp 126.000</span></div>
+              <div style="display:flex;flex-direction:column;gap:2px"><span style="display:flex;align-items:center;gap:5px;font:600 11px Manrope;color:#5A4237"><span style="width:8px;height:8px;border-radius:50%;background:#D1B6BB"></span>Outstanding</span><span style="font:700 17px Roundo,sans-serif">Rp 89.500</span></div>
+            </div>
+          </div>
+          <div style="background:#fff;border-radius:32px;padding:4px 16px">
+            <sc-for list="{{ board }}" as="m" hint-placeholder-count="5">
+              <div style="display:flex;gap:12px;align-items:center;padding:14px 0;border-bottom:{{ m.sep }}">
+                <at-avatar i="{{ m.i }}" size="40"></at-avatar>
+                <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
+                  <div style="display:flex;justify-content:space-between;align-items:center"><span style="font:700 16px Manrope">{{ m.name }}</span><span style="font:700 16px Roundo,sans-serif">{{ m.rp }}</span></div>
+                  <div style="display:flex;align-items:center;gap:8px">
+                    <at-tag kind="{{ m.st }}" size="s"></at-tag>
+                    <span style="flex:1"></span>
+                    <sc-if value="{{ m.receipt }}" hint-placeholder-val="{{ false }}"><span style="position:relative;width:28px;height:36px;border-radius:6px;overflow:hidden;background:#EDE2E4;box-shadow:inset 0 0 0 1.5px #D1B6BB"><span style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(43,26,18,.1) 0 3px,transparent 3px 6px)"></span></span></sc-if>
+                    <sc-if value="{{ m.nudge }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:999px;background:#F9CFAF;font:600 12px Manrope"><at-icon name="bell" size="13"></at-icon>Nudge</span></sc-if>
+                    <sc-if value="{{ m.mark }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:999px;background:#E9FF83;box-shadow:inset 0 0 0 1.5px #BCD947;font:600 12px Manrope"><at-icon name="check" size="12" sw="3"></at-icon>Mark paid</span></sc-if>
+                    <span style="width:28px;height:28px;border-radius:50%;background:#E9FF83;display:flex;align-items:center;justify-content:center"><at-icon name="wa" size="14"></at-icon></span>
+                  </div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <span style="font:500 12px/1.45 Manrope;color:#7A6257;padding:0 4px">Your own share (Rp 189.500) isn’t counted. Totals include the Rp 2.500 ongkir share on each bill.</span>
+        </div>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+
+    <div id="5-10" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#5-10" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">5-10</a><b style="color:#2B1A12">Receipt</b> · full screen → Mark paid</div>
+      <div data-screen-label="5-10 Receipt" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:#140D09;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status dark style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back close dark title="Putri’s receipt" right="share" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:126px;left:40px;right:40px;height:480px;border-radius:16px;overflow:hidden;background:#3A2A22">
+          <div style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(255,255,255,.05) 0 8px,transparent 8px 16px)"></div>
+          <span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:500 12px ui-monospace,Menlo,monospace;color:#D1B6BB">transfer receipt photo</span>
+        </div>
+        <div style="position:absolute;left:24px;right:24px;top:626px;display:flex;justify-content:space-between;align-items:flex-end;color:#FBF3EA">
+          <div style="display:flex;flex-direction:column;gap:4px"><span style="font:600 13px Manrope;color:#D1B6BB">Putri · BCA · 14:22</span><span style="font:700 30px Roundo,sans-serif">Rp 99.500</span></div>
+          <at-tag kind="says"></at-tag>
+        </div>
+        <div style="position:absolute;left:16px;right:16px;bottom:44px;display:flex;gap:10px">
+          <span style="flex:1;text-align:center;padding:14px 0;border-radius:999px;background:rgba(251,243,234,.12);border:4px solid rgba(251,243,234,.12);color:#FBF3EA;font:600 16px Manrope">Not received</span>
+          <span style="flex:1.3;display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 0;border-radius:999px;background:#E9FF83;border:4px solid #BCD947;font:600 16px Manrope"><at-icon name="check" size="17" sw="3"></at-icon>Mark paid</span>
+        </div>
+        <at-homebar dark style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section style="padding:48px 64px 64px">
+  <h2 style="margin:0 0 28px;font:700 28px/1 Roundo,sans-serif">4.14 Confirm delivery <span style="font:500 14px Manrope;color:#7A6257">· anyone in the group</span></h2>
+  <div style="display:flex;flex-wrap:wrap;gap:56px 48px;align-items:flex-start">
+
+    <div id="5-11" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#5-11" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">5-11</a><b style="color:#2B1A12">Camera</b> · or pick from library</div>
+      <div data-screen-label="5-11 Camera" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:#000;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status dark style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <div style="position:absolute;top:100px;left:0;right:0;height:540px;background:#2A1E18"><div style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(255,255,255,.05) 0 10px,transparent 10px 20px)"></div><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:500 12px ui-monospace,Menlo,monospace;color:#D1B6BB">camera viewfinder · boxes at reception</span></div>
+        <at-nav back close dark title="Photo of the delivery" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;left:0;right:0;bottom:70px;display:flex;align-items:center;justify-content:space-around">
+          <span style="width:52px;height:52px;border-radius:12px;background:#3A2A22;display:flex;align-items:center;justify-content:center"><at-icon name="image" size="22" color="#FBF3EA"></at-icon></span>
+          <span style="width:78px;height:78px;border-radius:50%;border:4px solid #fff;display:flex;align-items:center;justify-content:center;box-sizing:border-box"><span style="width:62px;height:62px;border-radius:50%;background:#fff"></span></span>
+          <span style="width:52px;height:52px;border-radius:50%;background:rgba(255,255,255,.15);display:flex;align-items:center;justify-content:center"><at-icon name="refresh" size="20" color="#FBF3EA"></at-icon></span>
+        </div>
+        <at-homebar dark style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+
+    <div id="5-12" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#5-12" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">5-12</a><b style="color:#2B1A12">Preview</b> · Confirm delivered</div>
+      <div data-screen-label="5-12 Delivery preview" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back title="Confirm delivery" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:118px;left:16px;right:16px;height:440px;border-radius:32px;overflow:hidden;background:#EDE2E4"><div style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(43,26,18,.06) 0 8px,transparent 8px 16px)"></div><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:500 12px ui-monospace,Menlo,monospace;color:#7A6257">delivery photo</span></div>
+        <div style="position:absolute;top:578px;left:20px;right:20px;display:flex;flex-direction:column;gap:6px"><span style="font:700 22px/1.15 Roundo,sans-serif">Everything arrived?</span><span style="font:500 14px/1.45 Manrope;color:#5A4237">The photo shows on the order with your name. Rani then closes it.</span></div>
+        <div style="position:absolute;left:16px;right:16px;bottom:44px;display:flex;gap:10px">
+          <span style="flex:1;text-align:center;padding:14px 0;border-radius:999px;background:#FBF3EA;border:4px solid #F9CFAF;font:600 16px Manrope">Retake</span>
+          <span style="flex:1.6;display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 0;border-radius:999px;background:#9D5C1D;border:4px solid #9D5C1D;color:#FBF3EA;font:600 16px Manrope"><at-icon name="check" size="17" sw="3"></at-icon>Confirm delivered</span>
+        </div>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+
+    <div id="5-13" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#5-13" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">5-13</a><b style="color:#2B1A12">Delivered</b> · host closes the order</div>
+      <div data-screen-label="5-13 Delivered" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back right="more" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:116px;left:16px;right:16px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;flex-direction:column;gap:8px;padding:0 4px"><at-tag kind="delivered"></at-tag><span style="font:700 32px/1.05 Roundo,sans-serif">Academy Bali Friday Treats</span></div>
+          <div style="position:relative;background:#E9FF83;border-radius:32px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:inset 0 0 0 2px #BCD947;overflow:hidden">
+            <div style="position:relative;height:200px;border-radius:20px;overflow:hidden;background:#EDE2E4"><div style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(43,26,18,.06) 0 8px,transparent 8px 16px)"></div><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:500 12px ui-monospace,Menlo,monospace;color:#7A6257">delivery photo</span></div>
+            <div style="display:flex;align-items:center;gap:10px"><at-avatar i="K" size="30"></at-avatar><span style="flex:1;font:600 14px Manrope">Kevin confirmed · Fri 10:12</span></div>
+            <div style="position:absolute;right:10px;top:150px;width:96px;height:96px;border-radius:50%;overflow:hidden"><image-slot id="pose-celebrating" src="uploads/art/pose-celebrating.png" fit="cover" shape="circle" placeholder="celebrating" style="width:96px;height:96px"></image-slot></div>
+          </div>
+          <div style="background:#fff;border-radius:24px;padding:16px;display:flex;justify-content:space-between;align-items:center"><div style="display:flex;flex-direction:column;gap:2px"><span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase">Payments</span><span style="font:600 14px Manrope">4 of 5 paid · Kevin outstanding</span></div><at-icon name="chev-r" size="18" color="#A08A80"></at-icon></div>
+        </div>
+        <at-glass radius="36" style="position:absolute;left:12px;right:12px;bottom:26px;padding:12px">
+          <span style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 0;border-radius:999px;background:#2B1A12;border:4px solid #2B1A12;color:#FBF3EA;font:600 17px/1.25 Manrope">Close order</span>
+        </at-glass>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+  </div>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const ITEMS = [["2x Butter Croissant","Rani"],["1x Classic Sourdough 1000gr (Sliced 15mm)","Rani"],["1x Burnt Cheesecake 20 cm","Rani","tolong dipotong","sliced please"],["1x Pain Au Chocolate","Dimas"],["2x Cinnamon Roll 60 gr","Dimas"],["2x Pain Au Chocolate","Putri","dihangatkan kalau bisa","warm if possible"],["1x Brioche Bun","Kevin"],["1x English Muffin","Kevin"],["1x Pretzel 120 gr","Kevin"],["1x Banana Cake","Nadia"],["2x Cookies 100 gr","Arief","tanpa kacang kalau bisa","no nuts if possible"]];
+    const waMessageId = [
+      'Halo Kak, saya mau pesan untuk grup *Academy Bali Friday Treats* (via Ataste).','',
+      'Pengiriman: Jumat, 3 Okt 2026, 10.00 WITA','Alamat: Apple Developer Academy Bali','Kontak: Rani · +62 812 7788 2210','',
+      'Pesanan:', ...ITEMS.map(([t,n,id]) => t + ' - a.n. ' + n + (id ? ' (catatan: ' + id + ')' : '')),'',
+      'Total: Rp 481.000 (belum termasuk ongkir).','Pesanan sudah di atas Rp 200.000, mohon dibantu diskon ongkirnya ya. Terima kasih!'
+    ].join('\n');
+    const waMessageEn = [
+      'Hi! I’d like to place an order for the group *Academy Bali Friday Treats* (via Ataste).','',
+      'Delivery: Friday, 3 Oct 2026, 10:00 WITA','Address: Apple Developer Academy Bali','Contact: Rani · +62 812 7788 2210','',
+      'Order:', ...ITEMS.map(([t,n,id,en]) => t + ' - for ' + n + (en ? ' (note: ' + en + ')' : '')),'',
+      'Total: Rp 481.000 (excluding delivery fee).','The order is over Rp 200.000, so please apply the delivery discount. Thank you!'
+    ].join('\n');
+    const FB = [['R','Rani','187.000','Rp 189.500'],['D','Dimas','36.000','Rp 38.500'],['P','Putri','97.000','Rp 99.500'],['K','Kevin','87.000','Rp 89.500'],['N','Nadia','50.000','Rp 52.500'],['A','Arief','24.000','Rp 26.500']];
+    const finalBills = FB.map(([i,name,before,total],k) => ({ i, name, before, total, sep: k<FB.length-1 ? '1px solid #EDE2E4' : 'none' }));
+    const tl = [['Open','check','Thu 08:02','done'],['Locked','check','Thu 13:00','done'],['Edits requested','check','Thu 13:06','done'],['Sent to Atas','check','Thu 13:42','done'],['Confirmed by Atas','check','Thu 14:05','now'],['Delivered','','Fri ~10:00','todo'],['Closed','','','todo']];
+    const timelineConfirmed = tl.map(([label,icon,meta,st],i) => ({ label, meta, icon: icon || 'more', ic: st==='now' ? '#FBF3EA' : '#2B1A12',
+      dot: st==='done' ? '#E9FF83' : st==='now' ? '#9D5C1D' : '#fff', ring: st==='todo' ? 'inset 0 0 0 2px #D1B6BB' : st==='now' ? '0 0 0 5px #F9CFAF' : 'inset 0 0 0 1.5px #BCD947',
+      line: i===tl.length-1 ? 'transparent' : (st==='done' ? '#BCD947' : '#EDE2E4'), ink: st==='todo' ? '#A08A80' : '#2B1A12' }));
+    const myBill = [
+      { label:'2× Pain Au Chocolate', meta:'my items', rp:'Rp 32.000', c:'#2B1A12' },
+      { label:'Burnt Cheesecake 20 cm · 25%', meta:'split with Rani and Kevin · under Rani', rp:'Rp 65.000', c:'#2B1A12' },
+      { label:'Ongkir share', meta:'Rp 30.000 ÷ 6', rp:'Rp 5.000', c:'#2B1A12' },
+      { label:'Discount share', meta:'Rp 15.000 ÷ 6', rp:'− Rp 2.500', c:'#5E7A00' }
+    ];
+    const B = [['D','Dimas','Rp 38.500','paid',false,false,false],['P','Putri','Rp 99.500','says',true,false,true],['K','Kevin','Rp 89.500','unpaid',false,true,false],['N','Nadia','Rp 52.500','paid',false,false,false],['A','Arief','Rp 26.500','says',true,false,true]];
+    const board = B.map(([i,name,rp,st,receipt,nudge,mark],k) => ({ i, name, rp, st, receipt, nudge, mark, sep: k<B.length-1 ? '1px solid #EDE2E4' : 'none' }));
+    return { waMessageId, waMessageEn, finalBills, timelineConfirmed, myBill, board };
+  }
+}
+</script>
+</body>
+</html>
