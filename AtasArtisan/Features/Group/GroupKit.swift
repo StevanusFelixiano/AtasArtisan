@@ -180,3 +180,31 @@ struct GroupSkeleton: View {
         .accessibilityLabel("Loading the order")
     }
 }
+
+/// Children side by side at fixed width ratios (CSS `flex: 1` / `flex: 1.2`).
+struct FlexRow: Layout {
+    var weights: [CGFloat]
+    var spacing: CGFloat = 10
+
+    private func widths(_ total: CGFloat, _ n: Int) -> [CGFloat] {
+        let w = (0..<n).map { $0 < weights.count ? weights[$0] : 1 }
+        let sum = w.reduce(0, +)
+        let room = max(0, total - spacing * CGFloat(n - 1))
+        return w.map { room * $0 / sum }
+    }
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+        let total = proposal.width ?? 360
+        let ws = widths(total, subviews.count)
+        let h = zip(subviews, ws).map { $0.sizeThatFits(ProposedViewSize(width: $1, height: proposal.height)).height }.max() ?? 0
+        return CGSize(width: total, height: h)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+        var x = bounds.minX
+        for (s, w) in zip(subviews, widths(bounds.width, subviews.count)) {
+            s.place(at: CGPoint(x: x, y: bounds.minY), proposal: ProposedViewSize(width: w, height: bounds.height))
+            x += w + spacing
+        }
+    }
+}

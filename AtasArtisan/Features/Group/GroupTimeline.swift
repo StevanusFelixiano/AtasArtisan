@@ -23,7 +23,6 @@ struct Timeline: View {
     var hadEdits = false
     var layout: Layout = .stacked
 
-    private enum Step: Hashable { case state(GroupState) }
     private enum Phase { case done, now, todo }
 
     private var steps: [GroupState] {

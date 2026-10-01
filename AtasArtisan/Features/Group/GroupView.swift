@@ -134,7 +134,7 @@ struct GroupView: View {
             .refreshable { await store.refresh() }
             .safeAreaInset(edge: .bottom) { actionBar(g, m) }
             .toolbar { toolbar(g, m) }
-            .navigationTitle(m == .fixing ? g.name : "Review order")
+            .navigationTitle([.review, .editsHost].contains(m) ? "Review order" : g.name)
         }
     }
 
@@ -254,14 +254,14 @@ struct GroupView: View {
             }
         case .review:
             GlassBar {
-                if !g.personal {
-                    Button { sheet = .requestEdit(RequestSeed()) } label: { Label("Request edits", systemImage: "pencil") }
-                        .buttonStyle(BarPillStyle(kind: .secondary))
-                        .layoutPriority(1)
+                FlexRow(weights: g.personal ? [1] : [1, 1.2]) {
+                    if !g.personal {
+                        Button { sheet = .requestEdit(RequestSeed()) } label: { Label("Request edits", systemImage: "pencil") }
+                            .buttonStyle(BarPillStyle(kind: .secondary))
+                    }
+                    Button { sheet = .send } label: { Label("Send to Atas", systemImage: "paperplane") }
+                        .buttonStyle(BarPillStyle(kind: .primary))
                 }
-                Button { sheet = .send } label: { Label("Send to Atas", systemImage: "paperplane") }
-                    .buttonStyle(BarPillStyle(kind: .primary))
-                    .layoutPriority(1.2)
             }
         case .editsHost:
             GlassBar {

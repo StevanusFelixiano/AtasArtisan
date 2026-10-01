@@ -312,13 +312,12 @@ extension GroupView {
             }
             .padding(.horizontal, 14).padding(.vertical, 12)
             .background(RoundedRectangle(cornerRadius: 16, style: .continuous).fill(Brand.splitFill))
-            HStack(spacing: 10) {
+            FlexRow(weights: [1.3, 1]) {
                 Button {
                     replacing = (item, Set(store.myItems.map(\.id)), store.myItems.reduce(0) { $0 + $1.total })
                     sheet = .menu
                 } label: { Label("Replace", systemImage: "arrow.triangle.2.circlepath") }
                 .buttonStyle(BarPillStyle(kind: .dark, height: 52))
-                .layoutPriority(1.3)
                 Button {
                     confirm = Confirm(title: "Remove \(item.name)?", message: "It comes out of your order.", button: "Remove") {
                         try await store.remove(item)
@@ -326,7 +325,6 @@ extension GroupView {
                     }
                 } label: { Label("Remove", systemImage: "trash") }
                 .buttonStyle(BarPillStyle(kind: .destructive, height: 52))
-                .layoutPriority(1)
             }
         }
         .surface(32, padding: edges(18, 18))
