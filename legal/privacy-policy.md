@@ -35,4 +35,4 @@ Ataste is not meant for children under 13, and we don't knowingly collect their 
 ## Changes
 If we change this policy we will update the date above and, for important changes, tell you in the app.
 ## Contact
-Questions or requests: support@ataste.app
+Questions or requests: bayu.johar25@gmail.com

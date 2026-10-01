@@ -113,10 +113,22 @@ extension View {
             .background(RoundedRectangle(cornerRadius: radius, style: .continuous).fill(Brand.card))
     }
 
+    /// A full screen on cream. The frame comes first: a narrow view (a spinner while loading) must still paint
+    /// the whole screen, or the black window shows on both sides.
     func screen() -> some View {
-        self.background(Brand.cream.ignoresSafeArea())
+        self.frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(Brand.cream.ignoresSafeArea())
             .toolbarBackground(Brand.cream, for: .navigationBar)
     }
+}
+
+/// The art people can pick as their profile picture (Ataste's own, never an upload).
+enum Art {
+    static let poses = ["pose-neutral", "pose-waving", "pose-cakebox", "pose-waiting", "pose-celebrating",
+                        "pose-confused", "pose-sleeping", "pose-delivery", "pose-phone", "pose-splitting"]
+    static let paintings = ["paint-monalisa", "paint-croissant", "paint-scream", "paint-gothic", "paint-brioche",
+                            "paint-sonofbun", "paint-vangogh", "paint-supper", "paint-creation"]
+    static var all: [String] { poses + paintings }
 }
 
 struct Avatar: View {
@@ -124,12 +136,21 @@ struct Avatar: View {
     var index: Int
     var host = false
     var size: CGFloat = 36
+    var art: String? = nil
     var body: some View {
-        Text(String(name.prefix(1)).uppercased())
-            .font(Brand.font(.headline, size: size * 0.42))
-            .foregroundStyle(Brand.cocoa)
+        ZStack {
+            Circle().fill(Brand.people[index % Brand.people.count])
+            if let art, Art.all.contains(art) {
+                Image(art).resizable().scaledToFill()
+                    .frame(width: size, height: size, alignment: art.hasPrefix("paint") ? .top : .bottom)
+                    .clipShape(Circle())
+            } else {
+                Text(String(name.prefix(1)).uppercased())
+                    .font(Brand.font(.headline, size: size * 0.42))
+                    .foregroundStyle(Brand.cocoa)
+            }
+        }
             .frame(width: size, height: size)
-            .background(Circle().fill(Brand.people[index % Brand.people.count]))
             .overlay(alignment: .bottom) {
                 if host {
                     Text("HOST").font(Brand.font(.label, size: 7)).foregroundStyle(Brand.cream)
@@ -203,29 +224,87 @@ struct DiscountBar: View {
 }
 
 /// A slowly scrolling band of uppercase text.
+/// Running text band, `<at-marquee>` in the design: Roundo 700 uppercase, 0.04em tracking, line height 1, vertical
+/// padding 0.7 × size. One run is the text six times plus half an em; it travels its own width every `speed` seconds.
 struct Marquee: View {
     var text = "FRESH FROM ATAS • GROUP UP • SAVE ON ONGKIR • "
     var fill = Brand.cocoa
     var ink = Brand.cream
-    @State private var offset: CGFloat = 0
+    var size: CGFloat = 15
+    var speed: Double = 30
+    var reverse = false
+    var tilt: Double = 0
+    @State private var runWidth: CGFloat = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
-        GeometryReader { _ in
-            HStack(spacing: 0) {
-                ForEach(0..<4, id: \.self) { _ in Text(text).brand(.label, ink).fixedSize() }
+        let run = Text(String(repeating: text + " ", count: 6))
+            .font(Font(Brand.uiFont(.roundo, size: size, weight: 700)))
+            .tracking(size * 0.04)
+            .foregroundStyle(ink)
+            .lineLimit(1)
+            .fixedSize()
+            .padding(.trailing, size / 2)
+        // The track is far wider than the screen, so it lives in an overlay and never sizes the layout.
+        Color.clear
+            .frame(maxWidth: .infinity)
+            .frame(height: size)
+            .overlay(alignment: .leading) {
+                TimelineView(.animation(paused: reduceMotion)) { t in
+                    let phase = t.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: speed) / speed
+                    HStack(spacing: 0) { run; run }
+                        .fixedSize()
+                        .onGeometryChange(for: CGFloat.self) { $0.size.width / 2 } action: { runWidth = $0 }
+                        .offset(x: -runWidth * (reverse ? 1 - phase : phase))
+                }
             }
-            .offset(x: offset)
-            .onAppear {
-                guard !reduceMotion else { return }
-                withAnimation(.linear(duration: 18).repeatForever(autoreverses: false)) { offset = -420 }
-            }
-        }
-        .frame(height: 34)
+            .padding(.vertical, (size * 0.7).rounded())
         .background(fill)
         .clipped()
+        .rotationEffect(.degrees(tilt))
+        .padding(.horizontal, tilt == 0 ? 0 : -12)
         .accessibilityHidden(true)
     }
+}
+
+/// The design system's toast ("Link copied", "Account number copied"): cocoa pill, lime check, Manrope 600 14.
+struct Toast: View {
+    var text: String
+    var body: some View {
+        HStack(spacing: 8) {
+            Image(systemName: "checkmark").font(.system(size: 14, weight: .heavy)).foregroundStyle(Brand.lime)
+            Text(text).font(Brand.font(.callout, weight: 600)).foregroundStyle(Brand.cream)
+        }
+        .padding(.vertical, 12)
+        .padding(.horizontal, 20)
+        .background(Capsule().fill(Brand.cocoa))
+        .shadow(color: Brand.cocoa.opacity(0.25), radius: 12, y: 8)
+    }
+}
+
+extension View {
+    /// Shows the toast for 1.6 s, `above` points over the bottom safe area, with a success haptic.
+    func toast(_ text: Binding<String?>, above: CGFloat = 8) -> some View {
+        overlay(alignment: .bottom) {
+            if let t = text.wrappedValue {
+                Toast(text: t)
+                    .padding(.bottom, above)
+                    .transition(.move(edge: .bottom).combined(with: .opacity))
+                    .task(id: t) {
+                        try? await Task.sleep(for: .seconds(1.6))
+                        text.wrappedValue = nil
+                    }
+            }
+        }
+        .animation(.spring(duration: 0.3), value: text.wrappedValue)
+        .sensoryFeedback(.success, trigger: text.wrappedValue) { _, new in new != nil }
+    }
+}
+
+/// Copy with feedback: `copy(link, "Link copied", $toast)` on a view that has `.toast($toast)`.
+func copy(_ value: String, _ message: String, _ toast: Binding<String?>) {
+    UIPasteboard.general.string = value
+    toast.wrappedValue = message
 }
 
 // MARK: States
@@ -294,7 +373,7 @@ extension View {
 /// Runs an async action, turning a failure into a Problem.
 @MainActor
 func attempt(_ problem: Binding<Problem?>, _ title: String, _ work: @escaping () async throws -> Void) async {
-    do { try await work() } catch { problem.wrappedValue = Problem(title: title, message: readable(error)) }
+    do { try await work() } catch where isCancellation(error) {} catch { problem.wrappedValue = Problem(title: title, message: readable(error)) }
 }
 
 /// Presents the system share sheet (ShareLink never sits in a Menu; see the iOS guide).

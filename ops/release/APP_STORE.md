@@ -1,10 +1,10 @@
 # Ataste: App Store Connect checklist
 
-## Before the public App Store release
-- [ ] **Written permission from Atas Artisan** to use their name, menu and product photos. Attach it in App Review
-      Information → Attachment. Until then: TestFlight only.
-- [ ] Real support email (replace `support@ataste.app` in `Shared/Backend.swift` and `legal/*.md`, rebuild PDFs).
+## Before release
 - [ ] Public TestFlight link in `Links.getTheApp` once beta review passes.
+- Atas Artisan permission: not needed (user's decision, 2026-10-01). Ataste only links customers to Atas's own
+  WhatsApp ordering; the "not affiliated" disclaimer stays in the app, listing and terms. If App Review raises
+  guideline 5.2, answer with that.
 
 ## App information
 - Name: Ataste · Subtitle: Group orders from Atas Artisan

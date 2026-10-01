@@ -97,7 +97,9 @@ struct LogoPill: View {
 struct VerifyStep: View {
     var verified: (_ phone: String, _ name: String, _ token: String) -> Void
 
-    private struct Start: Decodable { var code: String; var nonce: String; var expires_at: Date }
+    // `expires_at` is left out: the functions client decodes dates with Foundation's default strategy, which
+    // can't read Postgres timestamps, so including it failed every start. The server enforces expiry.
+    private struct Start: Decodable { var code: String; var nonce: String }
     private struct Status: Decodable { var status: String; var phone: String?; var push_name: String?; var token_hash: String? }
 
     enum Wait { case starting, ready, waiting, expired, noWhatsApp }
@@ -150,6 +152,8 @@ struct VerifyStep: View {
         do {
             start = try await supabase.functions.invoke("otp/start", options: .init(method: .post))
             wait = .ready
+        } catch where isCancellation(error) {
+            return
         } catch {
             problem = Problem(title: "Couldn't start verification", message: readable(error))
             wait = .expired
@@ -167,7 +171,7 @@ struct VerifyStep: View {
     private func poll() async {
         guard let nonce = start?.nonce else { return }
         while !Task.isCancelled && wait == .waiting {
-            if let s: Status = try? await supabase.functions.invoke("otp/status?nonce=\(nonce)", options: .init(method: .get)) {
+            if let s: Status = try? await supabase.functions.invoke("otp/status", options: .init(method: .get, query: [URLQueryItem(name: "nonce", value: nonce)])) {
                 if s.status == "verified", let phone = s.phone, let token = s.token_hash {
                     verified(phone, s.push_name ?? "", token)
                     return

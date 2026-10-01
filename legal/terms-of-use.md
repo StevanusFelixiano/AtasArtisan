@@ -21,4 +21,4 @@ You can stop using Ataste and delete your account at any time from Profile, Dele
 ## Changes and law
 We may update these terms; we will change the date above and tell you in the app about important changes. These terms are governed by the laws of the Republic of Indonesia.
 ## Contact
-support@ataste.app
+bayu.johar25@gmail.com

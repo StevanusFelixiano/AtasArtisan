@@ -9,6 +9,7 @@ nonisolated struct Profile: Codable, Identifiable, Hashable {
     var name: String
     var msg_lang: String
     var notify_mute: [String]
+    var avatar: String?
 }
 
 nonisolated struct PayoutAccount: Codable, Identifiable, Hashable {

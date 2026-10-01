@@ -119,6 +119,8 @@ struct HomeView: View {
                 let rows: [BillRow] = try await supabase.from("group_bill_v").select().eq("user_id", value: me).execute().value
                 bills = Dictionary(uniqueKeysWithValues: rows.map { ($0.group_id, $0) })
             }
+        } catch where isCancellation(error) {
+            return
         } catch {
             problem = Problem(title: "Couldn't load your orders", message: readable(error))
         }
@@ -374,6 +376,7 @@ struct CreateGroupView: View {
 struct ShareCard: View {
     var group: OrderGroup
     @Environment(\.dismiss) private var dismiss
+    @State private var toast: String?
 
     var body: some View {
         VStack(spacing: Brand.s5) {
@@ -390,11 +393,12 @@ struct ShareCard: View {
             Text(Links.join(group.code).absoluteString).brand(.footnote, Brand.ink3).multilineTextAlignment(.center).textSelection(.enabled)
             Spacer(minLength: 0)
             Button("Share link") { presentShare([shareText]) }.buttonStyle(.pill(.primary))
-            Button("Copy link") { UIPasteboard.general.string = shareText }.buttonStyle(.pill(.secondary, .medium))
+            Button("Copy link") { copy(Links.join(group.code).absoluteString, "Link copied", $toast) }.buttonStyle(.pill(.secondary, .medium))
         }
         .padding(Brand.s5)
         .screen()
         .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
+        .toast($toast)
     }
 
     private var shareText: String {

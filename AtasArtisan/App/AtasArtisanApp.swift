@@ -159,5 +159,30 @@ struct RootView: View {
             }
         }
         .task { await app.watchSession() }
+        .background(KeyboardDismiss())
+    }
+}
+
+/// A tap anywhere outside a text field closes the keyboard, on every screen, form and sheet: one tap recognizer
+/// on the window that never cancels the tap, so buttons and rows still get it.
+private struct KeyboardDismiss: UIViewRepresentable {
+    func makeUIView(context: Context) -> UIView { let p = Probe(); p.isUserInteractionEnabled = false; return p }
+    func updateUIView(_ view: UIView, context: Context) {}
+
+    final class Probe: UIView, UIGestureRecognizerDelegate {
+        override func didMoveToWindow() {
+            guard let window, !(window.gestureRecognizers ?? []).contains(where: { $0.delegate === self }) else { return }
+            let tap = UITapGestureRecognizer(target: self, action: #selector(tapped))
+            tap.cancelsTouchesInView = false
+            tap.delegate = self
+            window.addGestureRecognizer(tap)
+        }
+        @objc private func tapped() { window?.endEditing(true) }
+        func gestureRecognizer(_ g: UIGestureRecognizer, shouldReceive touch: UITouch) -> Bool {
+            var view = touch.view
+            while let v = view { if v is UITextField || v is UITextView { return false }; view = v.superview }
+            return true
+        }
+        func gestureRecognizer(_ g: UIGestureRecognizer, shouldRecognizeSimultaneouslyWith other: UIGestureRecognizer) -> Bool { true }
     }
 }

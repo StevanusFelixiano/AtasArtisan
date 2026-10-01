@@ -263,6 +263,7 @@
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				INFOPLIST_FILE = "AtasArtisan-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Ataste;
+				INFOPLIST_KEY_UIUserInterfaceStyle = Light;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Take a photo of the delivered order or your transfer receipt.";
 				CODE_SIGN_ENTITLEMENTS = AtasArtisan.entitlements;
@@ -299,6 +300,7 @@
 				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = UIInterfaceOrientationPortrait;
 				INFOPLIST_FILE = "AtasArtisan-Info.plist";
 				INFOPLIST_KEY_CFBundleDisplayName = Ataste;
+				INFOPLIST_KEY_UIUserInterfaceStyle = Light;
 				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.food-and-drink";
 				INFOPLIST_KEY_NSCameraUsageDescription = "Take a photo of the delivered order or your transfer receipt.";
 				CODE_SIGN_ENTITLEMENTS = AtasArtisan.entitlements;

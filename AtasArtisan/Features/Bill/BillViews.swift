@@ -10,6 +10,7 @@ struct BillView: View {
     @State private var uploaded = false
     @State private var busy = false
     @State private var copied: String?
+    @State private var toast: String?
     @State private var problem: Problem?
 
     var body: some View {
@@ -65,6 +66,7 @@ struct BillView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { ToolbarItem(placement: .confirmationAction) { Button("Done") { dismiss() } } }
         .onChange(of: photo) { _, item in if let item { Task { await upload(item) } } }
+        .toast($toast, above: 84)
         .problemAlert($problem)
     }
 
@@ -90,7 +92,7 @@ struct BillView: View {
             }
             Spacer()
             IconCircle(symbol: copied == value ? "checkmark" : "doc.on.doc") {
-                UIPasteboard.general.string = value
+                copy(value, caption == "Account number" ? "Account number copied" : "Copied", $toast)
                 copied = value
             }
             .accessibilityLabel("Copy \(caption ?? value)")
@@ -164,7 +166,7 @@ struct PaymentBoardView: View {
                 ForEach(rows, id: \.user_id) { r in
                     VStack(alignment: .leading, spacing: Brand.s3) {
                         HStack(spacing: Brand.s3) {
-                            Avatar(name: store.name(r.user_id), index: store.colorIndex(r.user_id))
+                            Avatar(name: store.name(r.user_id), index: store.colorIndex(r.user_id), art: store.people[r.user_id]?.avatar)
                             VStack(alignment: .leading, spacing: 0) {
                                 Text(store.name(r.user_id)).brand(.headline)
                                 Text(Rupiah.format(r.total)).brand(.callout, Brand.ink2)

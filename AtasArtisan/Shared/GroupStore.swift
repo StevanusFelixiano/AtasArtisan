@@ -77,6 +77,8 @@ final class GroupStore {
             self.products.merge(prods.map { ($0.id, $0) }) { _, new in new }
             self.payout = payout
             self.loadError = nil
+        } catch where isCancellation(error) {
+            return
         } catch {
             loadError = readable(error)
         }

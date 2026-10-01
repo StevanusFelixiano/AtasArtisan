@@ -154,7 +154,7 @@ struct GroupView: View {
         let bill = store.bill.first { $0.user_id == m.user_id }
         return VStack(alignment: .leading, spacing: Brand.s3) {
             HStack(spacing: Brand.s3) {
-                Avatar(name: store.name(m.user_id), index: store.colorIndex(m.user_id), host: m.user_id == g.host_id)
+                Avatar(name: store.name(m.user_id), index: store.colorIndex(m.user_id), host: m.user_id == g.host_id, art: store.people[m.user_id]?.avatar)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(mine ? "\(store.name(m.user_id)) (you)" : store.name(m.user_id)).brand(.headline)
                     Text(Rupiah.format(bill?.total ?? items.reduce(0) { $0 + $1.total })).brand(.callout, Brand.ink2)

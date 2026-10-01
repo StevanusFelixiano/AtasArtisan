@@ -32,7 +32,7 @@ struct SplitProposeView: View {
                     let pct = pcts[u] ?? 0
                     VStack(alignment: .leading, spacing: Brand.s2) {
                         HStack {
-                            Avatar(name: store.name(u), index: store.colorIndex(u), size: 30)
+                            Avatar(name: store.name(u), index: store.colorIndex(u), size: 30, art: store.people[u]?.avatar)
                             Text(store.name(u) + (u == item.owner_id ? " · owner" : "")).brand(.headline)
                             Spacer()
                             Text("\(Int(pct))% · \(Rupiah.format(Int((Double(item.total) * pct / 100).rounded())))").brand(.callout)

@@ -18,8 +18,7 @@ enum Links {
     static let privacy = supabaseURL.appending(path: "functions/v1/legal/privacy")
     static let terms = supabaseURL.appending(path: "functions/v1/legal/terms")
     static let support = supabaseURL.appending(path: "functions/v1/legal/support")
-    // TODO(user): the public support contact for the App Store listing and the in-app Support row. Not set yet.
-    static let supportEmail = "support@ataste.app"
+    static let supportEmail = "bayu.johar25@gmail.com"
     /// Public TestFlight link, set once the first build passes beta review.
     static let getTheApp = "https://testflight.apple.com/join/ataste"
 
@@ -45,6 +44,12 @@ struct Nullable<Value: Encodable>: Encodable {
 
 /// Server errors come back as Postgres exception text ("only the host can do this"). Show that sentence,
 /// not the SDK's wrapper.
+/// SwiftUI cancels a view's task when the view goes away or a newer load replaces it. The result is no longer
+/// wanted, so a cancelled request is never shown as a failure.
+func isCancellation(_ error: Error) -> Bool {
+    error is CancellationError || (error as? URLError)?.code == .cancelled
+}
+
 func readable(_ error: Error) -> String {
     if let e = error as? PostgrestError { return e.message }
     if let e = error as? FunctionsError, case let .httpError(_, data) = e,

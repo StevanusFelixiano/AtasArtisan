@@ -1,6 +1,6 @@
 # Ataste Support
 Last updated 1 October 2026
-Need help with Ataste? Write to support@ataste.app and we will reply within two working days.
+Need help with Ataste? Write to bayu.johar25@gmail.com and we will reply within two working days.
 ## Common questions
 - How do I sign in? Tap Continue with WhatsApp. WhatsApp opens with a short code already typed; press send. Ataste reads your number from that message and signs you in.
 - My code expired. Codes last 10 minutes. Go back and tap Send again for a new one.

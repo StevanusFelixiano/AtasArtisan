@@ -12,6 +12,7 @@ struct ProfileView: View {
     @State private var editingAccount: PayoutAccount?
     @State private var editingAddress: Address?
     @State private var confirmDelete = false
+    @State private var pickingAvatar = false
     @State private var confirmLogout = false
     @State private var problem: Problem?
 
@@ -19,7 +20,15 @@ struct ProfileView: View {
         Form {
             Section {
                 HStack(spacing: Brand.s3) {
-                    Avatar(name: app.profile?.name ?? "?", index: 0, size: 56)
+                    Button { pickingAvatar = true } label: {
+                        Avatar(name: app.profile?.name ?? "?", index: 0, size: 64, art: app.profile?.avatar)
+                            .overlay(alignment: .bottomTrailing) {
+                                Image(systemName: "pencil.circle.fill").font(.system(size: 20)).foregroundStyle(Brand.caramel)
+                                    .background(Circle().fill(.white))
+                            }
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Change profile picture")
                     VStack(alignment: .leading) {
                         TextField("Your name", text: $name).font(Brand.font(.title2)).onSubmit { Task { await saveName() } }
                         Label(PhoneFormat.display(app.profile?.phone ?? ""), systemImage: "checkmark.seal.fill").brand(.callout, Color(rgb: 0x5E7A00))
@@ -71,6 +80,8 @@ struct ProfileView: View {
         .screen()
         .navigationTitle("Profile")
         .task { await load() }
+        .onAppear { if DebugScreens.value("ATASTE_SHEET") == "avatar" { pickingAvatar = true } }
+        .sheet(isPresented: $pickingAvatar) { NavigationStack { AvatarPicker() } }
         .sheet(item: $editingAccount) { a in NavigationStack { PayoutEditor(account: a) { _ in Task { await load() } } } }
         .sheet(item: $editingAddress) { a in NavigationStack { AddressEditor(address: a) { _ in Task { await load() } } } }
         .alert("Log out?", isPresented: $confirmLogout) {
@@ -215,6 +226,54 @@ struct AddressEditor: View {
             a.user_id = nil
             let row: Address = try await supabase.from("addresses").upsert(a).select().single().execute().value
             saved(row)
+            dismiss()
+        }
+    }
+}
+
+/// Pick a giraffe or a painting as your profile picture.
+struct AvatarPicker: View {
+    @Environment(AppModel.self) private var app
+    @Environment(\.dismiss) private var dismiss
+    @State private var problem: Problem?
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: Brand.s5) {
+                section("Giraffes", Art.poses)
+                section("Paintings", Art.paintings)
+                Button("Use my initial instead") { Task { await choose(nil) } }.buttonStyle(.pill(.secondary, .medium))
+            }
+            .padding(Brand.s4)
+        }
+        .screen()
+        .navigationTitle("Profile picture")
+        .navigationBarTitleDisplayMode(.inline)
+        .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
+        .problemAlert($problem)
+    }
+
+    private func section(_ title: String, _ arts: [String]) -> some View {
+        VStack(alignment: .leading, spacing: Brand.s3) {
+            Text(title).brand(.label)
+            LazyVGrid(columns: Array(repeating: GridItem(.flexible(), spacing: Brand.s3), count: 3), spacing: Brand.s3) {
+                ForEach(arts, id: \.self) { art in
+                    Button { Task { await choose(art) } } label: {
+                        Avatar(name: app.profile?.name ?? "?", index: Art.all.firstIndex(of: art) ?? 0, size: 96, art: art)
+                            .overlay(Circle().stroke(app.profile?.avatar == art ? Brand.caramel : .clear, lineWidth: 4))
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityLabel(art.replacingOccurrences(of: "-", with: " "))
+                }
+            }
+        }
+    }
+
+    private func choose(_ art: String?) async {
+        await attempt($problem, "Couldn't save") {
+            guard let id = app.userID else { return }
+            try await supabase.from("profiles").update(["avatar": Nullable(art)]).eq("id", value: id).execute()
+            await app.loadProfile()
             dismiss()
         }
     }
