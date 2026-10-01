@@ -102,6 +102,9 @@ struct GroupView: View {
         return [.review, .editsHost, .fixing].contains(mode(g))
     }
 
+    /// 6-8: no network. The last loaded order stays readable; changes wait for the connection.
+    var offline: Bool { groupOffline }
+
     var hostName: String { store.name(store.group?.host_id ?? UUID()) }
     var hostFirst: String { String(hostName.split(separator: " ").first ?? Substring(hostName)) }
 
@@ -114,7 +117,13 @@ struct GroupView: View {
         } else {
             ScrollView {
                 VStack(alignment: .leading, spacing: 14) {
-                    sections(g, m)
+                    if offline {
+                        NoticeBanner(icon: "wifi.slash", text: "You’re offline. Showing the order as of \(Wita.string(store.loadedAt ?? Date(), "HH:mm")).",
+                                     fill: Brand.liquorice100, actionTitle: "Retry") { Task { await store.refresh() } }
+                    }
+                    VStack(alignment: .leading, spacing: 14) { sections(g, m) }
+                        .opacity(offline ? 0.7 : 1)
+                        .disabled(offline)
                 }
                 .padding(.horizontal, 16)
                 .padding(.top, 4)
@@ -386,7 +395,7 @@ struct GroupView: View {
         case "leave": if let g = store.group { askLeave(g) }
         default: break
         }
-        if let fake = DebugScreens.value("ATASTE_REPLACED"), let item = store.myItems.first {
+        if let fake = DebugScreens.value("ATASTE_REPLACED"), let item = store.myItems.last {
             let parts = fake.split(separator: ":").map(String.init)
             if parts.count == 3, let old = Int(parts[1]), let before = Int(parts[2]) {
                 replaced[item.id] = Replacement(oldName: parts[0], oldQty: 1, oldTotal: old, subtotalBefore: before)
@@ -451,20 +460,24 @@ struct QtyStepper: View {
     }
 }
 
-/// Pills that share the glass bar (4-5 "Request edits" + "Send to Atas", the 60pt "+"): the large pill's
-/// colours at 15pt with tight side padding so two fit side by side.
+/// Pills that share the glass bar or sit in cards (4-5 "Request edits" + "Send to Atas", the 60pt "+", 4-9
+/// "Replace" / "Remove"): the large pill's colours at 15pt with tight side padding so two fit side by side.
+/// `.destructive` is the outlined Remove (white, soft red ring, red text).
 struct BarPillStyle: ButtonStyle {
     var kind: PillKind
     var width: CGFloat? = nil
+    var height: CGFloat = 60
     @Environment(\.isEnabled) private var enabled
 
     func makeBody(configuration: Configuration) -> some View {
         let p = configuration.isPressed
         let (fill, border, ink): (Color, Color, Color) = switch (kind, enabled) {
+        case (_, false): kind == .secondary ? (Brand.cream, Brand.liquorice100, Brand.liquorice400) : (Brand.liquorice400, Brand.liquorice400, Brand.cream)
         case (.secondary, true): (p ? Brand.creamPressed : Brand.cream, p ? Brand.choc100Pressed : Brand.choc100, Brand.cocoa)
-        case (.secondary, false): (Brand.cream, Brand.liquorice100, Brand.liquorice400)
-        case (_, true): (p ? Brand.caramelPressed : Brand.caramel, p ? Brand.caramelPressed : Brand.caramel, Brand.cream)
-        case (_, false): (Brand.liquorice400, Brand.liquorice400, Brand.cream)
+        case (.dark, true): (p ? Brand.cocoaPressed : Brand.cocoa, p ? Brand.cocoaPressed : Brand.cocoa, Brand.cream)
+        case (.destructive, true): (p ? Brand.trashFill : .white, Brand.destructiveSoft, Brand.destructive)
+        case (.success, true): (p ? Brand.limePressed : Brand.lime, p ? Brand.limeDeepPressed : Brand.limeDeep, Brand.cocoa)
+        case (.primary, true): (p ? Brand.caramelPressed : Brand.caramel, p ? Brand.caramelPressed : Brand.caramel, Brand.cream)
         }
         configuration.label
             .labelStyle(BarLabel())
@@ -473,7 +486,7 @@ struct BarPillStyle: ButtonStyle {
             .minimumScaleFactor(0.85)
             .padding(.horizontal, width == nil ? 12 : 0)
             .frame(width: width)
-            .frame(maxWidth: width == nil ? .infinity : nil, minHeight: 60)
+            .frame(maxWidth: width == nil ? .infinity : nil, minHeight: height)
             .foregroundStyle(ink)
             .background(Capsule().fill(fill))
             .overlay(Capsule().strokeBorder(border, lineWidth: 4))

@@ -2,6 +2,9 @@ import SwiftUI
 
 // Small building blocks for the group screen (boards 3 to 6), sized from the design's CSS (1 px = 1 pt).
 
+/// No network (6-8); ATASTE_OFFLINE fakes it for DEBUG screenshots.
+var groupOffline: Bool { !Connectivity.shared.online || DebugScreens.value("ATASTE_OFFLINE") != nil }
+
 enum GFont {
     /// Roundo 700 at a design size ("font:700 32px Roundo").
     static func roundo(_ size: CGFloat) -> Font { Brand.font(.title2, size: size, weight: 700) }
@@ -107,10 +110,15 @@ func icon(_ name: String, _ size: CGFloat, _ color: Color = Brand.cocoa, weight:
 }
 
 /// The Liquid Glass action bar at the bottom of the group screen (`at-glass radius 36`, 12pt inset).
+/// Offline (6-8), the buttons are disabled and a line under them says why.
 struct GlassBar<Content: View>: View {
     @ViewBuilder var content: Content
     var body: some View {
-        HStack(spacing: 10) { content }
+        let offline = groupOffline
+        VStack(spacing: 8) {
+            HStack(spacing: 10) { content }.disabled(offline)
+            if offline { Text("Reconnect to change your order").ui(GFont.manrope(13), Brand.ink2).padding(.bottom, 2) }
+        }
             .padding(12)
             .glassEffect(.regular.tint(Brand.cream.opacity(0.4)), in: .rect(cornerRadius: 36))
             .padding(.horizontal, 12)
