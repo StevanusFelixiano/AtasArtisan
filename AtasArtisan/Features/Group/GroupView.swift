@@ -1,18 +1,31 @@
 import SwiftUI
 import Supabase
 
-/// Board 3. The group order: header, Rp 200k bar, members and their items, splits, edit requests,
-/// delivery photos, and a bottom action bar that depends on the role and the order's state.
+/// Boards 3 to 6: the group order. One screen whose content follows the order's state and the viewer's role
+/// (host or member): open (3-1/3-2/3-3/3-8), host review and edit rounds (4-5/4-7/4-8), the member's edit
+/// request (4-9/4-10), waiting on the host (3-5), sent (5-2), confirmed (5-4), delivered (5-13), cancelled
+/// (6-10). The bottom Liquid Glass bar carries the one next step. The sheets (menu, split, send, bill...)
+/// are other screens; this view only presents them.
 struct GroupView: View {
     let id: UUID
     @Binding var path: NavigationPath
-    @State private var store: GroupStore
-    @State private var sheet: GroupSheet?
-    @State private var confirm: Confirm?
-    @State private var editRequest: Item?
-    @State private var editReason = ""
-    @State private var problem: Problem?
-    @Environment(\.openURL) private var openURL
+    @State var store: GroupStore
+    @State var sheet: GroupSheet?
+    @State var confirm: Confirm?
+    @State var problem: Problem?
+    @State var toast: String?
+    @State var times: GroupTimes?
+    @State var itemTimes: [UUID: Date] = [:]
+    /// Member rows opened to show their splits.
+    @State var expanded: Set<UUID> = []
+    /// A flagged item being replaced from the menu: the item, my item ids before, my subtotal before.
+    @State var replacing: (item: Item, before: Set<UUID>, subtotal: Int)?
+    /// This session's replacements in the current edit round, keyed by the new item (4-10).
+    @State var replaced: [UUID: Replacement] = [:]
+    @State var removedInRound = false
+    @State var reporting: DeliveryProof?
+    @State var proofURLs: [UUID: URL] = [:]
+    @Environment(\.openURL) var openURL
 
     init(id: UUID, path: Binding<NavigationPath>) {
         self.id = id
@@ -27,277 +40,315 @@ struct GroupView: View {
             } else if let e = store.loadError, store.loaded {
                 VStack { ErrorBanner(message: e) { Task { await store.refresh() } } }.padding().frame(maxHeight: .infinity).screen()
             } else {
-                LoaderView(line: "Asking the oven…")
+                GroupSkeleton()
             }
         }
         .toolbar(.hidden, for: .tabBar)
         .navigationTitle(store.group?.name ?? "Order")
+        .toolbar(removing: showsTitle ? nil : .title)
         .navigationBarTitleDisplayMode(.inline)
         .task {
             await store.refresh()
-            switch DebugScreens.value("ATASTE_SHEET") {
-            case "menu": sheet = .menu
-            case "send": sheet = .send
-            case "confirm": sheet = .confirmAtas
-            case "bill": sheet = .bill
-            case "board": sheet = .board
-            case "delivery": sheet = .delivery
-            case "share": sheet = .share
-            case "split": if let i = store.items.first(where: { $0.owner_id == store.me && store.liveSplit($0) == nil }) { sheet = .split(i) }
-            default: break
-            }
+            debugHooks()
         }
         .task { await store.watch() }
-        .sheet(item: $sheet) { s in sheetView(s) }
+        .task(id: timesKey) { await loadTimes() }
+        .sheet(item: $sheet, onDismiss: finishReplacing) { s in sheetView(s) }
         .alert(confirm?.title ?? "", isPresented: Binding(get: { confirm != nil }, set: { if !$0 { confirm = nil } })) {
             if let c = confirm {
-                Button(c.button, role: .destructive) { Task { await run(c.action) } }
-                Button("Keep", role: .cancel) {}
+                Button(c.keep, role: .cancel) {}
+                Button(c.button, role: .destructive) { Task { await act("That didn't work", c.action) } }
             }
         } message: { Text(confirm?.message ?? "") }
-        .alert("Ask to change this item", isPresented: Binding(get: { editRequest != nil }, set: { if !$0 { editRequest = nil } })) {
-            TextField("Reason, e.g. sold out today", text: $editReason)
-            Button("Send") {
-                if let item = editRequest { Task { await act("Couldn't send the request") { try await store.rpc("request_edit", ["item": .string(item.id.uuidString), "reason": .string(editReason)]) } } }
-                editReason = ""
+        .alert("Report this photo?", isPresented: Binding(get: { reporting != nil }, set: { if !$0 { reporting = nil } })) {
+            Button("Cancel", role: .cancel) {}
+            Button("Report and hide", role: .destructive) {
+                if let p = reporting { Task { await act("Couldn't report") { try await store.rpc("report_photo", ["proof": .string(p.id.uuidString)]) } } }
             }
-            Button("Cancel", role: .cancel) { editReason = "" }
-        } message: { Text("\(store.name(editRequest?.owner_id ?? UUID())) gets a notification with your reason.") }
+        } message: { Text("It's hidden for everyone in the group, and we review it.") }
         .problemAlert($problem)
+        .toast($toast)
     }
+
+    // MARK: Who sees what
+
+    enum Mode { case open, review, editsHost, fixing, waiting, sent, confirmed, delivered, closed, cancelled }
+
+    var me: Member? { store.members.first { $0.user_id == store.me } }
+    /// I pressed Done editing after the latest lock, so this round is finished for me.
+    var doneThisRound: Bool {
+        guard let d = me?.done_editing_at else { return false }
+        return d > (times?.locked_at ?? .distantPast)
+    }
+
+    func mode(_ g: OrderGroup) -> Mode {
+        switch g.state {
+        case .open: .open
+        case .locked: store.isHost ? .review : .waiting
+        case .edits:
+            if store.hasFlagsForMe || ((!replaced.isEmpty || removedInRound) && !doneThisRound) { .fixing }
+            else { store.isHost ? .editsHost : .waiting }
+        case .sent: .sent
+        case .confirmed: .confirmed
+        case .delivered: .delivered
+        case .closed: .closed
+        case .cancelled: .cancelled
+        }
+    }
+
+    /// Screens that draw their own heading hide the bar title (it stays set for the back menu).
+    var showsTitle: Bool {
+        guard let g = store.group else { return false }
+        return [.review, .editsHost, .fixing].contains(mode(g))
+    }
+
+    var hostName: String { store.name(store.group?.host_id ?? UUID()) }
+    var hostFirst: String { String(hostName.split(separator: " ").first ?? Substring(hostName)) }
 
     // MARK: Content
 
-    @ViewBuilder private func content(_ g: OrderGroup) -> some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: Brand.s4) {
-                header(g)
-                if !g.personal && g.state.isLive && g.state != .cancelled {
-                    DiscountBar(subtotal: store.subtotal).card()
+    @ViewBuilder func content(_ g: OrderGroup) -> some View {
+        let m = mode(g)
+        if m == .cancelled {
+            cancelledPage(g)
+        } else {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 14) {
+                    sections(g, m)
                 }
-                if g.state == .edits && store.hasFlagsForMe { editBanner }
-                if g.state == .confirmed || g.state == .delivered, let bill = store.myBill, !store.isHost, bill.total > 0 { myBillCard(bill) }
-                Timeline(group: g)
-                ForEach(store.activeMembers, id: \.user_id) { m in memberCard(g, m) }
-                if !store.proofs.filter({ !$0.hidden }).isEmpty { DeliveryPhotos(store: store) }
-                if g.state == .open && !store.isHost {
-                    Button("Leave group", role: .destructive) {
-                        confirm = Confirm(title: "Leave \(g.name)?", message: "Your items come out of the order and the host gets a heads-up. You can rejoin with the link while the group is open.",
-                                          button: "Leave group") { try await store.rpc("leave_group", ["g": .string(id.uuidString)]); path.removeLast() }
+                .padding(.horizontal, 16)
+                .padding(.top, 4)
+                .padding(.bottom, 24)
+            }
+            .scrollIndicators(.hidden)
+            .screen()
+            .refreshable { await store.refresh() }
+            .safeAreaInset(edge: .bottom) { actionBar(g, m) }
+            .toolbar { toolbar(g, m) }
+            .navigationTitle(m == .fixing ? g.name : "Review order")
+        }
+    }
+
+    @ViewBuilder private func sections(_ g: OrderGroup, _ m: Mode) -> some View {
+        switch m {
+        case .open: openSections(g)
+        case .review: reviewSections(g)
+        case .editsHost: editsHostSections(g)
+        case .fixing: fixingSections(g)
+        case .waiting: waitingSections(g)
+        case .sent: sentSections(g)
+        case .confirmed: confirmedSections(g)
+        case .delivered, .closed: deliveredSections(g)
+        case .cancelled: EmptyView()
+        }
+    }
+
+    // MARK: Toolbar (Liquid Glass capsule: share + more)
+
+    @ToolbarContentBuilder private func toolbar(_ g: OrderGroup, _ m: Mode) -> some ToolbarContent {
+        ToolbarItemGroup(placement: .topBarTrailing) {
+            if g.state == .open && !g.personal {
+                Button { sheet = .share } label: { Image(systemName: "square.and.arrow.up") }
+                    .accessibilityLabel("Share invite")
+            }
+            if hasMoreMenu(g) {
+                Menu { moreMenu(g) } label: { Image(systemName: "ellipsis") }
+                    .accessibilityLabel(store.isHost ? "Host actions" : "More")
+            }
+        }
+    }
+
+    private func hasMoreMenu(_ g: OrderGroup) -> Bool {
+        if store.isHost { return g.state != .cancelled }
+        return true
+    }
+
+    /// 3-4 Host menu, and the member's equivalent.
+    @ViewBuilder private func moreMenu(_ g: OrderGroup) -> some View {
+        let s = g.state
+        if store.isHost {
+            if s == .open && !g.personal {
+                Button { lock(g) } label: { Label("Lock order", systemImage: "lock") }.disabled(store.items.isEmpty)
+            }
+            if s == .locked {
+                Button { Task { await act("Couldn't unlock") { try await store.rpc("unlock_group", ["g": .string(id.uuidString), "new_cutoff": .null]) } } }
+                    label: { Label("Unlock order", systemImage: "lock.open") }
+            }
+            if [.locked, .edits].contains(s) && !g.personal {
+                Button { sheet = .requestEdit(RequestSeed()) } label: { Label("Request edits", systemImage: "pencil") }
+            }
+            if [.open, .locked, .edits].contains(s) {
+                Button { sheet = .editDelivery } label: { Label("Edit delivery details", systemImage: "mappin.and.ellipse") }
+            }
+            if s == .open && !g.personal {
+                Button { sheet = .share } label: { Label("Share invite", systemImage: "square.and.arrow.up") }
+            }
+            if [.confirmed, .delivered, .closed].contains(s) {
+                Button { sheet = g.personal ? .bill : .board } label: { Label(g.personal ? "My bill" : "Payments", systemImage: "receipt") }
+            }
+            Divider()
+            let others = store.activeMembers.filter { $0.user_id != g.host_id }
+            if [.open, .locked, .edits].contains(s) && !others.isEmpty {
+                Menu {
+                    ForEach(others, id: \.user_id) { m in
+                        Button(store.name(m.user_id)) { askRemove(m.user_id) }
                     }
-                    .brand(.callout, Brand.destructive).frame(maxWidth: .infinity)
-                }
+                } label: { Label("Remove a member", systemImage: "person") }
             }
-            .padding(Brand.s4)
-            .padding(.bottom, 90)
-        }
-        .screen()
-        .refreshable { await store.refresh() }
-        .safeAreaInset(edge: .bottom) { actionBar(g) }
-        .toolbar {
-            if store.isHost && g.state.isLive { ToolbarItem(placement: .topBarTrailing) { hostMenu(g) } }
-            if !g.personal && g.state == .open {
-                ToolbarItem(placement: .topBarTrailing) {
-                    Button { sheet = .share } label: { Image(systemName: "square.and.arrow.up") }.accessibilityLabel("Invite people")
-                }
-            }
-        }
-    }
-
-    private func header(_ g: OrderGroup) -> some View {
-        VStack(alignment: .leading, spacing: Brand.s2) {
-            HStack {
-                StateTag(state: g.state)
-                Spacer()
-                if g.state == .open, let c = g.cutoff_at {
-                    Label { Text("Locks \(c, style: .relative)") } icon: { Image(systemName: "clock") }.brand(.footnote, Brand.caramel)
-                }
-            }
-            Text(g.name).brand(.title1)
-            Text("Hosted by \(store.name(g.host_id)) · \(Wita.string(g.delivery_at, "EEE d MMM, HH:mm")) WITA · \(g.address_label)")
-                .brand(.callout, Brand.ink2)
-        }
-    }
-
-    private var editBanner: some View {
-        HStack(alignment: .top, spacing: Brand.s3) {
-            Mascot(pose: "pose-confused", size: 56, fill: Brand.pink100)
-            VStack(alignment: .leading, spacing: Brand.s2) {
-                Text("The host asked you to change an item").brand(.headline)
-                ForEach(store.myItems.filter { $0.flagged_at != nil }) { i in
-                    Text("\(i.name): \(i.flag_reason ?? "")").brand(.callout, Brand.ink2)
-                }
-                Text("Replace or remove it, then tap Done editing.").brand(.footnote, Brand.ink3)
-            }
-        }
-        .card(Brand.rCard).overlay(RoundedRectangle(cornerRadius: Brand.rCard).stroke(Brand.pink100, lineWidth: 3))
-    }
-
-    private func myBillCard(_ bill: BillRow) -> some View {
-        Button { sheet = .bill } label: {
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("You owe \(store.name(store.group?.host_id ?? UUID()))").brand(.label, Brand.ink3)
-                    Text(Rupiah.format(bill.total)).brand(.title1)
-                }
-                Spacer()
-                PayTag(state: PayState(bill))
-            }
-            .card()
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func memberCard(_ g: OrderGroup, _ m: Member) -> some View {
-        let mine = m.user_id == store.me
-        let items = store.items(of: m.user_id)
-        let bill = store.bill.first { $0.user_id == m.user_id }
-        return VStack(alignment: .leading, spacing: Brand.s3) {
-            HStack(spacing: Brand.s3) {
-                Avatar(name: store.name(m.user_id), index: store.colorIndex(m.user_id), host: m.user_id == g.host_id, art: store.people[m.user_id]?.avatar)
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(mine ? "\(store.name(m.user_id)) (you)" : store.name(m.user_id)).brand(.headline)
-                    Text(Rupiah.format(bill?.total ?? items.reduce(0) { $0 + $1.total })).brand(.callout, Brand.ink2)
-                }
-                Spacer()
-                if let bill, [.confirmed, .delivered, .closed].contains(g.state), bill.total > 0, m.user_id != g.host_id { PayTag(state: PayState(bill)) }
-                if store.isHost && !mine, let phone = store.people[m.user_id]?.phone {
-                    IconCircle(symbol: "message.fill", fill: Brand.lime) { openURL(Links.whatsApp(phone)) }
-                        .accessibilityLabel("WhatsApp \(store.name(m.user_id))")
-                }
-                if store.isHost && !mine && [.open, .locked, .edits].contains(g.state) {
-                    Menu {
-                        Button("Remove from group", role: .destructive) {
-                            confirm = Confirm(title: "Remove \(store.name(m.user_id))?", message: "Their items come out of the order and they get a notification.",
-                                              button: "Remove") { try await store.rpc("remove_member", ["g": .string(id.uuidString), "u": .string(m.user_id.uuidString)]) }
-                        }
-                    } label: { Image(systemName: "ellipsis").frame(width: 44, height: 44) }
-                    .accessibilityLabel("More for \(store.name(m.user_id))")
-                }
-            }
-            if items.isEmpty {
-                Text(mine ? "Nothing in the oven...yet!" : "No items yet").brand(.callout, Brand.ink3)
-            }
-            ForEach(items) { item in itemRow(g, item, mine: mine) }
-        }
-        .card()
-    }
-
-    private func itemRow(_ g: OrderGroup, _ item: Item, mine: Bool) -> some View {
-        let editable = mine && (g.state == .open || (g.state == .edits && store.hasFlagsForMe))
-        let split = store.liveSplit(item)
-        return VStack(alignment: .leading, spacing: Brand.s2) {
-            HStack(alignment: .top, spacing: Brand.s3) {
-                ProductPhoto(url: store.products[item.product_id]?.photo, size: 44)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("\(item.qty)× \(item.name)").brand(.headline)
-                    let opts = store.optionText(item)
-                    if !opts.isEmpty { Text(opts).brand(.callout, Brand.ink2) }
-                    if !item.note.isEmpty { Text("Note: \(item.note)").brand(.footnote, Brand.ink3) }
-                    if let reason = item.flag_reason, item.flagged_at != nil {
-                        Tag(text: "Change: \(reason)", fill: Brand.pink100)
-                    }
-                }
-                Spacer()
-                Text(Rupiah.format(item.total)).brand(.callout)
-            }
-            if let split { SplitSummary(store: store, item: item, split: split) }
-            HStack(spacing: Brand.s2) {
-                if editable {
-                    QtyStepper(qty: item.qty) { q in
-                        if q == 0 {
-                            confirm = Confirm(title: "Remove \(item.name)?", message: split == nil ? "It comes out of your order." : "The split on it is cancelled too.",
-                                              button: "Remove") { try await store.remove(item) }
-                        } else { Task { await act("Couldn't change the quantity") { try await store.update(item, qty: q) } } }
-                    }
-                }
-                Spacer()
-                if g.state == .open && split == nil && store.activeMembers.count > 1 {
-                    Button("Split") { sheet = .split(item) }.buttonStyle(.pill(.secondary, .small))
-                }
-                if store.isHost && [.locked, .edits].contains(g.state) && item.flagged_at == nil {
-                    Button("Ask to change") { editRequest = item }.buttonStyle(.pill(.secondary, .small))
-                }
-            }
-        }
-        .padding(.top, Brand.s2)
-    }
-
-    private func hostMenu(_ g: OrderGroup) -> some View {
-        Menu {
-            if g.state == .open {
-                Button { Task { await act("Couldn't lock") { try await store.rpc("lock_group", ["g": .string(id.uuidString)]) } } } label: { Label("Lock order", systemImage: "lock") }
-            }
-            if g.state == .locked {
-                Button { Task { await act("Couldn't unlock") { try await store.rpc("unlock_group", ["g": .string(id.uuidString), "new_cutoff": .null]) } } } label: { Label("Unlock", systemImage: "lock.open") }
-            }
-            if [.open, .locked, .edits, .sent].contains(g.state) {
+            if [.open, .locked, .edits, .sent].contains(s) {
                 Button(role: .destructive) {
                     confirm = Confirm(title: "Cancel \(g.name)?", message: "Everyone is told the group was cancelled. This can't be undone.",
                                       button: "Cancel group") { try await store.rpc("cancel_group", ["g": .string(id.uuidString)]) }
-                } label: { Label("Cancel group", systemImage: "xmark.circle") }
+                } label: { Label("Cancel group", systemImage: "trash") }
             }
-        } label: { Image(systemName: "ellipsis.circle") }
-        .accessibilityLabel("Host actions")
+        } else {
+            if s == .open {
+                Button { sheet = .share } label: { Label("Share invite", systemImage: "square.and.arrow.up") }
+            }
+            if let phone = store.people[g.host_id]?.phone {
+                Button { openURL(Links.whatsApp(phone)) } label: { Label("Message \(hostFirst)", systemImage: "message") }
+            }
+            if s == .confirmed, unpaid != nil {
+                Button { sheet = .delivery } label: { Label("Confirm delivery", systemImage: "shippingbox") }
+            }
+            if [.confirmed, .delivered, .closed].contains(s), let b = store.myBill, b.total > 0 {
+                Button { sheet = .bill } label: { Label("My bill", systemImage: "receipt") }
+            }
+            if s == .open {
+                Divider()
+                Button(role: .destructive) { askLeave(g) } label: { Label("Leave group", systemImage: "rectangle.portrait.and.arrow.right") }
+            }
+        }
     }
 
     // MARK: Bottom bar (Liquid Glass)
 
-    @ViewBuilder private func actionBar(_ g: OrderGroup) -> some View {
-        let host = store.isHost
-        HStack(spacing: Brand.s3) {
-            switch g.state {
-            case .open:
-                Button("Add items") { sheet = .menu }.buttonStyle(.pill(host && !g.personal ? .secondary : .primary))
-                if host {
-                    Button(g.personal ? "Send to Atas" : "Lock order") {
-                        Task { await act("Couldn't lock") {
-                            try await store.rpc("lock_group", ["g": .string(id.uuidString)])
-                            if g.personal { sheet = .send }
-                        } }
+    /// My bill while it is still to pay.
+    var unpaid: BillRow? {
+        guard !store.isHost, let b = store.myBill, b.total > 0, b.paid_at == nil else { return nil }
+        return b
+    }
+
+    @ViewBuilder private func actionBar(_ g: OrderGroup, _ m: Mode) -> some View {
+        switch m {
+        case .open:
+            if g.personal || store.isHost {
+                GlassBar {
+                    addCircle
+                    Button { lock(g) } label: {
+                        Label(g.personal ? "Send to Atas" : "Lock order", systemImage: g.personal ? "paperplane" : "lock")
                     }
                     .buttonStyle(.pill(.primary)).disabled(store.items.isEmpty)
                 }
-            case .edits:
-                if store.hasFlagsForMe {
-                    Button("Add items") { sheet = .menu }.buttonStyle(.pill(.secondary))
-                    Button("Done editing") { Task { await act("Couldn't finish") { try await store.rpc("done_editing", ["g": .string(id.uuidString)]) } } }.buttonStyle(.pill(.primary))
-                } else if host {
-                    Button("Lock again") { Task { await act("Couldn't lock") { try await store.rpc("lock_group", ["g": .string(id.uuidString)]) } } }
-                        .buttonStyle(.pill(.primary)).disabled(store.items.contains { $0.flagged_at != nil })
-                } else { waiting("Waiting for edits") }
-            case .locked:
-                if host { Button("Send to Atas · \(Rupiah.format(store.subtotal))") { sheet = .send }.buttonStyle(.pill(.primary)) }
-                else { waiting("\(store.name(g.host_id)) is checking the order") }
-            case .sent:
-                if host { Button("Atas replied · enter final bill") { sheet = .confirmAtas }.buttonStyle(.pill(.primary)) }
-                else { waiting("Waiting for Atas to confirm") }
-            case .confirmed:
-                if host && !g.personal { Button("Payments") { sheet = .board }.buttonStyle(.pill(.secondary)) }
-                else if !host, let b = store.myBill, b.total > 0, b.paid_at == nil { Button("Pay \(Rupiah.format(b.total))") { sheet = .bill }.buttonStyle(.pill(.secondary)) }
-                Button("Confirm delivery") { sheet = .delivery }.buttonStyle(.pill(.primary))
-            case .delivered:
-                if host {
-                    if !g.personal { Button("Payments") { sheet = .board }.buttonStyle(.pill(.secondary)) }
-                    Button("Close order") { Task { await act("Couldn't close") { try await store.rpc("close_group", ["g": .string(id.uuidString)]) } } }.buttonStyle(.pill(.primary))
-                } else if let b = store.myBill, b.total > 0, b.paid_at == nil {
-                    Button("Pay \(Rupiah.format(b.total))") { sheet = .bill }.buttonStyle(.pill(.primary))
-                }
-            case .closed, .cancelled:
-                EmptyView()
+            } else {
+                GlassBar { Button { sheet = .menu } label: { Label("Add items", systemImage: "plus") }.buttonStyle(.pill(.primary)) }
             }
+        case .review:
+            GlassBar {
+                if !g.personal {
+                    Button { sheet = .requestEdit(RequestSeed()) } label: { Label("Request edits", systemImage: "pencil") }
+                        .buttonStyle(BarPillStyle(kind: .secondary))
+                        .layoutPriority(1)
+                }
+                Button { sheet = .send } label: { Label("Send to Atas", systemImage: "paperplane") }
+                    .buttonStyle(BarPillStyle(kind: .primary))
+                    .layoutPriority(1.2)
+            }
+        case .editsHost:
+            GlassBar {
+                Button { lock(g) } label: { Label("Lock again", systemImage: "lock") }
+                    .buttonStyle(.pill(.primary)).disabled(store.items.contains { $0.flagged_at != nil })
+            }
+        case .fixing:
+            GlassBar {
+                Button { Task { await doneEditing() } } label: {
+                    if store.hasFlagsForMe { Text("Done editing") } else { Label("Done editing", systemImage: "checkmark") }
+                }
+                .buttonStyle(.pill(.primary)).disabled(store.hasFlagsForMe)
+            }
+        case .sent:
+            if store.isHost {
+                GlassBar { Button("Atas replied · enter final bill") { sheet = .confirmAtas }.buttonStyle(.pill(.primary)) }
+            }
+        case .confirmed:
+            GlassBar {
+                if let b = unpaid {
+                    Button { sheet = .bill } label: { Label("Pay \(hostFirst) · \(Rupiah.format(b.total))", systemImage: "receipt") }
+                        .buttonStyle(.pill(.primary))
+                } else {
+                    Button { sheet = .delivery } label: { Label("Confirm delivery", systemImage: "shippingbox") }.buttonStyle(.pill(.primary))
+                }
+            }
+        case .delivered:
+            if store.isHost {
+                GlassBar {
+                    Button("Close order") { Task { await act("Couldn't close") { try await store.rpc("close_group", ["g": .string(id.uuidString)]) } } }
+                        .buttonStyle(.pill(.dark))
+                }
+            } else if let b = unpaid {
+                GlassBar {
+                    Button { sheet = .bill } label: { Label("Pay \(hostFirst) · \(Rupiah.format(b.total))", systemImage: "receipt") }
+                        .buttonStyle(.pill(.primary))
+                }
+            }
+        case .waiting, .closed, .cancelled:
+            EmptyView()
         }
-        .padding(.horizontal, Brand.s4).padding(.vertical, Brand.s3)
-        .glassEffect(.regular.tint(Brand.cream.opacity(0.4)), in: .rect(cornerRadius: Brand.rHero))
-        .padding(.horizontal, Brand.s3)
     }
 
-    private func waiting(_ text: String) -> some View {
-        HStack(spacing: Brand.s2) {
-            ProgressView().tint(Brand.caramel)
-            Text(text).brand(.callout, Brand.ink2)
+    /// The 60pt "+" beside the main action (3-2, 3-8).
+    private var addCircle: some View {
+        Button { sheet = .menu } label: { Image(systemName: "plus").font(.system(size: 20, weight: .semibold)) }
+            .buttonStyle(BarPillStyle(kind: .secondary, width: 60))
+            .accessibilityLabel("Add items")
+    }
+
+    // MARK: Actions
+
+    func lock(_ g: OrderGroup) {
+        Task { await act("Couldn't lock") {
+            try await store.rpc("lock_group", ["g": .string(id.uuidString)])
+            if g.personal { sheet = .send }
+        } }
+    }
+
+    func askLeave(_ g: OrderGroup) {
+        let mine = itemPhrase(store.myItems)
+        let what = mine.isEmpty ? "You leave the order" : "Your \(mine) come out of the order"
+        confirm = Confirm(title: "Leave \(g.name)?",
+                          message: "\(what) and \(hostFirst) gets a heads-up. You can rejoin with the link while the group is open.",
+                          button: "Leave group", keep: "Stay") {
+            try await store.rpc("leave_group", ["g": .string(id.uuidString)])
+            path.removeLast()
         }
-        .frame(maxWidth: .infinity, minHeight: 52)
+    }
+
+    func askRemove(_ user: UUID) {
+        confirm = Confirm(title: "Remove \(store.name(user))?", message: "Their items come out of the order and they get a notification.",
+                          button: "Remove") { try await store.rpc("remove_member", ["g": .string(id.uuidString), "u": .string(user.uuidString)]) }
+    }
+
+    func doneEditing() async {
+        await act("Couldn't finish") {
+            try await store.rpc("done_editing", ["g": .string(id.uuidString)])
+            await loadTimes()
+        }
+    }
+
+    func act(_ title: String, _ work: @escaping () async throws -> Void) async {
+        await attempt($problem, title, work)
+    }
+
+    /// `locked_at` and item times, which the shared models don't carry.
+    private var timesKey: String {
+        "\(store.group?.state.rawValue ?? "")|\(store.items.map(\.id.uuidString).joined())|\(store.members.compactMap(\.done_editing_at).count)"
+    }
+
+    func loadTimes() async {
+        guard store.group != nil else { return }
+        times = try? await supabase.from("groups").select("locked_at,cancelled_at").eq("id", value: id).single().execute().value
+        let rows: [ItemTime] = (try? await supabase.from("items").select("id,created_at").eq("group_id", value: id).execute().value) ?? []
+        itemTimes = Dictionary(uniqueKeysWithValues: rows.map { ($0.id, $0.created_at) })
     }
 
     // MARK: Sheets
@@ -312,24 +363,45 @@ struct GroupView: View {
         case .bill: NavigationStack { BillView(store: store) }
         case .board: NavigationStack { PaymentBoardView(store: store) }
         case .delivery: NavigationStack { DeliveryView(store: store) }
+        case .requestEdit(let seed): NavigationStack { RequestEditSheet(store: store, seed: seed) }
+        case .editDelivery: NavigationStack { EditDeliverySheet(store: store) }
         }
     }
 
-    private func run(_ action: @escaping () async throws -> Void) async {
-        await act("That didn't work", action)
-    }
-
-    private func act(_ title: String, _ work: @escaping () async throws -> Void) async {
-        await attempt($problem, title, work)
+    /// DEBUG screenshot hooks: ATASTE_SHEET opens a sheet (or the leave / request-edit confirmations);
+    /// ATASTE_REPLACED="Old name:old price:subtotal before" fakes a replacement on my first item (4-10).
+    private func debugHooks() {
+        switch DebugScreens.value("ATASTE_SHEET") {
+        case "menu": sheet = .menu
+        case "send": sheet = .send
+        case "confirm": sheet = .confirmAtas
+        case "bill": sheet = .bill
+        case "board": sheet = .board
+        case "delivery": sheet = .delivery
+        case "share": sheet = .share
+        case "split": if let i = store.items.first(where: { $0.owner_id == store.me && store.liveSplit($0) == nil }) { sheet = .split(i) }
+        case "request": sheet = .requestEdit(RequestSeed(member: store.items.first { $0.owner_id != store.me }?.owner_id,
+                                                         item: store.items.first { $0.owner_id != store.me }?.id, reason: .soldOut))
+        case "delivery-details": sheet = .editDelivery
+        case "leave": if let g = store.group { askLeave(g) }
+        default: break
+        }
+        if let fake = DebugScreens.value("ATASTE_REPLACED"), let item = store.myItems.first {
+            let parts = fake.split(separator: ":").map(String.init)
+            if parts.count == 3, let old = Int(parts[1]), let before = Int(parts[2]) {
+                replaced[item.id] = Replacement(oldName: parts[0], oldQty: 1, oldTotal: old, subtotalBefore: before)
+            }
+        }
     }
 }
 
 enum GroupSheet: Identifiable {
-    case menu, share, split(Item), send, confirmAtas, bill, board, delivery
+    case menu, share, split(Item), send, confirmAtas, bill, board, delivery, requestEdit(RequestSeed), editDelivery
     var id: String {
         switch self {
         case .menu: "menu"; case .share: "share"; case .split(let i): "split-\(i.id)"; case .send: "send"
         case .confirmAtas: "confirm"; case .bill: "bill"; case .board: "board"; case .delivery: "delivery"
+        case .requestEdit: "request"; case .editDelivery: "edit-delivery"
         }
     }
 }
@@ -338,62 +410,79 @@ struct Confirm {
     var title: String
     var message: String
     var button: String
+    var keep = "Keep"
     var action: () async throws -> Void
+
+    init(title: String, message: String, button: String, keep: String = "Keep", action: @escaping () async throws -> Void) {
+        self.title = title; self.message = message; self.button = button; self.keep = keep; self.action = action
+    }
 }
 
+/// A flagged item the member swapped for another this session (4-10 "replaces Almond Croissant").
+struct Replacement: Hashable {
+    var oldName: String
+    var oldQty: Int
+    var oldTotal: Int
+    var subtotalBefore: Int
+}
+
+/// The quantity control in item rows (3-1): two 28pt choc-100 circles on a cream capsule, Roundo 16 count.
 struct QtyStepper: View {
     var qty: Int
     var change: (Int) -> Void
     var body: some View {
-        HStack(spacing: 0) {
-            IconCircle(symbol: qty == 1 ? "trash" : "minus") { change(qty - 1) }
+        HStack(spacing: 10) {
+            step(qty == 1 ? "trash" : "minus", qty == 1 ? Brand.trashFill : Brand.choc100) { change(qty - 1) }
                 .accessibilityLabel(qty == 1 ? "Remove" : "One less")
-            Text("\(qty)").brand(.headline).frame(minWidth: 24)
-            IconCircle(symbol: "plus") { change(min(qty + 1, 50)) }.accessibilityLabel("One more")
+            Text("\(qty)").ui(GFont.roundo(16)).frame(minWidth: 12)
+            step("plus", Brand.choc100) { change(min(qty + 1, 50)) }.accessibilityLabel("One more")
         }
+        .padding(3)
+        .background(Capsule().fill(Brand.cream))
+    }
+
+    private func step(_ symbol: String, _ fill: Color, _ action: @escaping () -> Void) -> some View {
+        Button(action: action) {
+            Image(systemName: symbol).font(.system(size: 13, weight: .bold)).foregroundStyle(symbol == "trash" ? Brand.destructive : Brand.cocoa)
+                .frame(width: 28, height: 28).background(Circle().fill(fill))
+                .padding(8).contentShape(Rectangle()).padding(-8)
+        }
+        .buttonStyle(.plain)
     }
 }
 
-/// The order's states, done and to come (design system timeline).
-struct Timeline: View {
-    var group: OrderGroup
-    private let steps: [GroupState] = [.open, .locked, .sent, .confirmed, .delivered, .closed]
+/// Pills that share the glass bar (4-5 "Request edits" + "Send to Atas", the 60pt "+"): the large pill's
+/// colours at 15pt with tight side padding so two fit side by side.
+struct BarPillStyle: ButtonStyle {
+    var kind: PillKind
+    var width: CGFloat? = nil
+    @Environment(\.isEnabled) private var enabled
 
-    var body: some View {
-        let current = group.state == .edits ? GroupState.locked : group.state
-        let at = steps.firstIndex(of: current) ?? 0
-        VStack(alignment: .leading, spacing: 0) {
-            ForEach(Array(steps.enumerated()), id: \.offset) { i, s in
-                HStack(spacing: Brand.s3) {
-                    ZStack {
-                        Circle().fill(i < at ? Brand.lime : i == at ? Brand.caramel : .white)
-                            .overlay(Circle().stroke(i <= at ? Brand.limeDeep : Brand.liquorice400, lineWidth: 1.5))
-                        if i < at { Image(systemName: "checkmark").font(.system(size: 10, weight: .bold)).foregroundStyle(Brand.cocoa) }
-                    }
-                    .frame(width: 22, height: 22)
-                    Text(s == .locked && group.state == .edits ? "Edits requested" : s.title)
-                        .brand(i == at ? .headline : .callout, i > at ? Brand.ink4 : Brand.cocoa)
-                    Spacer()
-                    if let d = date(s) { Text(Wita.string(d, "EEE HH:mm")).brand(.footnote, Brand.ink3) }
-                }
-                if i < steps.count - 1 {
-                    Rectangle().fill(i < at ? Brand.limeDeep : Brand.liquorice100).frame(width: 2, height: 14).padding(.leading, 10)
-                }
-            }
+    func makeBody(configuration: Configuration) -> some View {
+        let p = configuration.isPressed
+        let (fill, border, ink): (Color, Color, Color) = switch (kind, enabled) {
+        case (.secondary, true): (p ? Brand.creamPressed : Brand.cream, p ? Brand.choc100Pressed : Brand.choc100, Brand.cocoa)
+        case (.secondary, false): (Brand.cream, Brand.liquorice100, Brand.liquorice400)
+        case (_, true): (p ? Brand.caramelPressed : Brand.caramel, p ? Brand.caramelPressed : Brand.caramel, Brand.cream)
+        case (_, false): (Brand.liquorice400, Brand.liquorice400, Brand.cream)
         }
-        .card()
-        .opacity(group.state == .cancelled ? 0.5 : 1)
-        .accessibilityElement(children: .combine)
+        configuration.label
+            .labelStyle(BarLabel())
+            .font(GFont.manrope(15, 600))
+            .lineLimit(1)
+            .minimumScaleFactor(0.85)
+            .padding(.horizontal, width == nil ? 12 : 0)
+            .frame(width: width)
+            .frame(maxWidth: width == nil ? .infinity : nil, minHeight: 60)
+            .foregroundStyle(ink)
+            .background(Capsule().fill(fill))
+            .overlay(Capsule().strokeBorder(border, lineWidth: 4))
+            .contentShape(Capsule())
     }
 
-    private func date(_ s: GroupState) -> Date? {
-        switch s {
-        case .open: group.created_at
-        case .sent: group.sent_at
-        case .confirmed: group.confirmed_at
-        case .delivered: group.delivered_at ?? group.delivery_at
-        case .closed: group.closed_at
-        default: nil
+    private struct BarLabel: LabelStyle {
+        func makeBody(configuration: Configuration) -> some View {
+            HStack(spacing: 6) { configuration.icon.font(.system(size: 16, weight: .semibold)); configuration.title }
         }
     }
 }

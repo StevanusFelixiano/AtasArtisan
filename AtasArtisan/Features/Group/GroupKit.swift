@@ -13,12 +13,8 @@ enum GFont {
 
 /// Tints the design uses that have no token of their own: a token at an opacity over white.
 enum GTint {
-    /// #FFF0F6, the flagged-item wash.
-    static let flagged = Brand.pink100.opacity(0.2)
-    /// #F6FFD0, the replaced-item wash.
+    /// #F6FFD0, the replaced-item wash (no token yet).
     static let replaced = Brand.lime.opacity(0.3)
-    /// #F6C7CB, the Remove pill's ring.
-    static let removeRing = Brand.destructive.opacity(0.22)
 }
 
 extension View {
@@ -108,38 +104,6 @@ struct RoundIcon<Glyph: View>: View {
 func icon(_ name: String, _ size: CGFloat, _ color: Color = Brand.cocoa, weight: Font.Weight = .semibold) -> some View {
     Image(systemName: name).font(.system(size: size * 0.85, weight: weight)).foregroundStyle(color)
         .frame(width: size, height: size)
-}
-
-/// Icon + title inside a pill.
-struct PillLabel: View {
-    var title: String
-    var symbol: String?
-    var body: some View {
-        HStack(spacing: 8) {
-            if let symbol { Image(systemName: symbol).font(.system(size: 16, weight: .semibold)) }
-            Text(title)
-        }
-    }
-}
-
-/// Cream pill with a 4pt choc-100 ring: the bar's "+", "Request edits", "Open the Atas chat".
-struct OutlinePillStyle: ButtonStyle {
-    var size: CGFloat = 15
-    var height: CGFloat = 52
-    var expand = true
-    @Environment(\.isEnabled) private var enabled
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .font(GFont.manrope(size, 600))
-            .lineLimit(1)
-            .foregroundStyle(enabled ? Brand.cocoa : Brand.ink3)
-            .padding(.horizontal, expand ? 16 : 0)
-            .frame(maxWidth: expand ? .infinity : nil, minHeight: height)
-            .background(Capsule().fill(Brand.cream))
-            .overlay(Capsule().strokeBorder(Brand.choc100, lineWidth: 4))
-            .opacity(configuration.isPressed ? 0.82 : 1)
-            .contentShape(Capsule())
-    }
 }
 
 /// The Liquid Glass action bar at the bottom of the group screen (`at-glass radius 36`, 12pt inset).
