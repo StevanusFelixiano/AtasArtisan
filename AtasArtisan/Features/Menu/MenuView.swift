@@ -73,7 +73,7 @@ struct MenuView: View {
                     if query.isEmpty {
                         if let synced, !isStale(synced) {
                             Label { Text("Menu updated \(ago(synced))") } icon: { Image(systemName: "arrow.triangle.2.circlepath") }
-                                .labelStyle(TightLabel())
+                                .labelStyle(UpdatedLabel())
                                 .font(MenuFont.manrope(12)).foregroundStyle(Brand.ink3)
                                 .padding(.leading, 4)
                         }
@@ -260,7 +260,7 @@ struct MenuView: View {
 }
 
 /// Icon and text 6 pt apart (the "Menu updated" line).
-private struct TightLabel: LabelStyle {
+private struct UpdatedLabel: LabelStyle {
     func makeBody(configuration: Configuration) -> some View {
         HStack(spacing: 6) { configuration.icon.font(.system(size: 11, weight: .semibold)); configuration.title }
     }
