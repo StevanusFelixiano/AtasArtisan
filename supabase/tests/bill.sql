@@ -111,5 +111,8 @@ do $$ begin
   assert (select count(*) from public.notifications where kind = 'bill_final' and group_id = (select id from t_g)) = 5, 'bill notices';
 end $$;
 
+-- Deleting a group with a live split (also what account deletion does) must not trip on its own notices.
+delete from public.groups where id = (select id from t_g);
+
 select 'bill.sql: all assertions passed' as result;
 rollback;
