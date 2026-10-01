@@ -18,6 +18,8 @@ final class GroupStore {
     var products: [String: Product] = [:]
     var loadError: String?
     var loaded = false
+    /// When the data on screen was last fetched ("Showing the order as of 11:31" while offline).
+    var loadedAt: Date?
 
     init(id: UUID) { self.id = id }
 
@@ -77,6 +79,7 @@ final class GroupStore {
             self.products.merge(prods.map { ($0.id, $0) }) { _, new in new }
             self.payout = payout
             self.loadError = nil
+            self.loadedAt = Date()
         } catch where isCancellation(error) {
             return
         } catch {
