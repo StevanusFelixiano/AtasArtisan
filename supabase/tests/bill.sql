@@ -37,7 +37,7 @@ select pg_temp.act('rani');
 set local role authenticated;
 insert into public.groups (name, area, delivery_at, cutoff_at) values ('Academy Bali Friday Treats', 'Kuta', now() + interval '1 day', now() + interval '3 hours');
 reset role;
-create temp table t_g as select id, code from public.groups where name = 'Academy Bali Friday Treats';
+create temp table t_g as select id, code from public.groups where host_id = pg_temp.id('rani');
 grant select on t_g to authenticated;
 
 do $$ declare k text; begin
@@ -108,7 +108,7 @@ do $$ begin
   assert (select bill_total from public.members where user_id = pg_temp.id('kevin')) = 89500, 'kevin';
   assert (select bill_total from public.members where user_id = pg_temp.id('nadia')) = 52500, 'nadia';
   assert (select bill_total from public.members where user_id = pg_temp.id('arief')) = 26500, 'arief';
-  assert (select count(*) from public.notifications where kind = 'bill_final') = 5, 'bill notices';
+  assert (select count(*) from public.notifications where kind = 'bill_final' and group_id = (select id from t_g)) = 5, 'bill notices';
 end $$;
 
 select 'bill.sql: all assertions passed' as result;

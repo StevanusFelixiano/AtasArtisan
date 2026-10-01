@@ -179,6 +179,16 @@ enum Art {
     static let paintings = ["paint-monalisa", "paint-croissant", "paint-scream", "paint-gothic", "paint-brioche",
                             "paint-sonofbun", "paint-vangogh", "paint-supper", "paint-creation"]
     static var all: [String] { poses + paintings }
+
+    /// Background swatches for the profile picture (design 6-5b): key stored in `profiles.avatar_bg`, colour, name.
+    /// No cream: the app background is cream, so the picture would vanish.
+    static let backgrounds: [(key: String, color: Color, name: String)] = [
+        ("choc100", Brand.choc100, "Chocolate 100"), ("choc400", Brand.choc400, "Chocolate 400"),
+        ("pink100", Brand.pink100, "Pink 100"), ("lime", Brand.lime, "Sour lime"),
+        ("liquorice100", Brand.liquorice100, "Liquorice 100"), ("liquorice400", Brand.liquorice400, "Liquorice 400"),
+        ("caramel", Brand.caramel, "Caramel"),
+    ]
+    static func background(_ key: String?) -> Color? { backgrounds.first { $0.key == key }?.color }
 }
 
 /// `<at-avatar>`: initial in Roundo 700 at 0.4 × size on a pastel (join order), or the person's chosen art.
@@ -189,10 +199,13 @@ struct Avatar: View {
     var host = false
     var size: CGFloat = 36
     var art: String? = nil
+    /// The person's chosen background (`profiles.avatar_bg`); nil keeps the join-order pastel.
+    var bg: String? = nil
     var ring: Color? = nil
     var body: some View {
+        let fill = Art.background(bg) ?? Brand.people[index % Brand.people.count]
         ZStack {
-            Circle().fill(Brand.people[index % Brand.people.count])
+            Circle().fill(fill)
             if let art, Art.all.contains(art) {
                 Image(art).resizable().scaledToFill()
                     .frame(width: size, height: size, alignment: art.hasPrefix("paint") ? .top : .bottom)
@@ -200,7 +213,7 @@ struct Avatar: View {
             } else {
                 Text(String(name.prefix(1)).uppercased())
                     .font(Font(Brand.uiFont(.roundo, size: size * 0.4, weight: 700)))
-                    .foregroundStyle(Brand.cocoa)
+                    .foregroundStyle(bg == "caramel" ? Brand.cream : Brand.cocoa)
             }
             if let ring { Circle().strokeBorder(ring, lineWidth: max(2, size / 14)) }
         }
