@@ -14,6 +14,7 @@ struct AtasArtisanApp: App {
             RootView()
                 .environment(app)
                 .tint(Brand.caramel)
+                .environment(\.openURL, InAppBrowser.action)
                 .onOpenURL { app.open($0) }
         }
     }

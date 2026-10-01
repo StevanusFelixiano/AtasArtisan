@@ -15,9 +15,10 @@ enum Links {
     static let verifyNumber = "6281936100819"
     /// Atas Artisan's ordering WhatsApp (0821-3145-473). The host sends from their own WhatsApp.
     static let atasNumber = "628213145473"
-    static let privacy = supabaseURL.appending(path: "functions/v1/legal/privacy")
-    static let terms = supabaseURL.appending(path: "functions/v1/legal/terms")
-    static let support = supabaseURL.appending(path: "functions/v1/legal/support")
+    /// Legal pages: HTML built from `legal/*.md` (`legal/build.py`), served by the VPS next to the invite page.
+    static let privacy = URL(string: "https://ataste.51-79-240-114.sslip.io/legal/privacy")!
+    static let terms = URL(string: "https://ataste.51-79-240-114.sslip.io/legal/terms")!
+    static let support = URL(string: "https://ataste.51-79-240-114.sslip.io/legal/support")!
     static let supportEmail = "bayu.johar25@gmail.com"
     /// Public TestFlight link (external group "Public"); testers can join once a build passes beta review.
     static let getTheApp = "https://testflight.apple.com/join/U65TErQM"
