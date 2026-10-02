@@ -33,31 +33,46 @@ func finalTag(_ final: Bool) -> Tag {
 
 /// Full-width pill for the cells the shared `.pill` sizes don't cover: the translucent "Not received" on the
 /// dark receipt screen and the 15 pt "Try again" inside the upload-failed card.
-struct WidePill: ButtonStyle {
+struct WidePill: PrimitiveButtonStyle {
     var fill: Color
     var ink: Color
     var border: Color? = nil
     var size: CGFloat = 16
     /// Vertical padding inside the 4 pt border (the design's 14 px padding + 4 px border = 18).
     var padding: CGFloat = 18
-    @Environment(\.isEnabled) private var enabled
 
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .labelStyle(IconLabel(spacing: 8, size: size - 1))
-            .font(Type5.manrope(size, 600))
-            .lineLimit(1)
-            .minimumScaleFactor(0.85)
-            .foregroundStyle(ink)
-            .padding(.horizontal, 12)
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, padding)
-            .background(Capsule().fill(fill))
-            .overlay(Capsule().strokeBorder(border ?? fill, lineWidth: 4))
-            .opacity(enabled ? 1 : 0.5)
-            .opacity(configuration.isPressed ? 0.82 : 1)
-            .contentShape(Capsule())
-            .frame(minHeight: 44)
+        CommitButton(configuration: configuration, face: Face(fill: fill, ink: ink, border: border, size: size, padding: padding),
+                     haptic: Haptic.tap)
+    }
+
+    private struct Face: ButtonStyle {
+        var fill: Color
+        var ink: Color
+        var border: Color?
+        var size: CGFloat
+        var padding: CGFloat
+        @Environment(\.isEnabled) private var enabled
+
+        func makeBody(configuration: Configuration) -> some View {
+            configuration.label
+                .labelStyle(IconLabel(spacing: 8, size: size - 1))
+                .font(Type5.manrope(size, 600))
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+                .foregroundStyle(ink)
+                .padding(.horizontal, 12)
+                .frame(maxWidth: .infinity)
+                .padding(.vertical, padding)
+                .background(Capsule().fill(fill))
+                .overlay(Capsule().strokeBorder(border ?? fill, lineWidth: 4))
+                .opacity(enabled ? 1 : 0.5)
+                .opacity(configuration.isPressed ? 0.82 : 1)
+                .pressTone(configuration.isPressed)
+                .contentShape(Capsule())
+                .doughPress(configuration.isPressed, squash: Motion.pressWide)
+                .frame(minHeight: 44)
+        }
     }
 }
 
@@ -70,19 +85,32 @@ struct IconLabel: LabelStyle {
 }
 
 /// Small action chip on the payment board: "Nudge", "Mark paid". 12 pt, 5/12 padding, 44 pt tap area.
-struct ChipStyle: ButtonStyle {
+struct ChipStyle: PrimitiveButtonStyle {
     var fill: Color
     var ring: Color?
+    /// The commit's tap; nil when the result gives its own (Mark paid's success).
+    var haptic: SensoryFeedback? = Haptic.tap
+
     func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .labelStyle(IconLabel(spacing: 5, size: 12))
-            .font(Type5.manrope(12, 600))
-            .foregroundStyle(Brand.cocoa)
-            .padding(.vertical, 5).padding(.horizontal, 12)
-            .background(Capsule().fill(fill))
-            .overlay { if let ring { Capsule().strokeBorder(ring, lineWidth: 1.5) } }
-            .opacity(configuration.isPressed ? 0.82 : 1)
-            .contentShape(Rectangle().inset(by: -9))
+        CommitButton(configuration: configuration, face: Face(fill: fill, ring: ring), haptic: haptic)
+    }
+
+    private struct Face: ButtonStyle {
+        var fill: Color
+        var ring: Color?
+        func makeBody(configuration: Configuration) -> some View {
+            configuration.label
+                .labelStyle(IconLabel(spacing: 5, size: 12))
+                .font(Type5.manrope(12, 600))
+                .foregroundStyle(Brand.cocoa)
+                .padding(.vertical, 5).padding(.horizontal, 12)
+                .background(Capsule().fill(fill))
+                .overlay { if let ring { Capsule().strokeBorder(ring, lineWidth: 1.5) } }
+                .opacity(configuration.isPressed ? 0.82 : 1)
+                .pressTone(configuration.isPressed)
+                .contentShape(Rectangle().inset(by: -9))
+                .doughPress(configuration.isPressed, squash: Motion.pressCompact)
+        }
     }
 }
 

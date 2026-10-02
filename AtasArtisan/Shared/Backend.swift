@@ -58,5 +58,16 @@ func readable(_ error: Error) -> String {
     if let e = error as? PostgrestError { return e.message }
     if let e = error as? FunctionsError, case let .httpError(_, data) = e,
        let body = try? JSONDecoder().decode([String: String].self, from: data), let m = body["error"] { return m }
+    // The network's own errors read "The operation couldn't be completed. (NSURLErrorDomain error -1009.)".
+    if let e = error as? URLError {
+        switch e.code {
+        case .notConnectedToInternet, .networkConnectionLost, .dataNotAllowed, .internationalRoamingOff:
+            return "You’re offline. Check your connection and try again."
+        case .timedOut, .cannotConnectToHost, .cannotFindHost, .dnsLookupFailed, .badServerResponse:
+            return "The server didn’t answer. Try again in a moment."
+        default:
+            return "Something went wrong on the way to the server. Try again."
+        }
+    }
     return error.localizedDescription
 }

@@ -13,7 +13,7 @@ struct GroupView: View {
     @State var sheet: GroupSheet?
     @State var confirm: Confirm?
     @State var problem: Problem?
-    @State var toast: String?
+    @State var toast: ToastNote?
     @State var times: GroupTimes?
     @State var itemTimes: [UUID: Date] = [:]
     /// Member rows opened to show their splits.
@@ -25,7 +25,22 @@ struct GroupView: View {
     @State var removedInRound = false
     @State var reporting: DeliveryProof?
     @State var proofURLs: [UUID: URL] = [:]
+    /// The order as it was when an async button was tapped, shown until its result hands off (`AsyncPill`).
+    @State var held: OrderGroup?
+    @State var gate = SkeletonGate()
+    /// People who joined while the screen was open: their avatar pops in (Motion board 11).
+    @State var joined: Set<UUID> = []
+    @Environment(\.accessibilityReduceMotion) var reduceMotion
+    /// The remove-item and leave-group questions, asked in the Ataste confirm sheet (other questions stay alerts).
+    @State var asking: Confirm?
     @Environment(\.openURL) var openURL
+    @Environment(\.scenePhase) var scenePhase
+    /// The host handed the order to WhatsApp (5-1): 5-2's parts wait, hidden, and play in once the app is back, the
+    /// send sheet has gone and the order is Sent (Motion board 17).
+    @State var awaitingReturn = false
+    @State var sentIn = true
+    /// Taps that open the share sheet without a pill of their own (the toolbar, Invite, the menus) give a light tap.
+    @State var shareTaps = 0
 
     init(id: UUID, path: Binding<NavigationPath>) {
         self.id = id
@@ -35,25 +50,35 @@ struct GroupView: View {
 
     var body: some View {
         Group {
-            if let g = store.group {
-                content(g)
+            if gate.revealed, let g = held ?? store.group {
+                content(g).modifier(Arrival(animate: gate.animated))
             } else if let e = store.loadError, store.loaded {
                 VStack { ErrorBanner(message: e) { Task { await store.refresh() } } }.padding().frame(maxHeight: .infinity).screen()
+            } else if gate.skeleton {
+                // 3-7, only for a slow load (Motion board 14); it fades out as the order arrives.
+                GroupSkeleton().transition(.asymmetric(insertion: .identity, removal: .opacity.animation(Motion.fadeOut)))
             } else {
-                GroupSkeleton()
+                Color.clear.screen()
             }
         }
-        .toolbar(.hidden, for: .tabBar)
+        // Cream behind the skeleton and the arriving order while they crossfade.
+        .background(Brand.cream.ignoresSafeArea())
         .navigationTitle(store.group?.name ?? "Order")
         .toolbar(removing: showsTitle ? nil : .title)
         .navigationBarTitleDisplayMode(.inline)
         .task {
-            await store.refresh()
+            await gate.load(store.refresh)
             debugHooks()
         }
+        .marksScreen(group: id)
         .task { await store.watch() }
         .task(id: timesKey) { await loadTimes() }
-        .sheet(item: $sheet, onDismiss: finishReplacing) { s in sheetView(s) }
+        .sheet(item: Binding(get: { sheet?.ataste == false ? sheet : nil }, set: { sheet = $0 }), onDismiss: finishReplacing) { s in sheetView(s) }
+        // Propose a split and Request an edit rise in the Ataste sheet (Motion board 07), the rest are system sheets.
+        .doughSheet(item: Binding(get: { if case .split(let i) = sheet { i } else { nil } }, set: { if $0 == nil { sheet = nil } }),
+                    title: "Propose a split") { SplitProposeView(store: store, item: $0) }
+        .doughSheet(item: Binding(get: { if case .requestEdit = sheet { sheet } else { nil } }, set: { if $0 == nil { sheet = nil } }),
+                    title: "Request an edit") { s in if case .requestEdit(let seed) = s { RequestEditSheet(store: store, seed: seed) } }
         .alert(confirm?.title ?? "", isPresented: Binding(get: { confirm != nil }, set: { if !$0 { confirm = nil } })) {
             if let c = confirm {
                 Button(c.keep, role: .cancel) {}
@@ -66,8 +91,54 @@ struct GroupView: View {
                 if let p = reporting { Task { await act("Couldn't report") { try await store.rpc("report_photo", ["proof": .string(p.id.uuidString)]) } } }
             }
         } message: { Text("It's hidden for everyone in the group, and we review it.") }
+        .doughSheet(item: $asking) { c in
+            ConfirmSheet(confirm: c, delay: c.delay) { Task { await act("That didn't work", c.action) } }
+        }
+        .doughSheet(item: Binding(get: { if case .share = sheet { sheet } else { nil } }, set: { if $0 == nil { sheet = nil } }),
+                    insets: ShareCard.insets) { _ in if let g = store.group { ShareCard(group: g) } }
+        .sensoryFeedback(Haptic.tap, trigger: shareTaps)
+        .onChange(of: backFromAtas) { _, back in
+            guard back else { return }
+            awaitingReturn = false
+            sentIn = true
+        }
         .problemAlert($problem)
         .toast($toast)
+        // Someone else moved the order on: Confirmed, Delivered, Edits requested, Cancelled. Not on the first load,
+        // and not for a change my own button made.
+        .sensoryFeedback(trigger: (held ?? store.group)?.state) { old, new in
+            guard let old, let new, old != new, !store.isOwnMove(from: old, to: new) else { return nil }
+            return new.watcherHaptic
+        }
+        .sensoryFeedback(Haptic.done, trigger: store.myBill.map { $0.paid_at != nil }) { old, new in old == false && new == true }
+        .onChange(of: store.activeMembers.map(\.user_id)) { old, new in
+            if !old.isEmpty { joined.formUnion(Set(new).subtracting(old)) }
+        }
+    }
+
+    /// Back in the app from the WhatsApp hand-off, the send sheet gone and the order Sent: 5-2 plays in.
+    private var backFromAtas: Bool {
+        awaitingReturn && scenePhase == .active && sheet == nil && store.group?.state == .sent
+    }
+
+    /// Open WhatsApp on 5-1 was tapped: hide 5-2's parts until the app comes back.
+    func handedOff() {
+        var t = Transaction()
+        t.disablesAnimations = true
+        withTransaction(t) {
+            awaitingReturn = true
+            sentIn = false
+        }
+    }
+
+    func openShare() {
+        shareTaps += 1
+        sheet = .share
+    }
+
+    /// `AsyncPill`'s hold on the order shown while its result plays.
+    var holding: Binding<Bool> {
+        Binding(get: { held != nil }, set: { held = $0 ? store.group : nil })
     }
 
     // MARK: Who sees what
@@ -130,8 +201,11 @@ struct GroupView: View {
                 .padding(.bottom, 24)
             }
             .scrollIndicators(.hidden)
+            .pullToRefresh {
+                await store.refresh()
+                return store.loadError == nil
+            }
             .screen()
-            .refreshable { await store.refresh() }
             .safeAreaInset(edge: .bottom) { actionBar(g, m) }
             .toolbar { toolbar(g, m) }
             .navigationTitle([.review, .editsHost].contains(m) ? "Review order" : g.name)
@@ -157,7 +231,7 @@ struct GroupView: View {
     @ToolbarContentBuilder private func toolbar(_ g: OrderGroup, _ m: Mode) -> some ToolbarContent {
         ToolbarItemGroup(placement: .topBarTrailing) {
             if g.state == .open && !g.personal {
-                Button { sheet = .share } label: { Image(systemName: "square.and.arrow.up") }
+                Button { openShare() } label: { Image(systemName: "square.and.arrow.up") }
                     .accessibilityLabel("Share invite")
             }
             if hasMoreMenu(g) {
@@ -190,7 +264,7 @@ struct GroupView: View {
                 Button { sheet = .editDelivery } label: { Label("Edit delivery details", systemImage: "mappin.and.ellipse") }
             }
             if s == .open && !g.personal {
-                Button { sheet = .share } label: { Label("Share invite", systemImage: "square.and.arrow.up") }
+                Button { openShare() } label: { Label("Share invite", systemImage: "square.and.arrow.up") }
             }
             if [.confirmed, .delivered, .closed].contains(s) {
                 Button { sheet = g.personal ? .bill : .board } label: { Label(g.personal ? "My bill" : "Payments", systemImage: "receipt") }
@@ -216,7 +290,7 @@ struct GroupView: View {
             }
         } else {
             if s == .open {
-                Button { sheet = .share } label: { Label("Share invite", systemImage: "square.and.arrow.up") }
+                Button { openShare() } label: { Label("Share invite", systemImage: "square.and.arrow.up") }
             }
             if let phone = store.people[g.host_id]?.phone {
                 Button { openURL(Links.whatsApp(phone)) } label: { Label("Message \(hostFirst)", systemImage: "message") }
@@ -255,10 +329,8 @@ struct GroupView: View {
             } else if g.personal || store.isHost {
                 GroupBar {
                     addCircle
-                    Button { lock(g) } label: {
-                        Label(g.personal ? "Send to Atas" : "Lock order", systemImage: g.personal ? "paperplane" : "lock")
-                    }
-                    .buttonStyle(.pill(.primary)).disabled(store.items.isEmpty)
+                    lockPill(g, title: g.personal ? "Send to Atas" : "Lock order", icon: g.personal ? "paperplane" : "lock")
+                        .disabled(store.items.isEmpty, reason: "Add something from the menu first")
                 }
             } else {
                 GroupBar { Button { sheet = .menu } label: { Label("Add items", systemImage: "plus") }.buttonStyle(.pill(.primary)) }
@@ -276,19 +348,22 @@ struct GroupView: View {
             }
         case .editsHost:
             GroupBar {
-                Button { lock(g) } label: { Label("Lock again", systemImage: "lock") }
-                    .buttonStyle(.pill(.primary)).disabled(store.items.contains { $0.flagged_at != nil })
+                lockPill(g, title: "Lock again", icon: "lock")
+                    .disabled(store.items.contains { $0.flagged_at != nil }, reason: "Every flagged item needs fixing first")
             }
         case .fixing:
             GroupBar {
                 Button { Task { await doneEditing() } } label: {
                     if store.hasFlagsForMe { Text("Done editing") } else { Label("Done editing", systemImage: "checkmark") }
                 }
-                .buttonStyle(.pill(.primary)).disabled(store.hasFlagsForMe)
+                .buttonStyle(.pill(.primary)).disabled(store.hasFlagsForMe, reason: "Replace or remove your flagged items first")
             }
         case .sent:
             if store.isHost {
-                GroupBar { Button("Atas replied · enter final bill") { sheet = .confirmAtas }.buttonStyle(.pill(.primary)) }
+                GroupBar {
+                    Button("Atas replied · enter final bill") { sheet = .confirmAtas }.buttonStyle(.pill(.primary))
+                        .entrance(sentIn, offset: HandOffMotion.buttonOffset, Motion.arrive, fade: nil, delay: HandOffMotion.buttonDelay)
+                }
             }
         case .confirmed:
             GroupBar {
@@ -325,6 +400,16 @@ struct GroupView: View {
 
     // MARK: Actions
 
+    /// Lock order, Lock again, and a personal order's Send to Atas (which locks, then opens the message).
+    private func lockPill(_ g: OrderGroup, title: String, icon: String) -> some View {
+        AsyncPill(title: title, icon: icon, busyTitle: "Locking…", doneTitle: "Locked", failTitle: "Couldn’t lock",
+                  holding: holding, refresh: store.refresh, reached: { store.group?.state == .locked }) {
+            try await store.rpc("lock_group", ["g": .string(id.uuidString)])
+        } then: {
+            if g.personal { sheet = .send }
+        }
+    }
+
     func lock(_ g: OrderGroup) {
         Task { await act("Couldn't lock") {
             try await store.rpc("lock_group", ["g": .string(id.uuidString)])
@@ -335,7 +420,7 @@ struct GroupView: View {
     func askLeave(_ g: OrderGroup) {
         let mine = itemPhrase(store.myItems)
         let what = mine.isEmpty ? "You leave the order" : "Your \(mine) come out of the order"
-        confirm = Confirm(title: "Leave \(g.name)?",
+        asking = Confirm(title: "Leave \(g.name)?",
                           message: "\(what) and \(hostFirst) gets a heads-up. You can rejoin with the link while the group is open.",
                           button: "Leave group", keep: "Stay") {
             try await store.rpc("leave_group", ["g": .string(id.uuidString)])
@@ -379,14 +464,12 @@ struct GroupView: View {
     @ViewBuilder private func sheetView(_ s: GroupSheet) -> some View {
         switch s {
         case .menu: NavigationStack { MenuView(store: store) }
-        case .share: if let g = store.group { NavigationStack { ShareCard(group: g) } }
-        case .split(let item): NavigationStack { SplitProposeView(store: store, item: item) }
-        case .send: NavigationStack { SendToAtasView(store: store) }
+        case .share, .split, .requestEdit: EmptyView()
+        case .send: NavigationStack { SendToAtasView(store: store, handedOff: handedOff) }
         case .confirmAtas: NavigationStack { ConfirmAtasView(store: store) }
         case .bill: NavigationStack { BillView(store: store) }
         case .board: NavigationStack { PaymentBoardView(store: store) }
         case .delivery: NavigationStack { DeliveryView(store: store) }
-        case .requestEdit(let seed): NavigationStack { RequestEditSheet(store: store, seed: seed) }
         case .editDelivery: NavigationStack { EditDeliverySheet(store: store) }
         }
     }
@@ -427,17 +510,25 @@ enum GroupSheet: Identifiable {
         case .requestEdit: "request"; case .editDelivery: "edit-delivery"
         }
     }
+
+    /// Shown in the Ataste sheet rather than a system sheet.
+    var ataste: Bool {
+        switch self { case .split, .requestEdit, .share: true; default: false }
+    }
 }
 
-struct Confirm {
+struct Confirm: Identifiable {
+    let id = UUID()
     var title: String
     var message: String
     var button: String
     var keep = "Keep"
+    /// Seconds between the confirm closing and `action` (a removed row collapses 0.12 s into the sheet's exit).
+    var delay: Double = 0
     var action: () async throws -> Void
 
-    init(title: String, message: String, button: String, keep: String = "Keep", action: @escaping () async throws -> Void) {
-        self.title = title; self.message = message; self.button = button; self.keep = keep; self.action = action
+    init(title: String, message: String, button: String, keep: String = "Keep", delay: Double = 0, action: @escaping () async throws -> Void) {
+        self.title = title; self.message = message; self.button = button; self.keep = keep; self.delay = delay; self.action = action
     }
 }
 
@@ -454,57 +545,56 @@ struct QtyStepper: View {
     var qty: Int
     var change: (Int) -> Void
     var body: some View {
-        HStack(spacing: 10) {
-            step(qty == 1 ? "trash" : "minus", qty == 1 ? Brand.trashFill : Brand.choc100) { change(qty - 1) }
-                .accessibilityLabel(qty == 1 ? "Remove" : "One less")
-            Text("\(qty)").ui(GFont.roundo(16)).frame(minWidth: 12)
-            step("plus", Brand.choc100) { change(min(qty + 1, 50)) }.accessibilityLabel("One more")
-        }
-        .padding(3)
-        .background(Capsule().fill(Brand.cream))
-    }
-
-    private func step(_ symbol: String, _ fill: Color, _ action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol).font(.system(size: 13, weight: .bold)).foregroundStyle(symbol == "trash" ? Brand.destructive : Brand.cocoa)
-                .frame(width: 28, height: 28).background(Circle().fill(fill))
-                .padding(8).contentShape(Rectangle()).padding(-8)
-        }
-        .buttonStyle(.plain)
+        PillStepper(value: "\(qty)", fill: Brand.cream, gap: 10, pad: 3, minWidth: 12, countSize: 16,
+                    minusSymbol: qty == 1 ? "trash" : "minus", canPlus: qty < 50,
+                    minusLabel: qty == 1 ? "Remove" : "One less", plusLabel: "One more",
+                    minus: { change(qty - 1) }, plus: { change(qty + 1) })
     }
 }
 
 /// Pills that share the glass bar or sit in cards (4-5 "Request edits" + "Send to Atas", the 60pt "+", 4-9
 /// "Replace" / "Remove"): the large pill's colours at 15pt with tight side padding so two fit side by side.
 /// `.destructive` is the outlined Remove (white, soft red ring, red text).
-struct BarPillStyle: ButtonStyle {
+struct BarPillStyle: PrimitiveButtonStyle {
     var kind: PillKind
     var width: CGFloat? = nil
     var height: CGFloat = 60
-    @Environment(\.isEnabled) private var enabled
 
     func makeBody(configuration: Configuration) -> some View {
-        let p = configuration.isPressed
-        let (fill, border, ink): (Color, Color, Color) = switch (kind, enabled) {
-        case (_, false): kind == .secondary ? (Brand.cream, Brand.liquorice100, Brand.liquorice400) : (Brand.liquorice400, Brand.liquorice400, Brand.cream)
-        case (.secondary, true): (p ? Brand.creamPressed : Brand.cream, p ? Brand.choc100Pressed : Brand.choc100, Brand.cocoa)
-        case (.dark, true): (p ? Brand.cocoaPressed : Brand.cocoa, p ? Brand.cocoaPressed : Brand.cocoa, Brand.cream)
-        case (.destructive, true): (p ? Brand.trashFill : .white, Brand.destructiveSoft, Brand.destructive)
-        case (.success, true): (p ? Brand.limePressed : Brand.lime, p ? Brand.limeDeepPressed : Brand.limeDeep, Brand.cocoa)
-        case (.primary, true): (p ? Brand.caramelPressed : Brand.caramel, p ? Brand.caramelPressed : Brand.caramel, Brand.cream)
+        CommitButton(configuration: configuration, face: Face(kind: kind, width: width, height: height),
+                     haptic: kind == .destructive ? Haptic.heavy : Haptic.tap)
+    }
+
+    private struct Face: ButtonStyle {
+        var kind: PillKind
+        var width: CGFloat?
+        var height: CGFloat
+        @Environment(\.isEnabled) private var enabled
+
+        func makeBody(configuration: Configuration) -> some View {
+            let p = configuration.isPressed
+            let (fill, border, ink): (Color, Color, Color) = switch (kind, enabled) {
+            case (_, false): kind == .secondary ? (Brand.cream, Brand.liquorice100, Brand.liquorice400) : (Brand.liquorice400, Brand.liquorice400, Brand.cream)
+            case (.secondary, true): (p ? Brand.creamPressed : Brand.cream, p ? Brand.choc100Pressed : Brand.choc100, Brand.cocoa)
+            case (.dark, true): (p ? Brand.cocoaPressed : Brand.cocoa, p ? Brand.cocoaPressed : Brand.cocoa, Brand.cream)
+            case (.destructive, true): (p ? Brand.trashFill : .white, Brand.destructiveSoft, Brand.destructive)
+            case (.success, true): (p ? Brand.limePressed : Brand.lime, p ? Brand.limeDeepPressed : Brand.limeDeep, Brand.cocoa)
+            case (.primary, true): (p ? Brand.caramelPressed : Brand.caramel, p ? Brand.caramelPressed : Brand.caramel, Brand.cream)
+            }
+            configuration.label
+                .labelStyle(BarLabel())
+                .font(GFont.manrope(15, 600))
+                .lineLimit(1)
+                .minimumScaleFactor(0.85)
+                .padding(.horizontal, width == nil ? 12 : 0)
+                .frame(width: width)
+                .frame(maxWidth: width == nil ? .infinity : nil, minHeight: height)
+                .foregroundStyle(ink)
+                .background(Capsule().fill(fill).pressTone(p))
+                .overlay(Capsule().strokeBorder(border, lineWidth: 4).pressTone(p))
+                .contentShape(Capsule())
+                .doughPress(p, squash: width == nil ? Motion.pressWide : Motion.pressIcon)
         }
-        configuration.label
-            .labelStyle(BarLabel())
-            .font(GFont.manrope(15, 600))
-            .lineLimit(1)
-            .minimumScaleFactor(0.85)
-            .padding(.horizontal, width == nil ? 12 : 0)
-            .frame(width: width)
-            .frame(maxWidth: width == nil ? .infinity : nil, minHeight: height)
-            .foregroundStyle(ink)
-            .background(Capsule().fill(fill))
-            .overlay(Capsule().strokeBorder(border, lineWidth: 4))
-            .contentShape(Capsule())
     }
 
     private struct BarLabel: LabelStyle {

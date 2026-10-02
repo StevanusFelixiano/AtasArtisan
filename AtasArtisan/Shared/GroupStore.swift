@@ -20,6 +20,9 @@ final class GroupStore {
     var loaded = false
     /// When the data on screen was last fetched ("Showing the order as of 11:31" while offline).
     var loadedAt: Date?
+    /// RPCs of mine in flight, and the state change the last one made: watchers feel a change, its author doesn't.
+    private var writing = 0
+    private var ownMove: (from: GroupState, to: GroupState)?
 
     init(id: UUID) { self.id = id }
 
@@ -112,9 +115,18 @@ final class GroupStore {
     // MARK: Writes
 
     func rpc(_ fn: String, _ params: [String: AnyJSON]) async throws {
+        let before = group?.state
+        writing += 1
+        defer { writing -= 1 }
         try await supabase.rpc(fn, params: params).execute()
         await refresh()
+        if let before, let after = group?.state, after != before { ownMove = (before, after) }
         AppModel.shared.homeVersion += 1
+    }
+
+    /// The order moving `from` → `to` is my own doing (or may be: one of my RPCs is still in flight).
+    func isOwnMove(from: GroupState, to: GroupState) -> Bool {
+        writing > 0 || (ownMove?.from == from && ownMove?.to == to)
     }
 
     func add(product: Product, options: [String: String], qty: Int, note: String) async throws {
@@ -129,8 +141,15 @@ final class GroupStore {
         await refresh()
     }
 
+    /// The row goes at once (it collapses as the remove confirm leaves); a failed delete's refresh brings it back.
     func remove(_ item: Item) async throws {
-        try await supabase.from("items").delete().eq("id", value: item.id).execute()
+        items.removeAll { $0.id == item.id }
+        do {
+            try await supabase.from("items").delete().eq("id", value: item.id).execute()
+        } catch {
+            await refresh()
+            throw error
+        }
         await refresh()
     }
 }

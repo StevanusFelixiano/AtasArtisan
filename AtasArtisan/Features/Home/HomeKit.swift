@@ -32,17 +32,24 @@ struct FieldLabel: View {
     var body: some View { Text(text).brand(.label, color) }
 }
 
-/// A painting in the shared caramel frame with "Title · oil on canvas" under it.
+/// A painting in the shared caramel frame with "Title · oil on canvas" under it. With `intro` (an empty state's id) it
+/// plays the empty-state entrance on its first view this session (Motion board 22) and rests at −1.5°.
 struct CaptionedPainting: View {
     var art: String
     var title: String
     var width: CGFloat
     var height: CGFloat
     var tilt: Double
+    var intro: String? = nil
     var body: some View {
         VStack(spacing: Brand.s2) {
-            PaintingFrame(art: art, width: width, height: height, tilt: tilt)
-            Text("\(Text(title).italic()) · oil on canvas").brand(.footnote, Brand.ink3)
+            if let intro {
+                PaintingFrame(art: art, width: width, height: height).emptyIntro(.painting, id: intro)
+                Text("\(Text(title).italic()) · oil on canvas").brand(.footnote, Brand.ink3).emptyIntro(.caption, id: intro)
+            } else {
+                PaintingFrame(art: art, width: width, height: height, tilt: tilt)
+                Text("\(Text(title).italic()) · oil on canvas").brand(.footnote, Brand.ink3)
+            }
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel("\(title), a giraffe painting")

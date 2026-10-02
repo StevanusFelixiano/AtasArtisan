@@ -36,6 +36,17 @@ final class AppModel {
     var openGroup: UUID?
     /// Bumped when anything the Home list shows may have changed.
     var homeVersion = 0
+    /// The group whose screen is on show: an event about it plays on that screen, not as a banner.
+    var screenGroup: UUID?
+    /// The latest order event that arrived while the app was open, for the in-app banner.
+    var note: InAppNote?
+
+    /// A push in the foreground: the in-app banner shows it, unless it is about the group on screen.
+    func arrived(_ n: InAppNote) {
+        homeVersion += 1
+        if let g = n.group, g == screenGroup { return }
+        note = n
+    }
 
     func watchSession() async {
         for await (_, session) in supabase.auth.authStateChanges {
@@ -122,10 +133,17 @@ final class Notices: NSObject, UNUserNotificationCenterDelegate {
         if granted { UIApplication.shared.registerForRemoteNotifications() }
     }
 
+    /// In the foreground the Ataste banner replaces the system one (Motion board 08); the notification still goes to
+    /// the list.
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification,
                                             withCompletionHandler completionHandler: @escaping (UNNotificationPresentationOptions) -> Void) {
-        Task { @MainActor in AppModel.shared.homeVersion += 1 }
-        completionHandler([.banner, .sound, .list])
+        let c = notification.request.content
+        let note = InAppNote(title: c.title, body: c.body, kind: c.userInfo["kind"] as? String ?? "",
+                             group: (c.userInfo["group"] as? String).flatMap(UUID.init(uuidString:)))
+        Task { @MainActor in
+            AppModel.shared.arrived(note)
+            completionHandler([.list])
+        }
     }
 
     nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
@@ -140,11 +158,29 @@ final class Notices: NSObject, UNUserNotificationCenterDelegate {
 
 struct RootView: View {
     @Environment(AppModel.self) private var app
+    /// The splash stays up 0.25 s past launching for its ready turn, then crossfades to the next screen.
+    @State private var splash = true
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
+        ZStack {
+            if !splash { screen.transition(.opacity) }
+            if splash { SplashView(ready: app.phase != .launching).transition(.opacity) }
+        }
+        .task(id: app.phase != .launching) {
+            guard app.phase != .launching, splash else { return }
+            if !reduceMotion { try? await Task.sleep(for: .seconds(SplashMotion.welcomeDelay)) }
+            withAnimation(reduceMotion ? Motion.Reduced.fade : Motion.fade) { splash = false }
+        }
+        .task { await app.watchSession() }
+        .background(KeyboardDismiss())
+        .background(BannerWindowInstaller())
+    }
+
+    @ViewBuilder private var screen: some View {
         Group {
             switch app.phase {
-            case .launching: SplashView()
+            case .launching: Color.clear
             case .signedOut: OnboardingFlow()
             case .signedIn:
                 if let p = app.profile {
@@ -161,8 +197,6 @@ struct RootView: View {
                 }
             }
         }
-        .task { await app.watchSession() }
-        .background(KeyboardDismiss())
     }
 }
 

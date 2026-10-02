@@ -18,6 +18,9 @@ struct MenuView: View {
     @State private var showCart = false
     @State private var width: CGFloat = 402
     @State private var debugSplit: Item?
+    /// Basket changes while the bar shows (it bumps).
+    @State private var cartBumps = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Group {
@@ -103,6 +106,7 @@ struct MenuView: View {
         }
         .padding(.top, 4)
         .overlay(alignment: .bottom) { cartBar }
+        .onChange(of: [cart.count, cart.total]) { old, new in if old[0] > 0 && new[0] > 0 { cartBumps += 1 } }
     }
 
     private var searchField: some View {
@@ -150,9 +154,10 @@ struct MenuView: View {
 
     private func grid(_ items: [Product]) -> some View {
         let photo = min(150, (width - 32 - 12) / 2 - 24)
+        let counts = Dictionary(store.myItems.map { ($0.product_id, $0.qty) }, uniquingKeysWith: +)
         return LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
             ForEach(items) { p in
-                Button { picked = p } label: { ProductCard(product: p, photo: photo, inOrder: mine.contains(p.id)) }
+                Button { picked = p } label: { ProductCard(product: p, photo: photo, inOrder: counts[p.id] ?? 0) }
                     .buttonStyle(.plain)
             }
         }
@@ -160,28 +165,41 @@ struct MenuView: View {
 
     // MARK: Floating cart
 
+    /// My item count and total.
+    private var cart: (count: Int, total: Int) {
+        (store.myItems.reduce(0) { $0 + $1.qty }, store.myItems.reduce(0) { $0 + $1.total })
+    }
+
+    /// Rises in with the first item (`Motion.arrive`) and drops away with the last (`Motion.leave`). Each change bumps
+    /// it: the count rolls and the total counts to the new amount.
     @ViewBuilder private var cartBar: some View {
-        let mineItems = store.myItems
-        let count = mineItems.reduce(0) { $0 + $1.qty }
-        if count > 0 {
-            Button { showCart = true } label: {
-                HStack(spacing: 12) {
-                    Image(systemName: "bag").font(.system(size: 18, weight: .medium))
-                    Text(count == 1 ? "1 item" : "\(count) items").font(MenuFont.manrope(15, 600))
-                    Text(Rupiah.format(mineItems.reduce(0) { $0 + $1.total })).font(MenuFont.roundo(15))
-                        .padding(.horizontal, 16).padding(.vertical, 9)
-                        .background(Capsule().fill(Brand.caramel))
+        let (count, total) = cart
+        ZStack {
+            if count > 0 {
+                Button { showCart = true } label: {
+                    HStack(spacing: 12) {
+                        Image(systemName: "bag").font(.system(size: 18, weight: .medium))
+                        Text(count == 1 ? "1 item" : "\(count) items").font(MenuFont.manrope(15, 600))
+                            .contentTransition(reduceMotion ? .opacity : .numericText(value: Double(count)))
+                            .animation(reduceMotion ? Motion.Reduced.fade : Motion.digits, value: count)
+                        CountUp(amount: total) { Text(Rupiah.format($0)) }.font(MenuFont.roundo(15))
+                            .padding(.horizontal, 16).padding(.vertical, 9)
+                            .background(Capsule().fill(Brand.caramel))
+                    }
+                    .foregroundStyle(Brand.cream)
+                    .padding(.leading, 20).padding([.trailing, .vertical], 8)
+                    .background(Capsule().fill(Brand.cocoa))
+                    .shadow(color: Brand.cocoa.opacity(0.35), radius: 15, y: 12)
+                    .contentShape(Capsule())
                 }
-                .foregroundStyle(Brand.cream)
-                .padding(.leading, 20).padding([.trailing, .vertical], 8)
-                .background(Capsule().fill(Brand.cocoa))
-                .shadow(color: Brand.cocoa.opacity(0.35), radius: 15, y: 12)
-                .contentShape(Capsule())
+                .buttonStyle(DoughStyle(squash: Motion.pressCompact))
+                .kick(reduceMotion ? 0 : cartBumps, from: BasketMotion.bumpFrom)
+                .padding(.bottom, 6)
+                .accessibilityLabel("My order, \(count == 1 ? "1 item" : "\(count) items"), \(Rupiah.format(total))")
+                .transition(reduceMotion ? .opacity.animation(Motion.Reduced.fade)
+                            : .asymmetric(insertion: AnyTransition.offset(y: BasketMotion.hiddenOffset).combined(with: .opacity).animation(Motion.arrive),
+                                          removal: AnyTransition.offset(y: BasketMotion.hiddenOffset).combined(with: .opacity).animation(Motion.leave)))
             }
-            .buttonStyle(.plain)
-            .padding(.bottom, 6)
-            .accessibilityLabel("My order, \(count == 1 ? "1 item" : "\(count) items"), \(Rupiah.format(mineItems.reduce(0) { $0 + $1.total }))")
-            .transition(.move(edge: .bottom).combined(with: .opacity))
         }
     }
 
@@ -268,10 +286,14 @@ private struct UpdatedLabel: LabelStyle {
 
 /// One product in the grid: photo in its dashed ring, name, price, and a round button that reads the state
 /// (plus; lime check when it's already in my order; x when sold out).
+/// Adding it turns the button lime with a check that pops in; adding more of it bumps the check.
 struct ProductCard: View {
     var product: Product
     var photo: CGFloat = 150
-    var inOrder = false
+    /// How many of it are in my order.
+    var inOrder = 0
+    @State private var again = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let soldOut = !product.available
@@ -289,10 +311,15 @@ struct ProductCard: View {
             HStack(alignment: .bottom) {
                 Text(priceText).font(MenuFont.roundo(16)).foregroundStyle(Brand.cocoa).lineLimit(1).minimumScaleFactor(0.8)
                 Spacer(minLength: 4)
-                Image(systemName: soldOut ? "xmark" : inOrder ? "checkmark" : "plus")
+                PopSymbol(name: soldOut ? "xmark" : inOrder > 0 ? "checkmark" : "plus", animation: Motion.pop.delay(StepperMotion.addCheckDelay))
                     .font(.system(size: 13, weight: .bold)).foregroundStyle(Brand.cocoa)
                     .frame(width: 28, height: 28)
-                    .background(Circle().fill(soldOut ? Brand.liquorice100 : inOrder ? Brand.lime : Brand.choc100))
+                    .background {
+                        Circle().fill(soldOut ? Brand.liquorice100 : inOrder > 0 ? Brand.lime : Brand.choc100)
+                            .animation(reduceMotion ? Motion.Reduced.fade : Motion.quick, value: inOrder > 0)
+                            .geometryGroup()
+                    }
+                    .kick(reduceMotion ? 0 : again, from: StepperMotion.againBump)
             }
             .frame(maxHeight: .infinity, alignment: .bottom)
         }
@@ -302,8 +329,9 @@ struct ProductCard: View {
         .opacity(soldOut ? 0.55 : 1)
         .contentShape(RoundedRectangle(cornerRadius: Brand.rCard, style: .continuous))
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel([product.name, priceText, soldOut ? "Sold out" : inOrder ? "In your order" : nil].compactMap { $0 }.joined(separator: ", "))
+        .accessibilityLabel([product.name, priceText, soldOut ? "Sold out" : inOrder > 0 ? "In your order" : nil].compactMap { $0 }.joined(separator: ", "))
         .accessibilityAddTraits(.isButton)
+        .onChange(of: inOrder) { old, new in if old > 0 && new > old { again += 1 } }
     }
 
     /// "from Rp 21.000" only when the variants really differ in price.

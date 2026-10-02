@@ -4,84 +4,96 @@ import CoreImage.CIFilterBuiltins
 
 // MARK: Share (2-5)
 
+/// The share sheet, in the Ataste sheet (Motion board 20): it rises like 07's sheets, the QR is revealed by a circle
+/// growing from the tile's centre, Copy link flips its icon and shows the toast, Send on WhatsApp hands off and the
+/// sheet is still open on return. × gives a light tap and closes; the scrim and a drag close it without one.
 struct ShareCard: View {
     var group: OrderGroup
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.closeSheet) private var close
     @Environment(\.openURL) private var openURL
-    @State private var toast: String?
+    @State private var toast: ToastNote?
+
+    /// The sheet's padding: 10 top, 18 sides, 24 bottom.
+    static let insets = EdgeInsets(top: 10, leading: 18, bottom: 24, trailing: 18)
 
     private var link: URL { Links.join(group.code) }
     /// The link as the field shows it, without the scheme: "ataste.app/j/FRI-7Q2K".
     private var shownLink: String { (link.host() ?? "") + link.path() }
 
     var body: some View {
-        ScrollView {
-            VStack(spacing: 18) {
-                VStack(spacing: 14) {
-                    Text(group.name).styled(.title2, 22).multilineTextAlignment(.center)
-                    if let c = group.cutoff_at {
-                        Label("Locks \(Wita.string(c, "EEE d MMM, HH:mm")) WITA", systemImage: "clock")
-                            .labelStyle(TightLabel())
-                            .styled(.callout, 13, weight: 600, Brand.caramel)
+        VStack(spacing: 18) {
+            ZStack {
+                Text("Invite people").font(GFont.manrope(17, 700)).foregroundStyle(Brand.cocoa).lineLimit(1)
+                    .accessibilityAddTraits(.isHeader)
+                HStack {
+                    Spacer()
+                    Button { close?() } label: {
+                        Image(systemName: "xmark").font(.system(size: 16, weight: .semibold)).foregroundStyle(Brand.cocoa)
+                            .frame(width: 30, height: 30).background(Circle().fill(Brand.liquorice100))
+                            .frame(width: 44, height: 44).contentShape(Rectangle())
                     }
-                    if let qr = QR.mask(link.absoluteString) {
-                        Image(uiImage: qr).renderingMode(.template).interpolation(.none).resizable().scaledToFit()
-                            .foregroundStyle(Brand.cocoa)
-                            .frame(width: 176, height: 176)
-                            .padding(14)
-                            .background(RoundedRectangle(cornerRadius: Brand.rCard, style: .continuous).fill(Brand.cream))
-                            .accessibilityLabel("QR code for the join link")
-                    }
-                    HStack(spacing: 10) {
-                        Text(shownLink).styled(.body, 15, weight: 600).lineLimit(1).minimumScaleFactor(0.75).truncationMode(.middle)
-                            .frame(maxWidth: .infinity, alignment: .leading)
-                            .textSelection(.enabled)
-                        Button { copy(link.absoluteString, "Link copied", $toast) } label: {
-                            Label("Copy link", systemImage: "doc.on.doc")
-                                .labelStyle(TightLabel())
-                                .styled(.callout, 14, weight: 600, Brand.cream)
-                                .padding(.vertical, Brand.s2).padding(.horizontal, Brand.s4)
-                                .background(Capsule().fill(Brand.caramel))
-                                .frame(minHeight: 44)
-                        }
-                        .buttonStyle(.plain)
-                    }
-                    .padding(.leading, Brand.s4).padding(.trailing, 6)
-                    .padding(.vertical, 2)
-                    .background(Capsule().fill(Brand.cream))
-                }
-                .padding(22)
-                .frame(maxWidth: .infinity)
-                .background(RoundedRectangle(cornerRadius: Brand.rHero, style: .continuous).fill(Brand.card))
-
-                HStack(spacing: 10) {
-                    Button { openURL(Links.whatsApp("", text: shareText)) } label: {
-                        HStack(spacing: Brand.s2) {
-                            WAGlyph(size: 17)
-                            Text("Send on WhatsApp").font(Brand.font(.headline, size: 15, weight: 600))
-                        }
-                        .frame(maxWidth: .infinity)
-                    }
-                    .buttonStyle(.pill(.dark, .medium))
-                    Button { presentShare([shareText]) } label: {
-                        // The secondary pill's colours on a 56pt round-ended square (the pill's 32pt sides don't fit).
-                        Image(systemName: "square.and.arrow.up").font(.system(size: 17, weight: .semibold)).foregroundStyle(Brand.cocoa)
-                            .frame(width: 56, height: 52)
-                            .background(Capsule().fill(Brand.cream))
-                            .overlay(Capsule().strokeBorder(Brand.choc100, lineWidth: 4))
-                    }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("More ways to share")
+                    .buttonStyle(DoughStyle())
+                    .accessibilityLabel("Close")
                 }
             }
-            .padding(.horizontal, 20)
-            .padding(.top, Brand.s2)
+            VStack(spacing: 14) {
+                Text(group.name).styled(.title2, 22).multilineTextAlignment(.center)
+                if let c = group.cutoff_at {
+                    Label("Locks \(Wita.string(c, "EEE d MMM, HH:mm")) WITA", systemImage: "clock")
+                        .labelStyle(TightLabel())
+                        .styled(.callout, 13, weight: 600, Brand.caramel)
+                }
+                if let qr = QR.mask(link.absoluteString) {
+                    Image(uiImage: qr).renderingMode(.template).interpolation(.none).resizable().scaledToFit()
+                        .foregroundStyle(Brand.cocoa)
+                        .frame(width: 176, height: 176)
+                        .padding(12)
+                        .background(RoundedRectangle(cornerRadius: Brand.rCard, style: .continuous).fill(Brand.cream))
+                        .modifier(CircleReveal())
+                        .accessibilityLabel("QR code for the join link")
+                }
+                HStack(spacing: 10) {
+                    Text(shownLink).styled(.body, 15, weight: 600).lineLimit(1).minimumScaleFactor(0.75).truncationMode(.middle)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .textSelection(.enabled)
+                    CopyButton(value: link.absoluteString, message: "Link copied", toast: $toast, symbol: "doc.on.doc",
+                               squash: Motion.pressCompact) { icon in
+                        Label { Text("Copy link") } icon: { icon }
+                            .labelStyle(TightLabel())
+                            .styled(.callout, 14, weight: 600, Brand.cream)
+                            .padding(.vertical, Brand.s2).padding(.horizontal, Brand.s4)
+                            .background(Capsule().fill(Brand.caramel))
+                            .frame(minHeight: 44)
+                    }
+                }
+                .padding(.leading, Brand.s4).padding(.trailing, 6)
+                .padding(.vertical, 2)
+                .background(Capsule().fill(Brand.cream))
+            }
+            .padding(22)
+            .frame(maxWidth: .infinity)
+            .background(RoundedRectangle(cornerRadius: Brand.rHero, style: .continuous).fill(Brand.card))
+
+            HStack(spacing: 10) {
+                Button { openURL(Links.whatsApp("", text: shareText)) } label: {
+                    HStack(spacing: Brand.s2) {
+                        WAGlyph(size: 17)
+                        Text("Send on WhatsApp").font(Brand.font(.headline, size: 15, weight: 600))
+                    }
+                    .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.pill(.dark, .medium))
+                Button { presentShare([shareText]) } label: {
+                    Image(systemName: "square.and.arrow.up").font(.system(size: 17, weight: .semibold)).foregroundStyle(Brand.cocoa)
+                        .frame(width: 58, height: 58)
+                        .background(Circle().fill(Brand.card))
+                }
+                .buttonStyle(DoughStyle())
+                .accessibilityLabel("More ways to share")
+            }
         }
-        .screen()
-        .navigationTitle("Invite people")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar { ToolbarItem(placement: .topBarTrailing) { Button(role: .close) { dismiss() } } }
-        .toast($toast)
+        // The toast sits 42 pt from the bottom of the screen: 10 over the sheet's 24 pt padding and 8 pt inset.
+        .toast($toast, above: 10)
     }
 
     private var shareText: String {
@@ -480,7 +492,7 @@ struct JoinSheet: View {
             Mascot(pose: pose, size: 160, fill: Brand.choc100)
                 .padding(.top, 76)
             if let marquee {
-                Marquee(text: marquee, fill: Brand.cocoa, ink: Brand.choc100, speed: 28, tilt: -4)
+                Marquee(text: marquee, fill: Brand.cocoa, ink: Brand.choc100, tilt: -4)
                     .padding(.horizontal, -20)
                     .padding(.top, 250)
             }

@@ -28,13 +28,12 @@ struct MyOrderView: View {
         .frame(maxHeight: .infinity, alignment: .top)
         .presentationDetents([.fraction(0.78), .large])
         .presentationDragIndicator(.visible)
-        .alert("Remove \(removing?.name ?? "")?", isPresented: Binding(get: { removing != nil }, set: { if !$0 { removing = nil } })) {
-            Button("Remove", role: .destructive) {
-                if let item = removing { Task { await attempt($problem, "Couldn't remove it") { try await store.remove(item) } } }
+        .doughSheet(item: $removing) { item in
+            ConfirmSheet(confirm: Confirm(title: "Remove \(item.name)?",
+                                          message: store.liveSplit(item) == nil ? "It comes out of your order." : "The split on it is cancelled too.",
+                                          button: "Remove", keep: "Keep") {}, delay: SheetMotion.rowAfterRemove) {
+                Task { await attempt($problem, "Couldn't remove it") { try await store.remove(item) } }
             }
-            Button("Keep", role: .cancel) {}
-        } message: {
-            Text(removing.flatMap { store.liveSplit($0) } == nil ? "It comes out of your order." : "The split on it is cancelled too.")
         }
         .problemAlert($problem)
     }
@@ -63,16 +62,21 @@ struct MyOrderView: View {
             VStack(spacing: 14) {
                 VStack(spacing: 0) {
                     ForEach(Array(items.enumerated()), id: \.element.id) { i, item in
-                        row(item)
-                        if i < items.count - 1 { Rectangle().fill(Brand.liquorice100).frame(height: 1) }
+                        VStack(spacing: 0) {
+                            if i > 0 { Rectangle().fill(Brand.liquorice100).frame(height: 1) }
+                            row(item)
+                        }
+                        .transition(.itemRow)
                     }
                 }
+                .rowMotion(items.map(\.id))
                 .padding(.horizontal, 14)
                 .background(RoundedRectangle(cornerRadius: Brand.rCard, style: .continuous).fill(Brand.card))
                 HStack {
                     Text("Your items").brand(.label)
                     Spacer()
-                    Text(Rupiah.format(items.reduce(0) { $0 + $1.total })).font(MenuFont.roundo(20)).foregroundStyle(Brand.cocoa)
+                    CountUp(amount: items.reduce(0) { $0 + $1.total }) { Text(Rupiah.format($0)) }
+                        .font(MenuFont.roundo(20)).foregroundStyle(Brand.cocoa)
                 }
                 .padding(.horizontal, 4)
                 Text("Ongkir is shared once Atas confirms the order.").font(MenuFont.manrope(13)).foregroundStyle(Brand.ink3)

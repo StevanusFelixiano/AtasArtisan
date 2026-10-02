@@ -2,16 +2,20 @@ import SwiftUI
 import Supabase
 
 /// 4.12 Send to Atas (5-1, 5-1b). The message in the hosts' own format (Indonesian by default, English
-/// selectable), editable, sent from the host's own WhatsApp to Atas (0821-3145-473).
+/// selectable), editable, sent from the host's own WhatsApp to Atas (0821-3145-473). Switching the language rolls the
+/// message to the other one while the card settles to its height (Motion board 17).
 struct SendToAtasView: View {
     var store: GroupStore
+    /// Open WhatsApp was tapped: the group screen plays 5-2 in when the app comes back.
+    var handedOff: () -> Void = {}
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.openURL) private var openURL
     @Environment(AppModel.self) private var app
     @State private var language = 0
     @State private var text = ""
-    @State private var busy = false
-    @State private var problem: Problem?
+    /// A language switch in progress: still copies of the old and new message roll over the hidden field.
+    @State private var rolling: Rolling?
     @FocusState private var editing: Bool
 
     private var indonesian: Bool { language == 0 }
@@ -26,28 +30,47 @@ struct SendToAtasView: View {
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
                 .padding(.horizontal, 4)
-                Segmented(options: ["Bahasa Indonesia", "English"], selection: $language)
-                    .accessibilityLabel("Message language")
+                Segmented(options: ["Bahasa Indonesia", "English"], selection: Binding(get: { language }, set: { l in
+                    let old = text
+                    language = l
+                    text = message()
+                    rolling = Rolling(old: old, new: text)
+                }))
+                // A labelled container: on the control itself the label would replace each segment's own.
+                .accessibilityElement(children: .contain)
+                .accessibilityLabel("Message language")
+                // The message rolls to the other language (`Motion.digits`): still copies of the old and new message
+                // roll over the field (a text field draws its new text at once, so it can't roll itself), then the
+                // field shows again. The card is sized by the new message and settles to its height on
+                // `Motion.settle`. Reduce Motion: a crossfade, the height snaps.
                 TextField("Message", text: $text, axis: .vertical)
                     .font(Type5.manrope(14))
                     .lineSpacing(2)
                     .foregroundStyle(Brand.cocoa)
                     .tint(Brand.caramel)
                     .focused($editing)
-                    .padding(.trailing, 24)
-                    .padding(.vertical, 16).padding(.horizontal, 18)
-                    .background(bubble.fill(Brand.card))
-                    .overlay(bubble.strokeBorder(Brand.liquorice100, lineWidth: 1.5))
-                    .overlay(alignment: .topTrailing) {
-                        Button { editing = true } label: {
-                            Image(systemName: "pencil").font(.system(size: 13, weight: .semibold)).foregroundStyle(Brand.cocoa)
-                                .frame(width: 28, height: 28).background(Circle().fill(Brand.liquorice100))
-                                .frame(width: 44, height: 44).contentShape(Rectangle())
+                    .opacity(rolling == nil ? 1 : 0)
+                    .overlay(alignment: .topLeading) {
+                        if let rolling {
+                            MessageRoll(rolling: rolling) { if self.rolling?.id == rolling.id { self.rolling = nil } }
+                                .id(rolling.id)
                         }
-                        .buttonStyle(.plain)
-                        .padding(4)
-                        .accessibilityLabel("Edit the message")
                     }
+                .padding(.trailing, 24)
+                .padding(.vertical, 16).padding(.horizontal, 18)
+                .background(bubble.fill(Brand.card))
+                .overlay(bubble.strokeBorder(Brand.liquorice100, lineWidth: 1.5))
+                .overlay(alignment: .topTrailing) {
+                    Button { editing = true } label: {
+                        Image(systemName: "pencil").font(.system(size: 13, weight: .semibold)).foregroundStyle(Brand.cocoa)
+                            .frame(width: 28, height: 28).background(Circle().fill(Brand.liquorice100))
+                            .frame(width: 44, height: 44).contentShape(Rectangle())
+                    }
+                    .buttonStyle(.plain)
+                    .padding(4)
+                    .accessibilityLabel("Edit the message")
+                }
+                .animation(reduceMotion ? nil : Motion.settle, value: language)
                 HStack {
                     Text("To Atas Artisan").font(Type5.manrope(13, 600)).foregroundStyle(Brand.ink2)
                     Spacer()
@@ -65,11 +88,17 @@ struct SendToAtasView: View {
         .screen()
         .safeAreaInset(edge: .bottom) {
             GlassBar {
-                Button { Task { await send() } } label: {
+                AsyncPill(busyTitle: "Sending…", doneTitle: "Sent", failTitle: "Couldn’t mark it sent", kind: .dark,
+                          refresh: store.refresh, reached: { store.group?.state == .sent }) {
+                    handedOff()
+                    openURL(Links.whatsApp(Links.atasNumber, text: text))
+                    try await store.rpc("mark_sent", ["g": .string(store.id.uuidString)])
+                } then: {
+                    dismiss()
+                } idle: {
                     Label { Text("Open WhatsApp") } icon: { WhatsAppGlyph(size: 20) }
                 }
-                .buttonStyle(.pill(.dark))
-                .disabled(busy || text.isEmpty)
+                .disabled(text.isEmpty, reason: "The message is empty")
                 cutoff
             }
         }
@@ -83,8 +112,6 @@ struct SendToAtasView: View {
             language = (store.group?.msg_lang ?? app.profile?.msg_lang ?? "id") == "id" ? 0 : 1
             text = message()
         }
-        .onChange(of: language) { _, _ in text = message() }
-        .problemAlert($problem)
     }
 
     /// The message bubble: radius 24 with a 6 pt corner at the bottom right.
@@ -125,14 +152,39 @@ struct SendToAtasView: View {
                                           mapsURL: g.maps_url, delivery: g.delivery_at, people: people), indonesian: indonesian)
     }
 
-    private func send() async {
-        busy = true
-        defer { busy = false }
-        openURL(Links.whatsApp(Links.atasNumber, text: text))
-        await attempt($problem, "Couldn't mark it sent") {
-            try await store.rpc("mark_sent", ["g": .string(store.id.uuidString)])
-            dismiss()
+}
+
+private struct Rolling: Identifiable {
+    let id = UUID()
+    var old: String
+    var new: String
+}
+
+/// The Send to Atas message rolling once to the other language: the old one leaves upwards and the new one comes up
+/// from 8 pt below (`Roll` on `Motion.digits`), then `done` hands back to the field. Reduce Motion crossfades.
+private struct MessageRoll: View {
+    var rolling: Rolling
+    var done: () -> Void
+    @State private var on = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        let d = reduceMotion ? 0 : StatusMotion.labelOffset
+        ZStack(alignment: .topLeading) {
+            copy(rolling.old).offset(y: on ? -d : 0).opacity(on ? 0 : 1)
+            copy(rolling.new).offset(y: on ? 0 : d).opacity(on ? 1 : 0)
         }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+        .onAppear {
+            withAnimation(reduceMotion ? Motion.Reduced.fade : Motion.digits, completionCriteria: .logicallyComplete) { on = true } completion: { done() }
+        }
+    }
+
+    private func copy(_ text: String) -> some View {
+        Text(text).font(Type5.manrope(14)).lineSpacing(2).foregroundStyle(Brand.cocoa)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
     }
 }
 

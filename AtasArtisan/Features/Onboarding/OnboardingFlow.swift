@@ -11,7 +11,6 @@ struct OnboardingFlow: View {
     enum Step: Hashable {
         /// `attempt` gives each new verification its own view identity, so "Try again" starts fresh.
         case verify(attempt: Int)
-        case verified(phone: String, name: String, token: String)
     }
     @State private var path: [Step] = []
     @State private var attempt = 0
@@ -31,13 +30,9 @@ struct OnboardingFlow: View {
     private var flow: some View {
         NavigationStack(path: $path) {
             WelcomeStep { restart() }
-                .navigationDestination(for: Step.self) { step in
-                    switch step {
-                    case .verify:
-                        VerifyStep { phone, name, token in path.append(.verified(phone: phone, name: name, token: token)) }
-                    case let .verified(phone, name, token):
-                        VerifiedStep(phone: phone, suggestedName: name, token: token) { restart() }
-                    }
+                .navigationDestination(for: Step.self) { _ in
+                    // 1-4b is shown over the verify step itself, so it fades in over the waiting screen.
+                    VerifyStep { restart() }
                 }
         }
         .sheet(isPresented: Binding(get: { app.pendingJoin != nil && !invitePrompted }, set: { if !$0 { invitePrompted = true } })) {
@@ -48,8 +43,7 @@ struct OnboardingFlow: View {
         }
         .onAppear {
             switch DebugScreens.value("ATASTE_ONBOARD") {
-            case "verify", "waiting", "expired", "nowa": path = [.verify(attempt: 0)]
-            case "verified": path = [.verify(attempt: 0), .verified(phone: "6281290345521", name: "Putri", token: "")]
+            case "verify", "waiting", "expired", "nowa", "verified": path = [.verify(attempt: 0)]
             default: break
             }
         }
@@ -148,53 +142,169 @@ struct LogoPill: View {
     }
 }
 
-// MARK: Verify + Waiting + Timed out + No WhatsApp (1-3, 1-4a, 1-4c, 1-4d)
+// MARK: Verify + Waiting + Timed out + No WhatsApp (1-3, 1-4a, 1-4c, 1-4d), Verified (1-4b)
 
+/// Motion board 16. Open WhatsApp hands off to WhatsApp; when the app comes back the code card turns into the code
+/// chip (its sides and height on `Motion.doughLead`, its top on `Motion.doughTrail`, the code 40 → 15 pt), the giraffe
+/// grows into the waiting pose as the ring fades in and turns a quarter, and the copy and button change. Timed out:
+/// the chip shakes and the fresh code rolls in over it, the giraffe looks confused and the ring fades. Verified: the
+/// ring turns once more, then the Cocoa screen fades in over this one and its parts arrive in order. Reduce Motion:
+/// crossfades at the final size, the ring still. The polling and the endpoints are the same as before.
 struct VerifyStep: View {
-    var verified: (_ phone: String, _ name: String, _ token: String) -> Void
+    var notMe: () -> Void
 
     // `expires_at` is left out: the functions client decodes dates with Foundation's default strategy, which
     // can't read Postgres timestamps, so including it failed every start. The server enforces expiry; the
     // countdown on 1-4a runs from when this app received the code (codes last 10 minutes).
     private struct Start: Decodable { var code: String; var nonce: String }
     private struct Status: Decodable { var status: String; var phone: String?; var push_name: String?; var token_hash: String? }
+    private struct Verified { var phone: String; var name: String; var token: String }
 
     enum Wait { case starting, ready, waiting, expired, noWhatsApp }
     @State private var start: Start?
     @State private var expiresAt = Date()
     @State private var wait: Wait = .starting
+    /// What the screen shows. It follows `wait`, except that after Open WhatsApp the move to 1-4a waits until the app
+    /// is back, so the card turns into the chip in front of the person.
+    @State private var shown: Wait = .starting
+    @State private var awayForCode = false
     @State private var problem: Problem?
     @State private var wentAway = false
+    @State private var verifiedAs: Verified?
+    /// The bar goes once 1-4b has faded in over it; hiding it sooner shifts the waiting screen up under the fade.
+    @State private var barHidden = false
+    @State private var ringTurns = 0
+    /// The code that ran out, kept on the chip until the fresh one rolls in over it (1-4c).
+    @State private var oldCode: String?
+    @State private var expiredAt = Date.distantPast
+    @State private var timeouts = 0
+    @State private var arrivals = 0
+    /// Where each layout leaves room for the code (the card on 1-3, the chip on 1-4a), and the drawn surface's edges.
+    @State private var cardSlot = CGRect.zero
+    @State private var chipSlot = CGRect.zero
+    @State private var edgeL: CGFloat = 0
+    @State private var edgeR: CGFloat = 0
+    @State private var edgeT: CGFloat = 0
+    @State private var edgeH: CGFloat = 0
+    @State private var surfaceChip = false
+    /// The giraffe's spot in each layout (140 pt on 1-3, 206 pt on 1-4a), and where it is drawn.
+    @State private var sendSpot = CGRect.zero
+    @State private var waitSpot = CGRect.zero
+    @State private var giraffeFrame = CGRect.zero
+    @State private var giraffeWaits = false
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private static let whatsAppStore = URL(string: "https://apps.apple.com/app/whatsapp-messenger/id310633997")!
+    private static let space = "verify"
+
+    private static var windowTop: CGFloat {
+        UIApplication.shared.connectedScenes.compactMap { ($0 as? UIWindowScene)?.keyWindow }.first?.safeAreaInsets.top ?? 0
+    }
+
+    private var chipLook: Bool { shown == .waiting || shown == .expired }
 
     var body: some View {
-        VStack(spacing: 0) {
-            switch wait {
-            case .starting, .ready: ready
-            case .waiting: waiting
-            case .expired: expired
-            case .noWhatsApp: noWhatsApp
+        ZStack {
+            VStack(spacing: 0) {
+                content
+                Spacer(minLength: Brand.s4)
+                buttons
             }
-            Spacer(minLength: Brand.s4)
-            buttons
+            .padding(.horizontal, Brand.s4)
+            .padding(.bottom, Brand.s4)
+            .overlay(alignment: .topLeading) { giraffe }
+            .overlay(alignment: .topLeading) { codeSurface }
+            .coordinateSpace(.named(Self.space))
+            .screen()
         }
-        .padding(.horizontal, Brand.s4)
-        .padding(.bottom, Brand.s4)
-        .screen()
-        .navigationTitle("Verify")
+        .overlay {
+            // Laid out against the window's top inset, not the bar's: the bar is still up while 1-4b fades in, and a
+            // taller overlay would otherwise push the waiting screen up under the fade.
+            if let v = verifiedAs {
+                VerifiedStep(phone: v.phone, suggestedName: v.name, token: v.token, notMe: notMe)
+                    .ignoresSafeArea(.container, edges: .top)
+                    .safeAreaPadding(.top, Self.windowTop)
+                    .transition(.opacity)
+            }
+        }
+        .navigationTitle(verifiedAs == nil ? "Verify" : "Verified")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(removing: .title)
+        .toolbar(barHidden ? .hidden : .automatic, for: .navigationBar)
+        .navigationBarBackButtonHidden(barHidden)
         .task { await debugOrBegin() }
         .task(id: wait) { if wait == .waiting, DebugScreens.value("ATASTE_ONBOARD") == nil { await poll() } }
         .onChange(of: scenePhase) { _, p in
             // Back from WhatsApp without using our button (e.g. the code was typed by hand): start checking.
             if p == .background { wentAway = true }
             if p == .active, wentAway, wait == .ready, start != nil { wait = .waiting }
+            if p == .active { cameBack() }
         }
+        .onChange(of: wait) { old, new in
+            if old == .waiting && new == .expired {
+                expiredAt = .now
+                timeouts += 1
+            }
+            if new == .waiting && awayForCode { return }
+            show(new)
+        }
+        .onChange(of: chipLook ? chipSlot : cardSlot, initial: true) { _, rect in place(rect) }
+        .onChange(of: chipLook ? waitSpot : sendSpot, initial: true) { _, rect in
+            guard rect != .zero else { return }
+            // A change of layout grows the giraffe from one spot to the other on `Motion.settle`; the first placement,
+            // a layout change and Reduce Motion are still.
+            if chipLook != giraffeWaits && giraffeFrame != .zero && !reduceMotion {
+                withAnimation(Motion.settle) { giraffeFrame = rect }
+            } else {
+                var t = Transaction()
+                t.disablesAnimations = true
+                withTransaction(t) { giraffeFrame = rect }
+            }
+            giraffeWaits = chipLook
+        }
+        .sensoryFeedback(Haptic.warn, trigger: timeouts)
+        .sensoryFeedback(Haptic.done, trigger: arrivals)
         .problemAlert($problem)
+    }
+
+    @ViewBuilder private var content: some View {
+        switch shown {
+        case .starting, .ready:
+            ready.transition(.asymmetric(insertion: .opacity, removal: .opacity.animation(reduceMotion ? Motion.Reduced.fade : Motion.fadeOut)))
+        case .waiting, .expired:
+            waiting.transition(.asymmetric(insertion: .opacity.animation((reduceMotion ? Motion.Reduced.fade : Motion.fade).delay(SignInMotion.waitInDelay)),
+                                           removal: .opacity))
+        case .noWhatsApp:
+            noWhatsApp
+        }
+    }
+
+    /// One giraffe drawn over the spot each layout leaves for it, so it grows from 1-3's 140 pt to 1-4a's 206 pt on
+    /// `Motion.settle` as its pose crossfades (phone → waiting → confused).
+    private var giraffe: some View {
+        let (pose, fill): (String, Color) = switch shown {
+        case .waiting: ("pose-waiting", Brand.choc100)
+        case .expired: ("pose-confused", Brand.pink100)
+        default: ("pose-phone", Brand.lime)
+        }
+        return ZStack {
+            Circle().fill(fill).overlay { Image(pose).resizable().scaledToFill() }.clipShape(Circle())
+                .id(pose)
+                .transition(.opacity.animation(reduceMotion ? Motion.Reduced.fade : Motion.fade))
+        }
+        .frame(width: giraffeFrame.width, height: giraffeFrame.height)
+        .offset(x: giraffeFrame.minX, y: giraffeFrame.minY)
+        .opacity(shown == .noWhatsApp || giraffeFrame == .zero ? 0 : 1)
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
+
+    /// Room for the giraffe in a layout, reported to `spot`.
+    private func giraffeSpot(_ size: CGFloat, _ spot: Binding<CGRect>) -> some View {
+        Color.clear.frame(width: size, height: size)
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.space)) } action: { spot.wrappedValue = $0 }
     }
 
     // 1-3
@@ -210,15 +320,11 @@ struct VerifyStep: View {
             .padding(.top, 6)
             Spacer(minLength: Brand.s4).frame(maxHeight: 74)
             VStack(spacing: 18) {
-                Mascot(pose: "pose-phone", size: 140, fill: Brand.lime)
-                VStack(spacing: Brand.s2) {
-                    Text("Your code").brand(.label, Brand.ink3)
-                    codeText(size: 40, tracking: 0.05)
-                }
-                .padding(.top, 22).padding(.bottom, 20)
-                .frame(maxWidth: .infinity)
-                .background(RoundedRectangle(cornerRadius: Brand.rHero, style: .continuous).fill(Brand.card))
-                .overlay(RoundedRectangle(cornerRadius: Brand.rHero, style: .continuous).strokeBorder(Brand.caramel, style: StrokeStyle(lineWidth: 2, dash: [6, 4])))
+                giraffeSpot(SignInMotion.mascotSize.send, $sendSpot)
+                // Room for the code card, drawn by `codeSurface`.
+                cardFace(code: start?.code)
+                    .hidden()
+                    .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.space)) } action: { cardSlot = $0 }
                 Text("Send it from the WhatsApp you want to log in with. We read your number from the message.")
                     .obText(.callout, 14, Brand.ink2).lineSpacing(3).multilineTextAlignment(.center).frame(maxWidth: 320)
                     .fixedSize(horizontal: false, vertical: true)
@@ -227,46 +333,33 @@ struct VerifyStep: View {
         }
     }
 
-    // 1-4a
+    // 1-4a, and 1-4c in its place: the chip stays, the fresh code rolls in, the giraffe is confused, the ring fades.
     private var waiting: some View {
-        VStack(spacing: 30) {
+        let expired = shown == .expired
+        return VStack(spacing: 30) {
             ZStack {
-                ObSpinRing(size: 250)
-                Mascot(pose: "pose-waiting", size: 206, fill: Brand.choc100)
+                ObRing(size: 250, turns: ringTurns)
+                    .opacity(expired ? 0 : 1)
+                    .animation(reduceMotion ? Motion.Reduced.fade : Motion.fade, value: expired)
+                    .onAppear { if shown == .waiting { ringTurns += 1 } }
+                giraffeSpot(SignInMotion.mascotSize.wait, $waitSpot)
             }
-            VStack(spacing: 10) {
-                Text("Checking your WhatsApp…").obText(.title1, 28).multilineTextAlignment(.center)
-                Text("This finishes by itself as soon as your message reaches us. You can leave and come back.")
-                    .obText(.body, 15, Brand.ink2).lineSpacing(4).multilineTextAlignment(.center).frame(maxWidth: 310)
-            }
-            TimelineView(.periodic(from: .now, by: 1)) { t in
-                HStack(spacing: Brand.s2) {
-                    Text(start?.code ?? "").obText(.headline, 15, tracking: 0.04)
-                    Text("· \(remaining(at: t.date)) left").obText(.footnote, 12, Brand.ink2)
+            ZStack {
+                VStack(spacing: 10) {
+                    Text(expired ? "We didn’t get your message" : "Checking your WhatsApp…").obText(.title1, 28).multilineTextAlignment(.center)
+                    Text(expired ? "Codes last 10 minutes and this one ran out. Here’s a fresh one — send it the same way."
+                                 : "This finishes by itself as soon as your message reaches us. You can leave and come back.")
+                        .obText(.body, 15, Brand.ink2).lineSpacing(4).multilineTextAlignment(.center).frame(maxWidth: 310)
                 }
-                .padding(.horizontal, 18).padding(.vertical, Brand.s2)
-                .background(Capsule().fill(Brand.liquorice100))
+                .id(expired)
+                .transition(.opacity.animation(reduceMotion ? Motion.Reduced.fade : Motion.fade))
             }
-            .accessibilityElement(children: .combine)
+            // Room for the code chip, drawn by `codeSurface`.
+            chipFace(code: start?.code ?? oldCode)
+                .hidden()
+                .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.space)) } action: { chipSlot = $0 }
         }
         .padding(.top, 52)
-    }
-
-    // 1-4c: the old code ran out; a fresh one is already fetched and shown.
-    private var expired: some View {
-        VStack(spacing: 20) {
-            Mascot(pose: "pose-confused", size: 180, fill: Brand.pink100)
-            Text("We didn’t get your message").obText(.title1, 28).multilineTextAlignment(.center)
-            Text("Codes last 10 minutes and this one ran out. Here’s a fresh one — send it the same way.")
-                .obText(.body, 15, Brand.ink2).lineSpacing(4).multilineTextAlignment(.center).frame(maxWidth: 320)
-            codeText(size: 36, tracking: 0.06)
-                .padding(.vertical, 18)
-                .frame(maxWidth: .infinity)
-                .background(RoundedRectangle(cornerRadius: Brand.rCard, style: .continuous).fill(Brand.card))
-                .overlay(RoundedRectangle(cornerRadius: Brand.rCard, style: .continuous).strokeBorder(Brand.caramel, style: StrokeStyle(lineWidth: 2, dash: [6, 4])))
-        }
-        .padding(.horizontal, Brand.s2)
-        .padding(.top, 72)
     }
 
     // 1-4d
@@ -282,33 +375,173 @@ struct VerifyStep: View {
     }
 
     @ViewBuilder private var buttons: some View {
-        switch wait {
-        case .starting, .ready:
-            VStack(spacing: 12) {
-                Button { send() } label: { ObWhatsAppLabel(title: "Open WhatsApp") }
-                    .buttonStyle(.pill(.dark)).disabled(start == nil)
-                Text("Code works for this iPhone only, for 10 minutes").obText(.footnote, 12, Brand.ink3)
-            }
-        case .waiting:
-            Button { send() } label: { ObWhatsAppLabel(title: "Open WhatsApp again") }.buttonStyle(.pill(.secondary))
-        case .expired:
-            Button { if start == nil { Task { await renew() } } else { send() } } label: { ObWhatsAppLabel(title: "Send new code") }
-                .buttonStyle(.pill(.dark))
+        switch shown {
         case .noWhatsApp:
             VStack(spacing: 10) {
                 Button("Get WhatsApp") { openURL(Self.whatsAppStore) }.buttonStyle(.pill(.primary))
                 Button("I’ve installed it") { send() }.buttonStyle(.pill(.secondary))
             }
+        default:
+            // One button through 1-3, 1-4a and 1-4c: Dark → Secondary → Dark, its label rolling to the next.
+            let title = switch shown { case .waiting: "Open WhatsApp again"; case .expired: "Send new code"; default: "Open WhatsApp" }
+            let delay = shown == .waiting ? SignInMotion.waitInDelay : 0
+            VStack(spacing: 12) {
+                Button {
+                    if shown == .expired && start == nil { Task { await renew() } } else { send() }
+                } label: {
+                    ZStack {
+                        ObWhatsAppLabel(title: title).id(title)
+                            .transition(AnyTransition.roll(reduceMotion).animation((reduceMotion ? Motion.Reduced.fade : Motion.digits).delay(delay)))
+                    }
+                }
+                .buttonStyle(.pill(shown == .waiting ? .secondary : .dark))
+                .disabled(!chipLook && start == nil)
+                .animation((reduceMotion ? Motion.Reduced.fade : Motion.fade).delay(delay), value: shown)
+                if !chipLook {
+                    Text("Code works for this iPhone only, for 10 minutes").obText(.footnote, 12, Brand.ink3)
+                        .transition(.opacity.animation(reduceMotion ? Motion.Reduced.fade : Motion.fadeOut))
+                }
+            }
         }
     }
 
-    private func codeText(size: CGFloat, tracking: CGFloat) -> some View {
-        Text(start?.code ?? "ATASTE ····")
-            .obText(.display, size, tracking: tracking, start == nil ? Brand.liquorice400 : Brand.cocoa)
+    // MARK: The code card and chip
+
+    /// 1-3's card: "Your code" over the code in Roundo 40, white with a dashed Caramel ring, radius 32.
+    private func cardFace(code: String?) -> some View {
+        VStack(spacing: Brand.s2) {
+            Text("Your code").brand(.label, Brand.ink3)
+            codeText(code, size: SignInMotion.codeSize.card)
+        }
+        .padding(.top, 22).padding(.bottom, 20)
+        .frame(maxWidth: .infinity)
+    }
+
+    /// 1-4a's chip: the code at 15 pt, then "· m:ss left", on Liquorice 100.
+    private func chipFace(code: String?) -> some View {
+        HStack(spacing: Brand.s2) {
+            codeText(code, size: SignInMotion.codeSize.chip)
+            TimelineView(.periodic(from: .now, by: 1)) { t in
+                Text("· \(remaining(at: t.date)) left").obText(.footnote, 12, Brand.ink2)
+            }
+        }
+        .padding(.horizontal, 18).padding(.vertical, Brand.s2)
+    }
+
+    private func codeText(_ code: String?, size: CGFloat) -> some View {
+        Text(code ?? "ATASTE ····")
+            .modifier(CodeType(size: size))
+            .foregroundStyle(code == nil ? Brand.liquorice400 : Brand.cocoa)
             .lineLimit(1).minimumScaleFactor(0.6)
             .fixedSize(horizontal: false, vertical: true)
-            .padding(.horizontal, Brand.s3)
-            .accessibilityLabel(start.map { "Code \($0.code)" } ?? "Getting your code")
+            .padding(.horizontal, size > 20 ? Brand.s3 : 0)
+    }
+
+    /// The code surface, drawn over the slot of whichever layout is on show. Each edge rides its own spring, so it
+    /// moves as one piece from the card to the chip; the fill, ring and radius crossfade while it moves.
+    private var codeSurface: some View {
+        EdgeValue(value: edgeL) { l in EdgeValue(value: edgeR) { r in EdgeValue(value: edgeT) { t in EdgeValue(value: edgeH) { h in
+            surface
+                .frame(width: max(0, r - l), height: max(0, h))
+                .offset(x: l, y: t)
+        } } } }
+        .opacity(shown == .noWhatsApp || edgeH == 0 ? 0 : 1)
+        .shake(reduceMotion ? 0 : timeouts)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(surfaceLabel)
+        .accessibilityHidden(shown == .noWhatsApp)
+    }
+
+    private var surface: some View {
+        let chip = surfaceChip
+        let fill = reduceMotion ? Motion.Reduced.fade : Motion.fade
+        let code = chip ? start?.code ?? oldCode : start?.code
+        return ZStack {
+            RoundedRectangle(cornerRadius: SignInMotion.cardRadius, style: .continuous).fill(Brand.card)
+                .overlay(RoundedRectangle(cornerRadius: SignInMotion.cardRadius, style: .continuous)
+                    .strokeBorder(Brand.caramel, style: StrokeStyle(lineWidth: 2, dash: [6, 4])))
+                .opacity(chip ? 0 : 1)
+                .animation(fill, value: chip)
+            Capsule().fill(Brand.liquorice100)
+                .opacity(chip ? 1 : 0)
+                .animation(fill, value: chip)
+            if reduceMotion {
+                // A crossfade at the final size.
+                ZStack {
+                    Group { if chip { chipFace(code: code) } else { cardFace(code: code) } }
+                        .id(chip)
+                        .transition(.opacity.animation(Motion.Reduced.fade))
+                }
+            } else {
+                HStack(spacing: chip ? Brand.s2 : 0) {
+                    VStack(spacing: chip ? 0 : Brand.s2) {
+                        Text("Your code").brand(.label, Brand.ink3)
+                            .fixedSize()
+                            .frame(height: chip ? 0 : nil)
+                            .opacity(chip ? 0 : 1)
+                            .animation(chip ? Motion.fadeOut : Motion.fade, value: chip)
+                        ZStack {
+                            codeText(code, size: chip ? SignInMotion.codeSize.chip : SignInMotion.codeSize.card)
+                                .id(code)
+                                // The fresh code after a time-out rolls in 0.32 s after the shake.
+                                .transition(shown == .expired ? AnyTransition(Roll()).animation(Motion.digits.delay(rollDelay)) : .identity)
+                        }
+                    }
+                    TimelineView(.periodic(from: .now, by: 1)) { t in
+                        Text("· \(remaining(at: t.date)) left").obText(.footnote, 12, Brand.ink2).fixedSize()
+                    }
+                    .frame(width: chip ? nil : 0, alignment: .leading)
+                    .clipped()
+                    .opacity(chip ? 1 : 0)
+                    .animation(chip ? Motion.fade.delay(SignInMotion.waitInDelay) : Motion.fadeOut, value: chip)
+                }
+                .padding(.horizontal, chip ? 18 : 0)
+                .animation(Motion.settle, value: chip)
+            }
+        }
+    }
+
+    private var rollDelay: Double { max(0, SignInMotion.newCodeDelay - Date.now.timeIntervalSince(expiredAt)) }
+
+    private var surfaceLabel: String {
+        guard let code = surfaceChip ? start?.code ?? oldCode : start?.code else { return "Getting your code" }
+        return surfaceChip ? "Code \(code), \(remaining(at: .now)) left" : "Your code, \(code)"
+    }
+
+    /// Moves the surface onto `rect`: a real change of look (card ↔ chip) travels; a layout change, the first
+    /// placement and Reduce Motion are still.
+    private func place(_ rect: CGRect) {
+        guard rect != .zero else { return }
+        let chip = chipLook
+        if chip != surfaceChip && edgeH > 0 && !reduceMotion {
+            withAnimation(Motion.doughLead) {
+                edgeL = rect.minX
+                edgeR = rect.maxX
+                edgeH = rect.height
+            }
+            withAnimation(Motion.doughTrail) { edgeT = rect.minY }
+        } else {
+            var t = Transaction()
+            t.disablesAnimations = true
+            withTransaction(t) { (edgeL, edgeR, edgeT, edgeH) = (rect.minX, rect.maxX, rect.minY, rect.height) }
+        }
+        surfaceChip = chip
+    }
+
+    // MARK: Steps
+
+    /// Shows `w`: layouts change on `Motion.settle` (the giraffe's frame); every part carries its own timing.
+    private func show(_ w: Wait) {
+        guard w != shown else { return }
+        if w == .waiting && shown == .expired { ringTurns += 1 }
+        withAnimation(reduceMotion ? Motion.Reduced.fade : Motion.settle) { shown = w }
+    }
+
+    /// The app is back from the WhatsApp hand-off: 1-3 turns into 1-4a now.
+    private func cameBack() {
+        guard awayForCode else { return }
+        awayForCode = false
+        show(wait)
     }
 
     private func remaining(at now: Date) -> String {
@@ -321,6 +554,7 @@ struct VerifyStep: View {
         start = Start(code: state == "expired" ? "ATASTE 7HQ2" : "ATASTE 4K9X", nonce: "")
         expiresAt = Date().addingTimeInterval(522)
         wait = switch state { case "waiting": .waiting; case "expired": .expired; case "nowa": .noWhatsApp; default: .ready }
+        if state == "verified" { arrive(phone: "6281290345521", name: "Putri", token: "") }
     }
 
     private func begin() async {
@@ -330,6 +564,7 @@ struct VerifyStep: View {
 
     /// 1-4c: swap the expired code for a fresh one while the timed-out screen stays up.
     private func renew() async {
+        if let code = start?.code { oldCode = code }
         start = nil
         _ = await fetchCode()
     }
@@ -350,7 +585,9 @@ struct VerifyStep: View {
     private func send() {
         guard let code = start?.code else { return }
         guard UIApplication.shared.canOpenURL(URL(string: "whatsapp://")!) else { wait = .noWhatsApp; return }
-        openURL(Links.whatsApp(Links.verifyNumber, text: code))
+        // The screen changes once the app is back; if WhatsApp doesn't open, at once.
+        if shown != .waiting { awayForCode = true }
+        openURL(Links.whatsApp(Links.verifyNumber, text: code)) { opened in if !opened { cameBack() } }
         wait = .waiting
     }
 
@@ -360,7 +597,7 @@ struct VerifyStep: View {
         while !Task.isCancelled && wait == .waiting {
             if let s: Status = try? await supabase.functions.invoke("otp/status", options: .init(method: .get, query: [URLQueryItem(name: "nonce", value: nonce)])) {
                 if s.status == "verified", let phone = s.phone, let token = s.token_hash {
-                    verified(phone, s.push_name ?? "", token)
+                    arrive(phone: phone, name: s.push_name ?? "", token: token)
                     return
                 }
                 if s.status == "expired" {
@@ -372,10 +609,40 @@ struct VerifyStep: View {
             try? await Task.sleep(for: .seconds(2))
         }
     }
+
+    /// The message arrived: the ring turns a quarter, then 1-4b fades in over this screen.
+    private func arrive(phone: String, name: String, token: String) {
+        ringTurns += 1
+        arrivals += 1
+        withAnimation((reduceMotion ? Motion.Reduced.fade : Motion.fade).delay(SignInMotion.screenDelay)) {
+            verifiedAs = Verified(phone: phone, name: name, token: token)
+        } completion: {
+            barHidden = true
+        }
+    }
 }
+
+/// Roundo 700 at a size that animates, its tracking going from the card's 0.05 em to the chip's 0.04 em with it.
+private struct CodeType: ViewModifier, Animatable {
+    var size: CGFloat
+    var animatableData: CGFloat {
+        get { size }
+        set { size = newValue }
+    }
+    func body(content: Content) -> some View {
+        let card = SignInMotion.codeSize.card, chip = SignInMotion.codeSize.chip
+        let em = 0.04 + 0.01 * max(0, min(1, (size - chip) / (card - chip)))
+        return content.font(Font(Brand.uiFont(.roundo, size: size, weight: 700, relativeTo: .largeTitle))).tracking(size * em)
+    }
+}
+
 
 // MARK: Verified (1-4b)
 
+/// Shown over the waiting screen when the message arrives: the Cocoa screen fades in, the sunburst turns from −40° and
+/// grows from 0.8, the lime disc pops, the celebrating giraffe rises 60 pt, "You’re in!" pops from 0.6 at −6°, the
+/// verified line fades in and Continue rises 40 pt, then everything rests. Reduce Motion: the parts fade in and the
+/// sunburst is still.
 struct VerifiedStep: View {
     var phone: String
     var suggestedName: String
@@ -383,27 +650,42 @@ struct VerifiedStep: View {
     var notMe: () -> Void
     @State private var busy = false
     @State private var problem: Problem?
+    @State private var shown = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
+        let sun = SignInMotion.sunburst
         VStack(spacing: 0) {
             ZStack {
-                Rays(width: 9, period: 18).frame(width: 500, height: 500)
                 Circle().fill(Brand.lime).frame(width: 300, height: 300)
+                    .entrance(shown, scale: 0.01, Motion.pop, delay: SignInMotion.discDelay)
                 Image("pose-celebrating").resizable().scaledToFill()
                     .frame(width: 270, height: 270)
                     .frame(width: 250, height: 250).clipShape(Circle())
+                    .entrance(shown, offset: SignInMotion.mascot.offset, Motion.bounce, fade: nil, delay: SignInMotion.mascot.delay)
                     .accessibilityHidden(true)
             }
-            .frame(height: 500)
             .frame(maxWidth: .infinity)
+            .frame(height: 500)
+            // The 500 pt sunburst is wider than the screen: as a background it no longer widens the column (which pushed
+            // Continue past both edges).
+            .background {
+                Rays(width: 9, period: 18).frame(width: 500, height: 500)
+                    .rotationEffect(shown || reduceMotion ? .zero : sun.tilt)
+                    .animation(shown && !reduceMotion ? Motion.glide.delay(sun.delay) : nil, value: shown)
+                    .scaleEffect(shown || reduceMotion ? 1 : sun.scale)
+                    .animation(shown && !reduceMotion ? Motion.settle.delay(sun.delay) : nil, value: shown)
+            }
             .padding(.top, 28)
             VStack(spacing: 12) {
                 Text("You’re in!").obText(.accent, 52, Brand.lime)
+                    .entrance(shown, scale: SignInMotion.headline.scale, tilt: SignInMotion.headline.tilt, Motion.pop, delay: SignInMotion.headline.delay)
                 HStack(spacing: Brand.s2) {
                     Image(systemName: "checkmark.circle").font(.system(size: 19, weight: .semibold)).foregroundStyle(Brand.lime)
                     Text("Verified as \(PhoneFormat.masked(phone))").obText(.headline, 16, weight: 600, Brand.cream)
                 }
                 .accessibilityElement(children: .combine)
+                .entrance(shown, Motion.fade, delay: SignInMotion.lineDelay)
             }
             .padding(.top, 22)
             Spacer(minLength: Brand.s4)
@@ -419,14 +701,15 @@ struct VerifiedStep: View {
             }
             .padding(.horizontal, Brand.s4)
             .padding(.bottom, Brand.s2)
+            .entrance(shown, offset: SignInMotion.continueButton.offset, Motion.arrive, fade: nil, delay: SignInMotion.continueButton.delay)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Brand.cocoa.ignoresSafeArea())
-        .navigationTitle("Verified")
-        .toolbar(.hidden, for: .navigationBar)
-        .navigationBarBackButtonHidden()
         .preferredColorScheme(.dark)
-        .onAppear { NameStep.suggested = suggestedName }
+        .onAppear {
+            NameStep.suggested = suggestedName
+            shown = true
+        }
         .problemAlert($problem)
     }
 
@@ -517,7 +800,7 @@ struct NameStep: View {
         .padding(.horizontal, Brand.s2)
         .padding(.top, 48)
         Spacer(minLength: Brand.s4)
-        Button("Continue") { primer = true }.buttonStyle(.pill(.primary)).disabled(!valid)
+        Button("Continue") { primer = true }.buttonStyle(.pill(.primary)).disabled(!valid, reason: "Type your name first")
     }
 
     // 1-6

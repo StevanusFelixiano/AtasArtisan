@@ -12,7 +12,8 @@ nonisolated struct ItemTime: Decodable, Hashable {
 }
 
 /// The order's states, done, now and to come (3-5 stacked, 5-4 inline). "Edits requested" is a step only
-/// when an edit round happened.
+/// when an edit round happened. When the order moves on while it shows, the line to the next step fills top to
+/// bottom, the finished step turns to a lime check, the new step pops in caramel with its halo, and its time fades in.
 struct Timeline: View {
     enum Layout { case stacked, inline }
 
@@ -23,7 +24,8 @@ struct Timeline: View {
     var hadEdits = false
     var layout: Layout = .stacked
 
-    private enum Phase { case done, now, todo }
+    fileprivate enum Phase { case done, now, todo }
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var steps: [GroupState] {
         var s: [GroupState] = [.open, .locked]
@@ -39,9 +41,18 @@ struct Timeline: View {
                 let phase: Phase = i < at ? .done : i == at ? .now : .todo
                 HStack(alignment: .top, spacing: 14) {
                     VStack(spacing: 0) {
-                        dot(s, phase)
+                        TimelineDot(phase: phase, symbol: nowSymbol(s))
                         Rectangle()
-                            .fill(i == list.count - 1 ? .clear : phase == .done ? Brand.limeDeep : Brand.liquorice100)
+                            .fill(i == list.count - 1 ? .clear : Brand.liquorice100)
+                            .overlay {
+                                if i < list.count - 1 {
+                                    Rectangle().fill(Brand.limeDeep)
+                                        .scaleEffect(y: phase == .done || reduceMotion ? 1 : 0, anchor: .top)
+                                        .opacity(phase == .done ? 1 : 0)
+                                        .animation(reduceMotion ? Motion.Reduced.fade : Motion.doughTrail, value: phase == .done)
+                                        .geometryGroup()
+                                }
+                            }
                             .frame(width: 2)
                             .frame(minHeight: layout == .stacked ? 14 : 10, maxHeight: .infinity)
                     }
@@ -57,43 +68,30 @@ struct Timeline: View {
 
     @ViewBuilder private func text(_ s: GroupState, _ phase: Phase) -> some View {
         let ink = phase == .todo ? Brand.ink4 : Brand.cocoa
+        let title = Text(s.title).foregroundStyle(ink)
+            .animation((reduceMotion ? Motion.Reduced.fade : Motion.fade).delay(StatusMotion.nowDelay), value: phase)
+            .geometryGroup()
+        let time = meta(s, phase).map { m in
+            Text(m).ui(GFont.manrope(12), Brand.ink3)
+                .transition(.opacity.animation((reduceMotion ? Motion.Reduced.fade : Motion.fade).delay(StatusMotion.timeDelay)))
+        }
         switch layout {
         case .stacked:
             VStack(alignment: .leading, spacing: 2) {
-                Text(s.title).ui(GFont.manrope(15, 700), ink).frame(minHeight: 22)
-                if let m = meta(s, phase) { Text(m).ui(GFont.manrope(12), Brand.ink3) }
+                title.font(GFont.manrope(15, 700)).frame(minHeight: 22)
+                time
             }
             .padding(.bottom, 12)
             .frame(maxWidth: .infinity, alignment: .leading)
         case .inline:
             HStack {
-                Text(s.title).ui(GFont.manrope(14, 700), ink)
+                title.font(GFont.manrope(14, 700))
                 Spacer()
-                if let m = meta(s, phase) { Text(m).ui(GFont.manrope(12), Brand.ink3) }
+                time
             }
             .frame(minHeight: 22)
             .padding(.bottom, 10)
         }
-    }
-
-    private func dot(_ s: GroupState, _ phase: Phase) -> some View {
-        ZStack {
-            switch phase {
-            case .done:
-                Circle().fill(Brand.lime)
-                Circle().strokeBorder(Brand.limeDeep, lineWidth: 1.5)
-                icon("checkmark", 12, Brand.cocoa, weight: .heavy)
-            case .now:
-                Circle().fill(Brand.caramel)
-                Circle().stroke(Brand.choc100, lineWidth: 5).padding(-2.5)
-                icon(nowSymbol(s), 12, Brand.cream, weight: .heavy)
-            case .todo:
-                Circle().fill(.white)
-                Circle().strokeBorder(Brand.liquorice400, lineWidth: 2)
-                icon("ellipsis", 12, Brand.cocoa, weight: .heavy)
-            }
-        }
-        .frame(width: 22, height: 22)
     }
 
     private func nowSymbol(_ s: GroupState) -> String {
@@ -129,5 +127,35 @@ struct Timeline: View {
         var line = Wita.string(d, "EEE d MMM, HH:mm")
         if s == .locked, let c = group.cutoff_at, abs(c.timeIntervalSince(d)) < 120 { line += " · at cutoff" }
         return line
+    }
+}
+
+/// A timeline step's 22 pt dot: done is a lime check, now a caramel circle with a 5 pt choc halo and the step's
+/// icon, to come a white circle with an ellipsis. Turning done: the check pops and the colours fade after 0.08 s.
+/// Turning now: it pops from 0.6 after 0.20 s as the caramel and halo fade in. Reduce Motion crossfades.
+private struct TimelineDot: View {
+    var phase: Timeline.Phase
+    var symbol: String
+    @State private var arrivals = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        let done = phase == .done, now = phase == .now
+        let delay = done ? StatusMotion.doneDelay : StatusMotion.nowDelay
+        let colours = (reduceMotion ? Motion.Reduced.fade : Motion.fade).delay(delay)
+        ZStack {
+            Circle().fill(Brand.choc100).padding(now ? -5 : 0)
+            Circle().fill(done ? Brand.lime : now ? Brand.caramel : .white)
+            Circle().strokeBorder(done ? Brand.limeDeep : Brand.liquorice400, lineWidth: done ? 1.5 : 2).opacity(now ? 0 : 1)
+            PopSymbol(name: done ? "checkmark" : now ? symbol : "ellipsis", animation: Motion.pop.delay(delay))
+                .font(.system(size: 12 * 0.85, weight: .heavy))
+                .foregroundStyle(now ? Brand.cream : Brand.cocoa)
+                .frame(width: 12, height: 12)
+        }
+        .frame(width: 22, height: 22)
+        .animation(colours, value: phase)
+        .geometryGroup()
+        .kick(reduceMotion ? 0 : arrivals, from: StatusMotion.nowFrom, delay: StatusMotion.nowDelay, spring: Motion.Keyframe.pop)
+        .onChange(of: phase) { _, new in if new == .now { arrivals += 1 } }
     }
 }

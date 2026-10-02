@@ -100,6 +100,8 @@ nonisolated struct Member: Codable, Hashable {
     var proof_at: Date?
     var paid_at: Date?
     var bill_total: Int?
+    /// The host's last payment reminder (the payment board shows "✓ Nudged" for the rest of that WITA day).
+    var nudged_at: Date?
 }
 
 nonisolated struct OptionGroup: Codable, Hashable {

@@ -10,15 +10,30 @@ struct BillView: View {
     @Environment(\.openURL) private var openURL
     @State private var photo: PhotosPickerItem?
     @State private var busy = false
-    @State private var uploading = false
-    @State private var copied: String?
-    @State private var toast: String?
+    @State private var toast: ToastNote?
     @State private var problem: Problem?
     @State private var receiptAt: Date?
     @State private var receiptURL: URL?
     @State private var viewing = false
     /// The JPEG of an upload that failed, kept for "Try again".
     @State private var failed: Data?
+    /// The photo being uploaded, shown as the thumbnail until the receipt is up (Motion board 18).
+    @State private var picked: UIImage?
+    /// Bumped by each pick, so the new thumbnail scales in.
+    @State private var picks = 0
+    @State private var upload: UploadState?
+    /// The upload still in flight after a timeout; a retry waits on it rather than sending another.
+    @State private var pendingUpload: Task<Bool, Never>?
+    @State private var uploadAttempt = 0
+    @State private var uploads = 0
+    @State private var uploadFails = 0
+    @State private var retries = 0
+    /// The bill on show is final. A bill that opens final is still; when Atas confirms while it is open, it settles
+    /// into its final numbers in the board's order (Motion board 12). The group screen under the sheet gives the
+    /// one success tap for the Confirmed move.
+    @State private var final = false
+    @State private var settles = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private enum Phase { case notFinal, unpaid, says, paid }
 
@@ -41,12 +56,19 @@ struct BillView: View {
         .toolbarColorScheme(phase == .paid ? .dark : nil, for: .navigationBar)
         .toolbar { ToolbarItem(placement: .cancellationAction) { Button(role: .close) { dismiss() } } }
         .onChange(of: photo) { _, item in if let item { Task { await upload(item) } } }
+        .onChange(of: phase != .notFinal, initial: true) { old, now in
+            final = now
+            if now && !old { settles += 1 }
+        }
         .task { await loadReceipt() }
         .sheet(isPresented: $viewing) {
             if let me = store.me { NavigationStack { ReceiptView(store: store, user: me) } }
         }
         .toast($toast, above: 84)
         .problemAlert($problem)
+        .sensoryFeedback(Haptic.done, trigger: uploads)
+        .sensoryFeedback(Haptic.fail, trigger: uploadFails)
+        .sensoryFeedback(Haptic.tap, trigger: retries)
     }
 
     // MARK: Bill
@@ -56,15 +78,21 @@ struct BillView: View {
             VStack(spacing: 14) {
                 summary
                 switch phase {
-                case .notFinal:
-                    if store.group?.payFirst == true, let p = store.payout { transfer(p, amount: nil) }
-                    BillBanner(text: store.group?.payFirst == true
-                               ? "Pay now so \(hostName) can order. They’ll send it to Atas once everyone has paid."
-                               : "The order is in — pay when you can. We’ll tell you the final amount.",
-                               fill: Brand.liquorice100, circle: .white)
-                case .unpaid:
-                    if let p = store.payout { transfer(p, amount: store.myBill?.total) }
-                    receiptCard
+                case .notFinal, .unpaid:
+                    if let p = store.payout, store.group?.payFirst == true || final {
+                        transfer(p, amount: final ? store.myBill?.total : nil).transition(arriving)
+                    }
+                    if !final {
+                        // The waiting card folds away 0.30 s into the settle.
+                        BillBanner(text: store.group?.payFirst == true
+                                   ? "Pay now so \(hostName) can order. They’ll send it to Atas once everyone has paid."
+                                   : "The order is in — pay when you can. We’ll tell you the final amount.",
+                                   fill: Brand.liquorice100, circle: .white)
+                            .transition(.asymmetric(insertion: .identity,
+                                                    removal: .opacity.animation((reduceMotion ? Motion.Reduced.fade : Motion.fadeOut).delay(BillMotion.waitingDelay))))
+                    } else {
+                        receiptCard.transition(arriving)
+                    }
                 case .says:
                     receiptCard
                     VStack(spacing: Brand.s2) {
@@ -78,6 +106,7 @@ struct BillView: View {
                     EmptyView()
                 }
             }
+            .animation(reduceMotion ? nil : final ? Motion.leave.delay(BillMotion.waitingDelay) : nil, value: final)
             .padding(.horizontal, Brand.s4)
             .padding(.top, 10)
             .padding(.bottom, Brand.s4)
@@ -86,16 +115,26 @@ struct BillView: View {
         .safeAreaInset(edge: .bottom) { bottomBar }
     }
 
+    /// Cards that come with the final bill (the transfer details, the receipt) fade in as the waiting card goes.
+    private var arriving: AnyTransition {
+        .asymmetric(insertion: .opacity.animation((reduceMotion ? Motion.Reduced.fade : Motion.fade).delay(BillMotion.waitingDelay)),
+                    removal: .opacity.animation(Motion.fadeOut))
+    }
+
     @ViewBuilder private var bottomBar: some View {
         switch phase {
-        case .notFinal:
-            GlassBar { Button("I’ve paid") {}.buttonStyle(.pill(.primary)).disabled(true) }
-        case .unpaid:
-            if let b = store.myBill, b.total > 0 {
+        case .notFinal, .unpaid:
+            // One button from disabled to Caramel: it turns and bumps 0.40 s into the settle.
+            if !final || (store.myBill?.total ?? 0) > 0 {
                 GlassBar {
                     Button("I’ve paid") { Task { await claim() } }
                         .buttonStyle(.pill(.primary))
-                        .disabled(busy || !["confirmed", "delivered"].contains(store.group?.state.rawValue ?? ""))
+                        .disabled(!final || busy || !["confirmed", "delivered"].contains(store.group?.state.rawValue ?? ""),
+                                  reason: final ? nil : "You can pay once Atas confirms the order")
+                        .animation((reduceMotion ? Motion.Reduced.fade : Motion.fade).delay(BillMotion.payDelay), value: final)
+                        .kick(reduceMotion ? 0 : settles, from: BillMotion.payBump, delay: BillMotion.payDelay)
+                        // The receipt is up: the next step bumps 0.20 s later.
+                        .kick(reduceMotion ? 0 : uploads, from: AsyncMotion.successBump, delay: UploadMotion.doneDelay)
                 }
             }
         case .says:
@@ -112,40 +151,58 @@ struct BillView: View {
         }
     }
 
-    /// The white card: state tags, the amount, who it goes to, and the lines that make it up.
+    /// The white card: state tags, the amount, who it goes to, and the lines that make it up. One card for both
+    /// states, so a bill that turns final while open settles in place: Final and Unpaid, each line's detail, the
+    /// ongkir and discount shares, then the total counts to the final amount as it grows to 52 pt.
     private var summary: some View {
         let b = store.myBill
+        let f = final
+        let total = f ? b?.total ?? 0 : b?.items ?? itemLines.reduce(0) { $0 + $1.amount }
+        let delay = BillMotion.totalDelay
         return VStack(alignment: .leading, spacing: 12) {
-            if phase == .notFinal {
-                finalTag(false)
-                Text("≈ \(Rupiah.format(b?.items ?? itemLines.reduce(0) { $0 + $1.amount }))")
-                    .font(Type5.roundo(46)).foregroundStyle(Brand.ink3).lineLimit(1).minimumScaleFactor(0.6)
-                Text("Your items so far. Ongkir and any discount get added when Atas confirms.")
-                    .font(Type5.manrope(13)).lineSpacing(1).foregroundStyle(Brand.ink2)
-            } else {
-                HStack {
-                    finalTag(true)
-                    Spacer()
+            HStack {
+                finalTag(f)
+                Spacer()
+                if f {
                     PayTag(state: phase == .says ? .says : .unpaid)
+                        .transition(reduceMotion ? AnyTransition.opacity.animation(Motion.Reduced.fade)
+                                    : AnyTransition.scale(scale: 0.01, anchor: .trailing).animation(Motion.pop.delay(StatusMotion.bumpDelay)))
                 }
-                Text(Rupiah.format(b?.total ?? 0))
-                    .font(Type5.roundo(52)).tracking(52 * -0.02).foregroundStyle(Brand.cocoa).lineLimit(1).minimumScaleFactor(0.6)
-                Text(subtitle).font(Type5.manrope(13)).foregroundStyle(Brand.ink2)
             }
+            .frame(minHeight: 23)
+            HStack(alignment: .firstTextBaseline, spacing: 0) {
+                // "≈ " narrows to nothing and fades as the amount turns final.
+                Text("≈ ").fixedSize()
+                    .frame(width: f ? 0 : nil, alignment: .leading).clipped()
+                    .opacity(f ? 0 : 1)
+                    .animation((reduceMotion ? Motion.Reduced.fade : Motion.fadeOut).delay(delay), value: f)
+                // Each counted frame is a new string: no per-frame text transition while the size also animates.
+                CountUp(amount: total, delay: delay) { Text(Rupiah.format($0)).contentTransition(reduceMotion ? .opacity : .identity) }
+            }
+            .modifier(RoundoSize(size: f ? BillMotion.totalSize.to : BillMotion.totalSize.from))
+            .tracking(f ? 52 * -0.02 : 0)
+            .lineLimit(1).minimumScaleFactor(0.6)
+            .animation(reduceMotion ? nil : Motion.settle.delay(delay), value: f)
+            .foregroundStyle(f ? Brand.cocoa : Brand.ink3)
+            .animation((reduceMotion ? Motion.Reduced.fade : Motion.fade).delay(delay), value: f)
+            OneSpot(active: f ? 1 : 0) {
+                Text("Your items so far. Ongkir and any discount get added when Atas confirms.")
+                    .opacity(f ? 0 : 1).animation((reduceMotion ? Motion.Reduced.fade : Motion.fadeOut).delay(delay), value: f)
+                Text(subtitle)
+                    .opacity(f ? 1 : 0).animation((reduceMotion ? Motion.Reduced.fade : Motion.fade).delay(delay), value: f)
+            }
+            .font(Type5.manrope(13)).lineSpacing(1).foregroundStyle(Brand.ink2)
+            .animation(reduceMotion ? nil : Motion.settle.delay(delay), value: f)
             if phase != .says {
                 VStack(spacing: 8) {
-                    ForEach(itemLines) { lineRow($0, compact: phase == .notFinal) }
-                    if phase == .notFinal {
-                        HStack {
-                            Text("Ongkir share")
-                            Spacer()
-                            Text("After Atas confirms")
-                        }
-                        .font(Type5.manrope(14, 600)).foregroundStyle(Brand.ink3)
-                    } else {
-                        ForEach(deliveryLines) { lineRow($0, compact: false) }
+                    ForEach(Array(itemLines.enumerated()), id: \.element.id) { i, l in lineRow(l, index: i) }
+                    ongkirRow(index: itemLines.count)
+                    if f, let d = deliveryLines.first(where: \.credit) {
+                        lineRow(d, index: itemLines.count + 1)
+                            .transition(.opacity.animation((reduceMotion ? Motion.Reduced.fade : Motion.fade).delay(BillMotion.discountDelay)))
                     }
                 }
+                .animation(reduceMotion ? nil : f ? Motion.settle.delay(BillMotion.discountDelay) : nil, value: f)
                 .padding(.top, 12)
                 .overlay(alignment: .top) { DashedRule(color: Brand.liquorice400) }
             }
@@ -161,17 +218,49 @@ struct BillView: View {
         return "to \(hostName)\(bank) · you marked it paid at \(Wita.string(at, "HH:mm"))"
     }
 
-    private func lineRow(_ l: BillLine, compact: Bool) -> some View {
+    /// A line's second line ("my items", "split with…", "Rp 10.000 ÷ 4") opens 0 → 16 pt once the bill is final,
+    /// each one 0.04 s after the one above, from 0.10 s.
+    private func lineDetail(_ meta: String?, index: Int) -> some View {
+        Text(meta ?? "").font(Type5.manrope(12)).foregroundStyle(Brand.ink3)
+            .frame(height: final && meta != nil ? 16 : 0, alignment: .top)
+            .clipped()
+            .opacity(final && meta != nil ? 1 : 0)
+            .animation(reduceMotion ? nil : final ? Motion.settle.delay(BillMotion.lineStart + BillMotion.lineStep * Double(index)) : nil, value: final)
+    }
+
+    private func lineRow(_ l: BillLine, index: Int) -> some View {
         HStack(alignment: .top, spacing: 12) {
             VStack(alignment: .leading, spacing: 1) {
                 Text(l.label).font(Type5.manrope(14, 600)).foregroundStyle(Brand.cocoa)
-                if !compact, let meta = l.meta { Text(meta).font(Type5.manrope(12)).foregroundStyle(Brand.ink3) }
+                lineDetail(l.meta, index: index)
             }
             Spacer(minLength: 0)
             Text(l.credit ? "− \(Rupiah.format(l.amount))" : Rupiah.format(l.amount))
                 .font(Type5.manrope(14, 600)).foregroundStyle(l.credit ? Brand.limeInk : Brand.cocoa).fixedSize()
         }
         .accessibilityElement(children: .combine)
+    }
+
+    /// "Ongkir share · After Atas confirms" until the bill is final, then my share rolls in and the ink deepens.
+    @ViewBuilder private func ongkirRow(index: Int) -> some View {
+        let line = deliveryLines.first { !$0.credit }
+        if !final || line != nil {
+            let ink = final ? Brand.cocoa : Brand.ink3
+            let inkMotion = (reduceMotion ? Motion.Reduced.fade : Motion.fade).delay(BillMotion.lineStart)
+            HStack(alignment: .top, spacing: 12) {
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Ongkir share").foregroundStyle(ink).animation(inkMotion, value: final)
+                    lineDetail(line?.meta, index: index)
+                }
+                Spacer(minLength: 0)
+                RollText(key: final ? "final" : "waiting", delay: BillMotion.lineStart) {
+                    Text(final ? Rupiah.format(line?.amount ?? 0) : "After Atas confirms").fixedSize()
+                }
+                .foregroundStyle(ink).animation(inkMotion, value: final)
+            }
+            .font(Type5.manrope(14, 600))
+            .accessibilityElement(children: .combine)
+        }
     }
 
     // MARK: Lines
@@ -267,16 +356,11 @@ struct BillView: View {
                     .lineLimit(1).minimumScaleFactor(0.7)
             }
             Spacer()
-            Button {
-                copy(value, toastText, $toast)
-                copied = value
-            } label: {
-                Image(systemName: copied == value ? "checkmark" : "square.on.square")
-                    .font(.system(size: 15, weight: .semibold)).foregroundStyle(Brand.cocoa)
+            CopyButton(value: value, message: toastText, toast: $toast) { icon in
+                icon.font(.system(size: 15, weight: .semibold)).foregroundStyle(Brand.cocoa)
                     .frame(width: 32, height: 32).background(Circle().fill(Brand.choc100))
                     .frame(width: 44, height: 44).contentShape(Rectangle())
             }
-            .buttonStyle(.plain)
             .padding(.trailing, -6)
             .accessibilityLabel("Copy \(caption.lowercased())")
         }
@@ -295,40 +379,23 @@ struct BillView: View {
 
     // MARK: Receipt
 
+    /// Where my receipt stands: an upload this session, else what the server has.
+    private var receiptState: UploadState? {
+        upload ?? (failed != nil ? .failed : receiptAt != nil ? .done : nil)
+    }
+
+    /// The upload slot until there is a photo; then the photo's row, which carries the upload (Motion board 18): the
+    /// picked photo scales in over the slot, a Cocoa layer and a ring creep while it uploads, and it ends with the
+    /// check badge, or with "Tap to retry" and 6-9's Try again.
     @ViewBuilder private var receiptCard: some View {
-        if let failed {
-            UploadFailedCard(image: UIImage(data: failed)) { Task { await send(failed) } }
-                .disabled(uploading)
-        } else if let at = receiptAt {
-            HStack(spacing: 14) {
-                Button { viewing = true } label: {
-                    HStack(spacing: 14) {
-                        HatchedPhoto(url: receiptURL, fill: Brand.liquorice100, ink: Brand.cocoa.opacity(0.07), band: 6)
-                            .frame(width: 64, height: 84)
-                            .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("Transfer receipt").font(Type5.manrope(15, 700)).foregroundStyle(Brand.cocoa)
-                            Text("Uploaded \(Wita.string(at, "HH:mm")) · tap to view").font(Type5.manrope(12)).foregroundStyle(Brand.ink3)
-                        }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    }
-                }
-                .buttonStyle(.plain)
-                PhotosPicker(selection: $photo, matching: .images) {
-                    Text("Replace").font(Type5.manrope(13, 600)).foregroundStyle(Brand.caramel).frame(minHeight: 44)
-                }
-                .disabled(uploading)
-            }
-            .padding(14)
-            .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(Brand.card))
+        if let state = receiptState {
+            receiptRow(state)
         } else {
             PhotosPicker(selection: $photo, matching: .images) {
                 HStack(spacing: 14) {
                     ZStack {
                         RoundedRectangle(cornerRadius: 14, style: .continuous).fill(Brand.liquorice100)
-                        if uploading { ProgressView().tint(Brand.caramel) } else {
-                            Image(systemName: "square.and.arrow.up").font(.system(size: 19, weight: .medium)).foregroundStyle(Brand.cocoa)
-                        }
+                        Image(systemName: "square.and.arrow.up").font(.system(size: 19, weight: .medium)).foregroundStyle(Brand.cocoa)
                     }
                     .frame(width: 48, height: 48)
                     VStack(alignment: .leading, spacing: 2) {
@@ -341,9 +408,89 @@ struct BillView: View {
                 .background(RoundedRectangle(cornerRadius: 24, style: .continuous).fill(Brand.card))
                 .overlay(RoundedRectangle(cornerRadius: 24, style: .continuous).strokeBorder(Brand.liquorice400, style: StrokeStyle(lineWidth: 2, dash: [6, 5])))
             }
-            .buttonStyle(.plain)
-            .disabled(uploading)
+            .buttonStyle(DoughStyle(squash: Motion.pressCompact))
         }
+    }
+
+    private func receiptRow(_ state: UploadState) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 24, style: .continuous)
+        return VStack(spacing: 12) {
+            HStack(spacing: 14) {
+                Button {
+                    switch state {
+                    case .done: viewing = true
+                    case .failed: retry()
+                    case .uploading: break
+                    }
+                } label: {
+                    HStack(spacing: 14) {
+                        receiptThumb(state)
+                        receiptText(state).frame(maxWidth: .infinity, alignment: .leading)
+                    }
+                }
+                .buttonStyle(.plain)
+                // Not `.disabled`: that would grey the row while the photo uploads.
+                .allowsHitTesting(state != .uploading)
+                .accessibilityHint(state == .failed ? "Uploads the photo again" : state == .done ? "Shows the receipt" : "")
+                if state == .done {
+                    PhotosPicker(selection: $photo, matching: .images) {
+                        Text("Replace").font(Type5.manrope(13, 600)).foregroundStyle(Brand.caramel).frame(minHeight: 44)
+                    }
+                    .buttonStyle(DoughStyle(squash: Motion.pressCompact))
+                }
+            }
+            if state == .failed, let failed {
+                Button { Task { await send(failed) } } label: { Label("Try again", systemImage: "arrow.clockwise") }
+                    .buttonStyle(WidePill(fill: Brand.cocoa, ink: Brand.cream, size: 15, padding: 15))
+                    .transition(.opacity.animation(reduceMotion ? Motion.Reduced.fade : Motion.fade))
+            }
+        }
+        .padding(14)
+        .background(shape.fill(Brand.card))
+        .overlay(shape.strokeBorder(Brand.destructive, lineWidth: 2).opacity(state == .failed ? 1 : 0))
+        .animation(reduceMotion ? Motion.Reduced.fade : Motion.fade, value: state)
+    }
+
+    /// The photo, 64 × 84 with an inset 1.5 pt Liquorice 400 ring, under the upload's layer and ring. A new pick scales
+    /// in from 0.9 as it fades in.
+    private func receiptThumb(_ state: UploadState) -> some View {
+        let shape = RoundedRectangle(cornerRadius: 12, style: .continuous)
+        return ZStack {
+            if let picked = picked ?? failed.flatMap(UIImage.init(data:)) {
+                Image(uiImage: picked).resizable().scaledToFill()
+            } else {
+                HatchedPhoto(url: receiptURL, fill: Brand.liquorice100, ink: Brand.cocoa.opacity(0.07), band: 6)
+            }
+        }
+        .frame(width: 64, height: 84)
+        .clipShape(shape)
+        .overlay(shape.strokeBorder(Brand.liquorice400, lineWidth: 1.5))
+        .modifier(UploadOverlay(state: state, radius: 12))
+        .modifier(ThumbIn(active: picks > 0))
+        .id(picks)
+        .accessibilityHidden(true)
+    }
+
+    @ViewBuilder private func receiptText(_ state: UploadState) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
+            switch state {
+            case .uploading:
+                Text("Transfer receipt").font(Type5.manrope(15, 700)).foregroundStyle(Brand.cocoa)
+                Text("Uploading…").font(Type5.manrope(12)).foregroundStyle(Brand.ink3)
+            case .done:
+                Text("Transfer receipt").font(Type5.manrope(15, 700)).foregroundStyle(Brand.cocoa)
+                Text("Uploaded \(Wita.string(receiptAt ?? Date(), "HH:mm")) · tap to view").font(Type5.manrope(12)).foregroundStyle(Brand.ink3)
+            case .failed:
+                Label("Upload didn’t go through", systemImage: "exclamationmark.triangle")
+                    .labelStyle(IconLabel(spacing: 6, size: 14))
+                    .font(Type5.manrope(15, 700)).foregroundStyle(Brand.destructive)
+                Text("The connection dropped. Your photo is still here.")
+                    .font(Type5.manrope(13)).lineSpacing(1).foregroundStyle(Brand.ink2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .id(state)
+        .transition(.opacity.animation(reduceMotion ? Motion.Reduced.fade : Motion.fade))
     }
 
     private func loadReceipt() async {
@@ -362,24 +509,59 @@ struct BillView: View {
             problem = Problem(title: "Upload failed", message: UploadError.unreadable.errorDescription ?? "")
             return
         }
+        pendingUpload = nil
+        picked = UIImage(data: jpeg)
+        picks += 1
         await send(jpeg)
     }
 
-    /// Uploads (or replaces) my receipt. A failed upload keeps the JPEG for "Try again" (6-9).
+    /// The failed thumbnail's tap: back to uploading the same JPEG.
+    private func retry() {
+        guard let failed else { return }
+        retries += 1
+        Task { await send(failed) }
+    }
+
+    /// Uploads (or replaces) my receipt. A failed upload, or one with no answer after 10 s, keeps the JPEG for "Try
+    /// again" (6-9). The request is never cancelled: a late success still lands, and a retry waits on it.
     private func send(_ jpeg: Data) async {
         guard let me = store.me else { return }
-        uploading = true
-        defer { uploading = false }
-        do {
-            try await supabase.storage.from("receipts").upload(Receipts.path(store.id, me), data: jpeg,
-                                                                options: FileOptions(contentType: "image/jpeg", upsert: true))
+        uploadAttempt += 1
+        let mine = uploadAttempt
+        upload = .uploading
+        let work = pendingUpload ?? Task { () -> Bool in
+            do {
+                try await supabase.storage.from("receipts").upload(Receipts.path(store.id, me), data: jpeg,
+                                                                    options: FileOptions(contentType: "image/jpeg", upsert: true))
+                return true
+            } catch {
+                return false
+            }
+        }
+        pendingUpload = work
+        let timer = Task {
+            try? await Task.sleep(for: .seconds(UploadMotion.timeout))
+            if !Task.isCancelled, mine == uploadAttempt, upload == .uploading { failUpload(jpeg) }
+        }
+        let ok = await work.value
+        timer.cancel()
+        guard mine == uploadAttempt else { return }
+        pendingUpload = nil
+        if ok {
             failed = nil
             receiptAt = Date()
+            upload = .done
+            uploads += 1
             receiptURL = await Receipts.url(store.id, me)
-        } catch where isCancellation(error) {
-        } catch {
-            failed = jpeg
+        } else if upload == .uploading {
+            failUpload(jpeg)
         }
+    }
+
+    private func failUpload(_ jpeg: Data) {
+        failed = jpeg
+        upload = .failed
+        uploadFails += 1
     }
 
     private func claim() async {
@@ -455,6 +637,15 @@ struct PaymentBoardView: View {
     @State private var receipt: ReceiptRef?
     @State private var receipts: [UUID: URL] = [:]
     @State private var problem: Problem?
+    /// Nudges sent from this board, shown as "✓ Nudged" before the server's `nudged_at` comes back.
+    @State private var nudging: Set<UUID> = []
+    @State private var nudgeBumps: [UUID: Int] = [:]
+    @State private var nudgeShakes: [UUID: Int] = [:]
+    /// My Mark paid is in flight: the bar and totals move 0.10 s after the chip (a member's own "I've paid" moves them
+    /// at once).
+    @State private var marking = false
+    @State private var marked = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var rows: [BillRow] {
         store.bill.filter { $0.user_id != store.group?.host_id && $0.total > 0 }
@@ -492,6 +683,7 @@ struct PaymentBoardView: View {
         .sheet(item: $receipt) { r in NavigationStack { ReceiptView(store: store, user: r.user) } }
         .task(id: store.bill.map(\.proof_at)) { await loadReceipts() }
         .problemAlert($problem)
+        .sensoryFeedback(Haptic.done, trigger: marked)
     }
 
     private var footnote: String {
@@ -505,7 +697,10 @@ struct PaymentBoardView: View {
 
     // MARK: Totals
 
+    /// The owed bar's segments take their share of the total on `Motion.doughTrail` and the three amounts count to
+    /// their new values on `Motion.glide` (Motion board 19). Reduce Motion: the bar eases, the amounts crossfade.
     private var totals: some View {
+        let delay = marking ? BoardMotion.barDelay : 0
         let paid = rows.filter { $0.paid_at != nil }.reduce(0) { $0 + $1.total }
         let says = rows.filter { $0.paid_at == nil && $0.proof_at != nil }.reduce(0) { $0 + $1.total }
         let owed = rows.filter { $0.paid_at == nil && $0.proof_at == nil }.reduce(0) { $0 + $1.total }
@@ -519,13 +714,18 @@ struct PaymentBoardView: View {
                 Text(Rupiah.format(paid + says + owed)).font(Type5.roundo(18)).foregroundStyle(Brand.cocoa)
             }
             GeometryReader { g in
-                let shown = parts.filter { $0.1 > 0 }
-                let width = g.size.width - CGFloat(max(0, shown.count - 1)) * 2
-                HStack(spacing: 2) {
-                    ForEach(shown, id: \.0) { p in
-                        Rectangle().fill(p.2).frame(width: width * CGFloat(p.1) / CGFloat(max(1, paid + says + owed)))
+                let amounts = parts.map(\.1)
+                let gaps = CGFloat(max(0, amounts.filter { $0 > 0 }.count - 1)) * SplitMotion.segmentGap
+                // Every segment stays in the row so it can grow from or shrink to nothing; a 2 pt gap follows each
+                // one that has a filled segment after it.
+                HStack(spacing: 0) {
+                    ForEach(parts.indices, id: \.self) { i in
+                        Rectangle().fill(parts[i].2)
+                            .frame(width: (g.size.width - gaps) * CGFloat(amounts[i]) / CGFloat(max(1, paid + says + owed)))
+                            .padding(.trailing, amounts[i] > 0 && amounts[(i + 1)...].contains { $0 > 0 } ? SplitMotion.segmentGap : 0)
                     }
                 }
+                .animation((reduceMotion ? Motion.Reduced.fill : Motion.doughTrail).delay(delay), value: amounts)
             }
             .frame(height: 16)
             .background(Brand.liquorice100)
@@ -538,7 +738,8 @@ struct PaymentBoardView: View {
                             Circle().fill(p.3).frame(width: 8, height: 8)
                             Text(p.0).font(Type5.manrope(11, 600)).foregroundStyle(Brand.ink2)
                         }
-                        Text(Rupiah.format(p.1)).font(Type5.roundo(17)).foregroundStyle(Brand.cocoa).lineLimit(1).minimumScaleFactor(0.7)
+                        CountUp(amount: p.1, delay: delay) { Text(Rupiah.format($0)) }
+                            .font(Type5.roundo(17)).foregroundStyle(Brand.cocoa).lineLimit(1).minimumScaleFactor(0.7)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     .accessibilityElement(children: .combine)
@@ -576,14 +777,11 @@ struct PaymentBoardView: View {
                         .buttonStyle(.plain)
                         .accessibilityLabel("\(store.name(r.user_id))’s receipt")
                     }
+                    // Nudge gives way to Mark paid when the member says they paid; Mark paid folds away once paid.
                     switch state {
-                    case .unpaid:
-                        Button("Nudge", systemImage: "bell") { Task { await act("nudge", r.user_id) } }
-                            .buttonStyle(ChipStyle(fill: Brand.choc100))
-                    case .says:
-                        markPaid(r.user_id)
-                    case .paid:
-                        EmptyView()
+                    case .unpaid: nudge(r.user_id).transition(fold)
+                    case .says: markPaid(r.user_id).transition(fold)
+                    case .paid: EmptyView()
                     }
                     if let phone = store.people[r.user_id]?.phone {
                         Button { openURL(Links.whatsApp(phone)) } label: {
@@ -596,18 +794,69 @@ struct PaymentBoardView: View {
                     }
                 }
                 .frame(minHeight: 36)
+                .animation(reduceMotion ? nil : Motion.leave.delay(BoardMotion.buttonCollapseDelay), value: state)
             }
         }
         .padding(.vertical, 14)
         // Cash and other off-app payments: the host can still mark an unpaid bill paid.
         .contextMenu {
-            if state == .unpaid { Button("Mark paid", systemImage: "checkmark") { Task { await act("confirm_paid", r.user_id) } } }
+            if state == .unpaid { Button("Mark paid", systemImage: "checkmark") { Task { await confirmPaid(r.user_id) } } }
         }
     }
 
+    /// Folds from the trailing edge as it goes, opens to its width as it comes.
+    private var fold: AnyTransition {
+        .asymmetric(insertion: AnyTransition(Fold(reduceMotion: reduceMotion)).animation(reduceMotion ? Motion.Reduced.fade : Motion.settle),
+                    removal: AnyTransition(Fold(reduceMotion: reduceMotion)).animation(reduceMotion ? Motion.Reduced.fade : Motion.leave.delay(BoardMotion.buttonCollapseDelay)))
+    }
+
+    /// Mark paid: the success tap comes with the result, as the chip turns Paid.
     private func markPaid(_ user: UUID) -> some View {
-        Button("Mark paid", systemImage: "checkmark") { Task { await act("confirm_paid", user) } }
-            .buttonStyle(ChipStyle(fill: Brand.lime, ring: Brand.limeDeep))
+        Button("Mark paid", systemImage: "checkmark") { Task { await confirmPaid(user) } }
+            .buttonStyle(ChipStyle(fill: Brand.lime, ring: Brand.limeDeep, haptic: nil))
+    }
+
+    /// Nudge (peach) rolls to "✓ Nudged" on Liquorice 100 and bumps from 1.15; the server allows one reminder an hour,
+    /// and the chip stays Nudged for the rest of the WITA day, where a tap only shakes it.
+    private func nudge(_ user: UUID) -> some View {
+        let at = store.members.first { $0.user_id == user }?.nudged_at
+        let nudged = nudging.contains(user) || at.map { Wita.calendar.isDate($0, inSameDayAs: .now) } == true
+        return Button {
+            if nudged {
+                nudgeShakes[user, default: 0] += 1
+            } else {
+                nudging.insert(user)
+                nudgeBumps[user, default: 0] += 1
+                Task {
+                    await attempt($problem, "Couldn't nudge") {
+                        do { try await store.rpc("nudge", ["g": .string(store.id.uuidString), "u": .string(user.uuidString)]) } catch {
+                            nudging.remove(user)
+                            throw error
+                        }
+                    }
+                }
+            }
+        } label: {
+            ZStack {
+                Group { if nudged { Label("Nudged", systemImage: "checkmark") } else { Label("Nudge", systemImage: "bell") } }
+                    .id(nudged)
+                    .transition(AnyTransition.roll(reduceMotion).animation(reduceMotion ? Motion.Reduced.fade : Motion.digits))
+            }
+        }
+        .buttonStyle(ChipStyle(fill: nudged ? Brand.liquorice100 : Brand.choc100, haptic: nudged ? Haptic.blocked : Haptic.tap))
+        .animation(reduceMotion ? Motion.Reduced.fade : Motion.quick, value: nudged)
+        .kick(reduceMotion ? 0 : nudgeBumps[user, default: 0], from: BoardMotion.nudgeBump)
+        .shake(reduceMotion ? 0 : nudgeShakes[user, default: 0])
+        .accessibilityLabel(nudged ? "Nudged today" : "Nudge \(store.name(user))")
+    }
+
+    private func confirmPaid(_ user: UUID) async {
+        marking = true
+        defer { marking = false }
+        await attempt($problem, "Couldn't mark paid") {
+            try await store.rpc("confirm_paid", ["g": .string(store.id.uuidString), "u": .string(user.uuidString)])
+            marked += 1
+        }
     }
 
     private func loadReceipts() async {
@@ -625,11 +874,6 @@ struct PaymentBoardView: View {
         #endif
     }
 
-    private func act(_ fn: String, _ user: UUID) async {
-        await attempt($problem, fn == "nudge" ? "Couldn't nudge" : "Couldn't mark paid") {
-            try await store.rpc(fn, ["g": .string(store.id.uuidString), "u": .string(user.uuidString)])
-        }
-    }
 }
 
 struct ReceiptRef: Identifiable { var user: UUID; var id: UUID { user } }
@@ -680,14 +924,20 @@ struct ReceiptView: View {
         .background(Brand.cocoa.ignoresSafeArea())
         .safeAreaInset(edge: .bottom) {
             if store.isHost, let row, row.paid_at == nil {
-                HStack(spacing: 10) {
+                HStack(alignment: .bottom, spacing: 10) {
                     Button("Not received") { Task { await act("reject_paid", "Couldn't tell them") } }
                         .buttonStyle(WidePill(fill: Brand.cream.opacity(0.12), ink: Brand.cream, size: 17, padding: 18))
-                    Button("Mark paid", systemImage: "checkmark") { Task { await act("confirm_paid", "Couldn't mark paid") } }
-                        .buttonStyle(.pill(.success))
+                        .disabled(busy)
+                    AsyncPill(title: "Mark paid", icon: "checkmark", busyTitle: "Marking…", doneTitle: "Paid", failTitle: "Couldn’t mark paid",
+                              kind: .success, refresh: store.refresh,
+                              reached: { store.bill.first { $0.user_id == user }?.paid_at != nil }) {
+                        try await store.rpc("confirm_paid", ["g": .string(store.id.uuidString), "u": .string(user.uuidString)])
+                    } then: {
+                        dismiss()
+                    }
+                    .disabled(busy)
                     .containerRelativeFrame(.horizontal) { w, _ in (w - 42) * 1.3 / 2.3 }
                 }
-                .disabled(busy)
                 .padding(.horizontal, Brand.s4)
                 .padding(.bottom, 10)
             }

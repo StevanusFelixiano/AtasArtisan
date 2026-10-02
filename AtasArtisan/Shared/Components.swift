@@ -11,10 +11,28 @@ enum PillSize { case large, medium, small }
 
 /// Full pill with a border in the fill colour. Large: bottom action bar, 17pt, 60 tall, full width. Medium:
 /// inline, 16pt, 52 tall. Small: rows and cards, 13pt, 3pt border, 36 tall (hit area 44). Pressed and disabled
-/// colours are the design system's own cells, not an opacity.
-struct PillStyle: ButtonStyle {
+/// colours are the design system's own cells, not an opacity. Every pill squashes on press (wide for large,
+/// compact for medium and small) and gives a light tap when it commits, a medium one for destructive.
+struct PillStyle: PrimitiveButtonStyle {
     var kind: PillKind = .primary
     var size: PillSize = .large
+    /// 12 pt side padding instead of 32, for a large pill that shares its row.
+    var tight = false
+    /// `AsyncPill`'s loading fill: the share of the face's width and its opacity.
+    var loading: (width: CGFloat, opacity: Double)? = nil
+
+    func makeBody(configuration: Configuration) -> some View {
+        CommitButton(configuration: configuration, face: PillFace(kind: kind, size: size, tight: tight, loading: loading),
+                     haptic: kind == .destructive ? Haptic.heavy : Haptic.tap)
+    }
+}
+
+/// The pill itself: colours for its kind and state, the loading fill, the press.
+private struct PillFace: ButtonStyle {
+    var kind: PillKind
+    var size: PillSize
+    var tight: Bool
+    var loading: (width: CGFloat, opacity: Double)?
     @Environment(\.isEnabled) private var enabled
 
     private func colors(pressed: Bool) -> (fill: Color, border: Color, ink: Color) {
@@ -38,18 +56,32 @@ struct PillStyle: ButtonStyle {
     }
 
     func makeBody(configuration: Configuration) -> some View {
-        let c = colors(pressed: configuration.isPressed)
+        let pressed = configuration.isPressed
+        let c = colors(pressed: pressed)
         let small = size == .small
         configuration.label
             .labelStyle(PillLabel(spacing: small ? 6 : 8, icon: small ? 14 : 18))
             .font(Brand.font(.body, size: size == .large ? 17 : small ? 13 : 16, weight: 600))
             .lineLimit(1)
-            .padding(.horizontal, small ? 16 : 32)
+            .minimumScaleFactor(tight ? 0.85 : 1)
+            .padding(.horizontal, tight ? 12 : small ? 16 : 32)
             .frame(maxWidth: size == .large ? .infinity : nil, minHeight: size == .large ? 60 : small ? 36 : 52)
             .foregroundStyle(c.ink)
-            .background(Capsule().fill(c.fill))
-            .overlay(Capsule().strokeBorder(c.border, lineWidth: small ? 3 : 4))
+            .background {
+                Capsule().fill(c.fill)
+                    .overlay(alignment: .leading) {
+                        // Cream at 24 % from the left edge, under the label; the face's capsule clips its leading end.
+                        if let loading {
+                            GeometryReader { g in Rectangle().fill(Brand.cream.opacity(0.24)).frame(width: g.size.width * loading.width) }
+                                .opacity(loading.opacity)
+                        }
+                    }
+                    .clipShape(Capsule())
+                    .pressTone(pressed)
+            }
+            .overlay(Capsule().strokeBorder(c.border, lineWidth: small ? 3 : 4).pressTone(pressed))
             .contentShape(Capsule())
+            .doughPress(pressed, squash: size == .large ? Motion.pressWide : Motion.pressCompact)
             .frame(minHeight: 44)
     }
 }
@@ -65,7 +97,7 @@ private struct PillLabel: LabelStyle {
     }
 }
 
-extension ButtonStyle where Self == PillStyle {
+extension PrimitiveButtonStyle where Self == PillStyle {
     static func pill(_ kind: PillKind = .primary, _ size: PillSize = .large) -> PillStyle { PillStyle(kind: kind, size: size) }
 }
 
@@ -81,7 +113,7 @@ struct IconCircle: View {
                 .frame(width: 28, height: 28).background(Circle().fill(fill))
                 .frame(width: 44, height: 44).contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(DoughStyle())
     }
 }
 
@@ -130,6 +162,9 @@ enum TagSize { case regular, small, large }
 
 /// `<at-tag>`: uppercase Manrope 600 with 0.03em tracking on a pastel capsule. Regular 11pt (cards, rows),
 /// small 10pt, large 12pt (product tags). Optional leading dot (order state) or check (paid, accepted).
+/// A tag whose text changes on screen (order or payment state) moves to the new one: the width grows from the leading
+/// edge, the colours change, the old label rolls up and out as the new one rolls in, then the tag bumps. Reduce
+/// Motion crossfades. Appearing, it is still.
 struct Tag: View {
     var text: String
     var fill: Color = Brand.choc100
@@ -138,23 +173,41 @@ struct Tag: View {
     var border: Color? = nil
     var check = false
     var size: TagSize = .regular
+    @State private var labelWidth: CGFloat?
+    @State private var changes = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         let fs: CGFloat = switch size { case .regular: 11; case .small: 10; case .large: 12 }
         let side: CGFloat = switch size { case .regular: 14; case .small: 10; case .large: 16 }
+        let label = { (t: String) in Text(t).font(Brand.font(.label, size: fs, weight: 600)).tracking(fs * 0.03).textCase(.uppercase) }
         HStack(spacing: 6) {
             if let dot { Circle().fill(dot).frame(width: 7, height: 7) }
             if check { Image(systemName: "checkmark").font(.system(size: fs - 1, weight: .heavy)) }
-            Text(text).font(Brand.font(.label, size: fs, weight: 600)).tracking(fs * 0.03).textCase(.uppercase)
+            ZStack(alignment: .leading) {
+                label(text).fixedSize().id(text).transition(AnyTransition.roll(reduceMotion).animation(reduceMotion ? Motion.Reduced.fade : Motion.digits))
+            }
+            .frame(width: labelWidth, alignment: .leading)
+            .background {
+                label(text).fixedSize().hidden()
+                    .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { w in
+                        if labelWidth == nil || reduceMotion { labelWidth = w } else { withAnimation(Motion.doughLead) { labelWidth = w } }
+                    }
+            }
         }
-        .foregroundStyle(ink)
         .lineLimit(1)
         .padding(.vertical, size == .small ? 2 : 4)
         .padding(.leading, dot != nil || check ? (size == .small ? 8 : 10) : side)
         .padding(.trailing, side)
+        .foregroundStyle(ink)
         .background(Capsule().fill(fill))
-        .overlay { if let border { Capsule().strokeBorder(border, lineWidth: 1.5) } }
+        .overlay(Capsule().strokeBorder(border ?? .clear, lineWidth: 1.5))
+        .animation(reduceMotion ? Motion.Reduced.fade : Motion.quick, value: text)
+        .clipShape(Capsule())
+        .geometryGroup()
+        .kick(reduceMotion ? 0 : changes, from: StatusMotion.bumpFrom, delay: StatusMotion.bumpDelay)
         .fixedSize()
+        .onChange(of: text) { changes += 1 }
     }
 }
 
@@ -371,92 +424,209 @@ struct Rays: View {
 /// The group screen's Rp 200k card, "the loudest element on the group screen" (3-1 / 3-3). Before the goal:
 /// white card, Roundo 38 amount, 20pt bar (striped when close), "Rp X more" line. At the goal: lime card with
 /// rays, the celebrating giraffe, Shrikhand "Discount unlocked!" and the DISCOUNT UNLOCKED band.
+/// One card for both: while the screen is open the bar fills, the numbers count, and crossing the goal plays the
+/// unlock in order (fill, card, headline, message, sunburst, giraffe, band); dropping back plays it out. A card that
+/// appears already unlocked is still. Layers on their own timing sit in a `geometryGroup`, so where they are still
+/// follows the card.
 struct DiscountBar: View {
     var subtotal: Int
     var host = "the host"
     /// Personal order (3-8): "Rp X more for the ongkir discount".
     var personal = false
-    static let goal = 200_000
+    static let goal = UnlockMotion.threshold
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
-    var body: some View {
-        if subtotal >= Self.goal { unlocked } else { progress }
-    }
-
+    private var unlocked: Bool { subtotal >= Self.goal }
     private var fraction: CGFloat { min(1, CGFloat(subtotal) / CGFloat(Self.goal)) }
 
-    private var progress: some View {
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline, spacing: 6) {
-                Text(Rupiah.format(subtotal)).font(Font(Brand.uiFont(.roundo, size: 38, weight: 700)))
-                Text("/ 200.000").font(Brand.font(.callout, weight: 600)).foregroundStyle(Brand.ink3)
-            }
-            bar(fill: fraction >= 0.75
-                ? AnyShapeStyle(.linearGradient(stops: [.init(color: Brand.choc400, location: 0.5), .init(color: Brand.stripe, location: 0.5)],
-                                               startPoint: .topLeading, endPoint: UnitPoint(x: 0.045, y: 0.045)))
-                : AnyShapeStyle(Brand.choc400), width: fraction)
-            (Text("\(Rupiah.format(Self.goal - subtotal)) more").foregroundStyle(Brand.caramel).fontWeight(.bold)
-             + Text(personal ? " for the ongkir discount" : " to unlock the ongkir discount"))
-                .font(Brand.font(.body, size: 15, weight: 600))
-        }
-        .foregroundStyle(Brand.cocoa)
-        .padding(20)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(RoundedRectangle(cornerRadius: Brand.rHero, style: .continuous).fill(Brand.card))
-        .accessibilityElement(children: .combine)
+    /// The unlock's step at its delay, or `off` when it re-locks.
+    private func step(_ a: Animation, _ delay: Double, off: Animation = Motion.fadeOut) -> Animation {
+        unlocked ? a.delay(delay) : off
+    }
+    /// Rows that open or close: the unlock's `Motion.settle`, the re-lock's `Motion.leave`; Reduce Motion snaps them.
+    private func row(_ delay: Double) -> Animation? {
+        reduceMotion ? nil : step(Motion.settle, delay, off: Motion.leave)
+    }
+    /// Layers that only fade under Reduce Motion.
+    private func layer(_ a: Animation, _ delay: Double) -> Animation {
+        step(reduceMotion ? Motion.Reduced.fade : a, delay)
     }
 
-    private var unlocked: some View {
+    var body: some View {
+        let u = unlocked
+        let card = UnlockMotion.cardDelay
+        let shape = RoundedRectangle(cornerRadius: Brand.rHero, style: .continuous)
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 12) {
-                Text("Discount unlocked!").font(Font(Brand.uiFont(.shrikhand, size: 36, weight: 400)))
-                    .frame(maxWidth: 200, alignment: .leading)
+                headline
                 HStack(alignment: .firstTextBaseline, spacing: 6) {
-                    Text(Rupiah.format(subtotal)).font(Font(Brand.uiFont(.roundo, size: 30, weight: 700)))
-                    Text("/ 200.000").font(Brand.font(.footnote, size: 13, weight: 600))
+                    CountUp(amount: subtotal) { Text(Rupiah.format($0)) }
+                        .modifier(RoundoSize(size: u ? UnlockMotion.totalSize.to : UnlockMotion.totalSize.from))
+                    Text("/ 200.000").font(u ? Brand.font(.footnote, size: 13, weight: 600) : Brand.font(.callout, weight: 600))
+                        .foregroundStyle(u ? Brand.cocoa : Brand.ink3)
                 }
-                Capsule().fill(Brand.cocoa).frame(height: 20)
-                Text("Atas applies the ongkir discount when \(host) sends the order.")
-                    .font(Brand.font(.callout, weight: 600))
+                bar
+                OneSpot(active: u ? 1 : 0) {
+                    CountUp(amount: max(0, Self.goal - subtotal)) { n in
+                        Text("\(Rupiah.format(n)) more").foregroundStyle(Brand.caramel).fontWeight(.bold)
+                            + Text(personal ? " for the ongkir discount" : " to unlock the ongkir discount")
+                    }
+                    .font(Brand.font(.body, size: 15, weight: 600))
+                    .opacity(u ? 0 : 1)
+                    .animation(u ? Motion.fadeOut.delay(card) : Motion.fade, value: u)
+                    .geometryGroup()
+                    Text("Atas applies the ongkir discount when \(host) sends the order.")
+                        .font(Brand.font(.callout, weight: 600))
+                        .opacity(u ? 1 : 0)
+                        .animation(step(Motion.fade, UnlockMotion.messageDelay), value: u)
+                        .geometryGroup()
+                }
             }
             .foregroundStyle(Brand.cocoa)
-            .padding(EdgeInsets(top: 22, leading: 20, bottom: 18, trailing: 20))
+            // 3-3's padding when unlocked, 20 all round before.
+            .padding(u ? EdgeInsets(top: 22, leading: 20, bottom: 18, trailing: 20) : EdgeInsets(top: 20, leading: 20, bottom: 20, trailing: 20))
             .frame(maxWidth: .infinity, alignment: .leading)
-            Marquee(text: "DISCOUNT UNLOCKED • ONGKIR SORTED • KEEP ADDING • ", fill: Brand.cocoa, ink: Brand.lime, size: 13, speed: 18)
+            band
         }
-        .background(alignment: .topTrailing) {
-            ZStack(alignment: .topTrailing) {
-                Rays(color: .white).frame(width: 260, height: 260).opacity(0.7).offset(x: 60, y: -60)
-                Mascot(pose: "pose-celebrating", size: 130, fill: .clear).offset(x: -6, y: 10)
+        .background(alignment: .topTrailing) { celebration }
+        .background {
+            ZStack {
+                shape.fill(Brand.card)
+                shape.fill(Brand.lime).opacity(u ? 1 : 0).animation(step(Motion.fade, card), value: u).geometryGroup()
             }
         }
-        .background(Brand.lime)
-        .clipShape(RoundedRectangle(cornerRadius: Brand.rHero, style: .continuous))
-        .overlay(RoundedRectangle(cornerRadius: Brand.rHero, style: .continuous).strokeBorder(Brand.limeDeep, lineWidth: 2))
+        .clipShape(shape)
+        .overlay {
+            shape.strokeBorder(Brand.limeDeep, lineWidth: 2)
+                .opacity(u ? 1 : 0).animation(step(Motion.fade, card), value: u).geometryGroup()
+        }
+        .animation(row(card), value: u)
         .accessibilityElement(children: .combine)
+        .sensoryFeedback(Haptic.done, trigger: u) { !$0 && $1 }
     }
 
-    private func bar(fill: AnyShapeStyle, width: CGFloat) -> some View {
-        Capsule().fill(Brand.liquorice100).frame(height: 20)
+    /// "Discount unlocked!": the column's first row, opening from 0 (its 12 pt gap opens with it) while the words
+    /// scale up from 0.6 and turn from −6° about a point 10 % across, 80 % down.
+    private var headline: some View {
+        let u = unlocked
+        let from = UnlockMotion.headlineFrom
+        let anchor = UnitPoint(x: 0.1, y: 0.8)
+        let still = u || reduceMotion
+        return Text("Discount unlocked!").font(Font(Brand.uiFont(.shrikhand, size: 36, weight: 400)))
+            .frame(maxWidth: 200, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
+            .scaleEffect(still ? 1 : from.scale, anchor: anchor)
+            .rotationEffect(still ? .zero : from.tilt, anchor: anchor)
+            .opacity(u ? 1 : 0)
+            .animation(layer(Motion.pop, from.delay), value: u)
+            .geometryGroup()
+            .frame(height: u ? nil : 0, alignment: .top)
+            .clipped()
+            .padding(.bottom, u ? 0 : -12)
+    }
+
+    private var bar: some View {
+        let u = unlocked
+        let close = fraction >= 0.75
+        return Capsule().fill(Brand.liquorice100).frame(height: 20)
             .overlay(alignment: .leading) {
-                GeometryReader { g in Capsule().fill(fill).frame(width: g.size.width * width) }
+                GeometryReader { g in
+                    Capsule()
+                        .fill(close ? AnyShapeStyle(.linearGradient(stops: [.init(color: Brand.choc400, location: 0.5), .init(color: Brand.stripe, location: 0.5)],
+                                                                   startPoint: .topLeading, endPoint: UnitPoint(x: 0.045, y: 0.045)))
+                                    : AnyShapeStyle(Brand.choc400))
+                        // At the goal a cocoa layer fades in over the full fill.
+                        .overlay(Capsule().fill(Brand.cocoa).opacity(u ? 1 : 0).animation(step(Motion.quick, UnlockMotion.cardDelay), value: u))
+                        .frame(width: g.size.width * fraction)
+                        .animation(reduceMotion ? Motion.Reduced.fill : Motion.doughTrail, value: fraction)
+                }
             }
             .clipShape(Capsule())
+            .geometryGroup()
+    }
+
+    /// The band row under the column, full card width. The card makes room with the rest of the unlock; the band
+    /// opens into it from the top after 0.38 s. Reduce Motion: it appears without the opening.
+    private var band: some View {
+        let u = unlocked
+        let height = UnlockMotion.band.height
+        return ZStack(alignment: .top) {
+            if u {
+                Marquee(text: "DISCOUNT UNLOCKED • ONGKIR SORTED • KEEP ADDING • ", fill: Brand.cocoa, ink: Brand.lime, size: 13)
+                    .transition(.asymmetric(insertion: .identity, removal: .opacity))
+            }
+        }
+        .frame(height: u ? height : 0, alignment: .top)
+        .mask(alignment: .top) {
+            Rectangle().frame(height: u ? height : 0)
+                .animation(reduceMotion ? nil : step(Motion.settle, UnlockMotion.band.delay, off: Motion.leave), value: u)
+        }
+    }
+
+    /// The sunburst behind everything and the celebrating giraffe; there only once unlocked.
+    private var celebration: some View {
+        let u = unlocked
+        let sun = UnlockMotion.sunburst, giraffe = UnlockMotion.mascot
+        let still = u || reduceMotion
+        return ZStack(alignment: .topTrailing) {
+            Rays(color: .white).frame(width: 260, height: 260)
+                .rotationEffect(still ? .zero : sun.tilt)
+                .animation(reduceMotion ? nil : step(Motion.glide, sun.delay), value: u)
+                .opacity(u ? sun.opacity : 0)
+                .animation(layer(Motion.fade, sun.delay), value: u)
+                .offset(x: 60, y: -60)
+            Mascot(pose: "pose-celebrating", size: 130, fill: .clear)
+                .scaleEffect(still ? 1 : giraffe.scale)
+                .offset(y: still ? 0 : giraffe.offset)
+                .opacity(u ? 1 : 0)
+                .animation(layer(Motion.bounce, giraffe.delay), value: u)
+                .offset(x: -6, y: 10)
+        }
+        .allowsHitTesting(false)
     }
 }
 
-/// A slowly scrolling band of uppercase text.
 /// Running text band, `<at-marquee>` in the design: Roundo 700 uppercase, 0.04em tracking, line height 1, vertical
-/// padding 0.7 × size. One run is the text six times plus half an em; it travels its own width every `speed` seconds.
+/// padding 0.7 × size. One run is the text six times plus half an em, and the track wraps every run.
+/// It does not run on its own: 0.3 s after it appears it is flicked once and coasts to a stop, and a horizontal drag scrolls it and
+/// coasts on release, like a scroll view's deceleration. Reduce Motion skips the flick on appear.
 struct Marquee: View {
     var text = "FRESH FROM ATAS • GROUP UP • SAVE ON ONGKIR • "
     var fill = Brand.cocoa
     var ink = Brand.cream
     var size: CGFloat = 15
-    var speed: Double = 30
     var reverse = false
     var tilt: Double = 0
     @State private var runWidth: CGFloat = 0
+    @State private var coast = Coast(from: 0, velocity: 0, start: .now)
+    /// Track position the current drag started from (minus the translation at the moment it locked horizontal).
+    @State private var dragFrom: CGFloat?
+    @State private var dragX: CGFloat = 0
+    /// nil until a drag has moved far enough to pick an axis; a vertical drag is left to the enclosing scroll view.
+    @State private var horizontal: Bool?
+    @State private var moving = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    /// Exponential decay: x(t) = from + v/k·(1 − e^(−k·t)), so the speed falls smoothly to zero.
+    struct Coast {
+        var from: CGFloat, velocity: CGFloat, start: Date
+        static let friction = 2.5  // 1/s; a flick travels velocity / friction points
+        /// When the speed has fallen under 0.5 pt/s; x is held there, so a later redraw never jumps.
+        var end: Date { start + log(max(abs(velocity), 0.5) / 0.5) / Self.friction }
+        func x(_ t: Date) -> CGFloat {
+            let dt = min(t, end).timeIntervalSince(start)
+            return from + velocity / Self.friction * (1 - exp(-Self.friction * max(0, dt)))
+        }
+    }
+
+    /// Where the track is now, in points, unwrapped.
+    private var x: CGFloat { dragFrom.map { $0 + dragX } ?? coast.x(.now) }
+
+    private func wrapped(_ x: CGFloat) -> CGFloat {
+        guard runWidth > 0 else { return 0 }
+        let m = x.truncatingRemainder(dividingBy: runWidth)
+        return m > 0 ? m - runWidth : m
+    }
 
     var body: some View {
         let run = Text(String(repeating: text + " ", count: 6))
@@ -471,17 +641,45 @@ struct Marquee: View {
             .frame(maxWidth: .infinity)
             .frame(height: size)
             .overlay(alignment: .leading) {
-                TimelineView(.animation(paused: reduceMotion)) { t in
-                    let phase = t.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: speed) / speed
+                TimelineView(.animation(paused: !moving || dragFrom != nil)) { t in
                     HStack(spacing: 0) { run; run }
                         .fixedSize()
                         .onGeometryChange(for: CGFloat.self) { $0.size.width / 2 } action: { runWidth = $0 }
-                        .offset(x: -runWidth * (reverse ? 1 - phase : phase))
+                        .offset(x: wrapped(dragFrom.map { $0 + dragX } ?? coast.x(t.date)))
                 }
             }
             .padding(.vertical, (size * 0.7).rounded())
         .background(fill)
         .clipped()
+        .contentShape(Rectangle())
+        // Simultaneous, so a vertical drag that starts on the band still scrolls the screen.
+        .simultaneousGesture(
+            DragGesture(minimumDistance: 8)
+                .onChanged { v in
+                    if horizontal == nil {
+                        horizontal = abs(v.translation.width) > abs(v.translation.height)
+                        if horizontal == true { dragFrom = x - v.translation.width }
+                    }
+                    if horizontal == true { dragX = v.translation.width }
+                }
+                .onEnded { v in
+                    if let from = dragFrom {
+                        coast = Coast(from: from + v.translation.width, velocity: v.velocity.width, start: .now)
+                    }
+                    dragFrom = nil
+                    horizontal = nil
+                }
+        )
+        .onAppear {
+            guard !reduceMotion else { return }
+            // The flick waits 0.3 s after the screen appears (Motion board 21); a coast that starts later holds still.
+            coast = Coast(from: x, velocity: reverse ? 1200 : -1200, start: .now + BandMotion.flickDelay)
+        }
+        // Run the timeline only while a coast is moving.
+        .task(id: coast.start) {
+            moving = true
+            do { try await Task.sleep(for: .seconds(max(0, coast.end.timeIntervalSinceNow))); moving = false } catch {}
+        }
         .rotationEffect(.degrees(tilt))
         .padding(.horizontal, tilt == 0 ? 0 : -12)
         .accessibilityHidden(true)
@@ -489,12 +687,17 @@ struct Marquee: View {
 }
 
 /// The design system's toast ("Link copied", "Account number copied"): cocoa pill, lime check, Manrope 600 14.
+/// A new message rolls in over the old one.
 struct Toast: View {
     var text: String
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         HStack(spacing: 8) {
             Image(systemName: "checkmark").font(.system(size: 14, weight: .heavy)).foregroundStyle(Brand.lime)
-            Text(text).font(Brand.font(.callout, weight: 600)).foregroundStyle(Brand.cream)
+            ZStack {
+                Text(text).font(Brand.font(.callout, weight: 600)).foregroundStyle(Brand.cream).id(text).transition(.roll(reduceMotion))
+            }
+            .animation(reduceMotion ? Motion.Reduced.fade : Motion.digits, value: text)
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 20)
@@ -503,47 +706,107 @@ struct Toast: View {
     }
 }
 
+/// One toast's message. Each copy makes a new one, so copying the same thing again restarts the timer.
+struct ToastNote: Equatable {
+    var text: String
+    var id = UUID()
+}
+
 extension View {
-    /// Shows the toast for 1.6 s, `above` points over the bottom safe area, with a success haptic.
-    func toast(_ text: Binding<String?>, above: CGFloat = 8) -> some View {
-        overlay(alignment: .bottom) {
-            if let t = text.wrappedValue {
-                Toast(text: t)
-                    .padding(.bottom, above)
-                    .transition(.move(edge: .bottom).combined(with: .opacity))
-                    .task(id: t) {
-                        try? await Task.sleep(for: .seconds(1.6))
-                        text.wrappedValue = nil
+    /// Shows the toast `above` points over the bottom safe area for 1.8 s after the last copy, or until it is swiped
+    /// down. It rises in from 24 pt below; a copy while it shows rolls the text and bumps it. Never more than one.
+    func toast(_ note: Binding<ToastNote?>, above: CGFloat = 8) -> some View {
+        modifier(ToastHost(note: note, above: above))
+    }
+}
+
+private struct ToastHost: ViewModifier {
+    @Binding var note: ToastNote?
+    var above: CGFloat
+    @State private var bumps = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    func body(content: Content) -> some View {
+        content
+            .overlay(alignment: .bottom) {
+                ZStack {
+                    if let n = note {
+                        Toast(text: n.text)
+                            .kick(reduceMotion ? 0 : bumps, from: ToastMotion.repeatBump)
+                            .padding(.bottom, above)
+                            .transition(transition)
+                            .gesture(DragGesture(minimumDistance: 8).onEnded { if $0.translation.height > 0 { note = nil } })
+                            .task(id: n.id) {
+                                do { try await Task.sleep(for: .seconds(ToastMotion.hold)) } catch { return }
+                                note = nil
+                            }
                     }
+                }
             }
+            .onChange(of: note) { old, new in if old != nil && new != nil { bumps += 1 } }
+    }
+
+    /// In: up from 24 pt below at 0.96 (`Motion.arrive`) while it fades in (`Motion.fade`). Out: 8 pt down as it fades.
+    private var transition: AnyTransition {
+        if reduceMotion {
+            return .asymmetric(insertion: .opacity.animation(Motion.Reduced.fade), removal: .opacity.animation(Motion.fadeOut))
         }
-        .animation(.spring(duration: 0.3), value: text.wrappedValue)
-        .sensoryFeedback(.success, trigger: text.wrappedValue) { _, new in new != nil }
+        let enter = ToastMotion.enter
+        return .asymmetric(
+            insertion: AnyTransition.offset(y: enter.offset).combined(with: .scale(scale: enter.scale)).animation(Motion.arrive)
+                .combined(with: .opacity.animation(Motion.fade)),
+            removal: AnyTransition.offset(y: ToastMotion.exitOffset).combined(with: .opacity).animation(Motion.fadeOut))
     }
 }
 
 /// Copy with feedback: `copy(link, "Link copied", $toast)` on a view that has `.toast($toast)`.
-func copy(_ value: String, _ message: String, _ toast: Binding<String?>) {
+func copy(_ value: String, _ message: String, _ toast: Binding<ToastNote?>) {
     UIPasteboard.general.string = value
-    toast.wrappedValue = message
+    toast.wrappedValue = ToastNote(text: message)
+}
+
+/// A copy button (account name and number, the invite link): its copy icon gives way to a check that pops in,
+/// and comes back 1.6 s after the last copy. `face` draws the button around the icon it is given.
+struct CopyButton<Face: View>: View {
+    var value: String
+    var message: String
+    @Binding var toast: ToastNote?
+    var symbol = "square.on.square"
+    var squash = Motion.pressIcon
+    @ViewBuilder var face: (PopSymbol) -> Face
+    @State private var copies = 0
+
+    var body: some View {
+        let copied = copies > 0
+        Button {
+            copy(value, message, $toast)
+            copies += 1
+        } label: {
+            face(PopSymbol(name: copied ? "checkmark" : symbol, animation: copied ? Motion.pop : Motion.fade))
+        }
+        .buttonStyle(DoughStyle(squash: squash))
+        .task(id: copies) {
+            guard copies > 0 else { return }
+            do { try await Task.sleep(for: .seconds(ToastMotion.iconHold)) } catch { return }
+            copies = 0
+        }
+    }
 }
 
 // MARK: States
 
-/// "Proofing the dough…": a dashed caramel ring turning every 14 s around the neutral giraffe (`<at-spin>`).
+/// "Proofing the dough…": the dashed caramel ring around the neutral giraffe (`<at-spin>`). Like the splash's, it turns
+/// a quarter into place as it appears and then stays still while it waits.
 struct LoaderView: View {
     var line = "Proofing the dough…"
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @State private var shown = false
     var body: some View {
         VStack(spacing: 22) {
             ZStack {
-                TimelineView(.animation(paused: reduceMotion)) { t in
-                    Circle().strokeBorder(Brand.caramel, style: StrokeStyle(lineWidth: 1.2, dash: [5.4, 5.4]))
-                        .rotationEffect(.degrees(t.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 14) / 14 * 360))
-                }
-                .frame(width: 180, height: 180)
+                ObRing(size: 180, turns: shown ? 1 : 0, from: SplashMotion.ringFrom)
                 Mascot(pose: "pose-neutral", size: 144)
             }
+            .onAppear { shown = true }
             Text(line).font(Font(Brand.uiFont(.roundo, size: 20, weight: 700))).foregroundStyle(Brand.cocoa)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -686,26 +949,102 @@ struct ChoiceCard: View {
     }
 }
 
-/// Segmented control: white thumb on a liquorice capsule, 14pt semibold.
+/// Segmented control: white thumb on a liquorice capsule, 14pt semibold. Picking the other segment sends the thumb
+/// there like the option chips' pill (Motion board 13): the edge in the direction of travel on `Motion.doughLead`, the
+/// other on `Motion.doughTrail`, the inks swapping on `Motion.quick` (the new one 0.04 s later), with a selection tick.
+/// A press squashes the segment and the thumb under it; a tap on the picked segment only presses. A selection set from
+/// outside moves the thumb still. Reduce Motion: the thumb fades across and a press dims.
 struct Segmented: View {
     var options: [String]
     @Binding var selection: Int
+    /// The thumb's edges as fractions of the track.
+    @State private var left: CGFloat = 0
+    @State private var right: CGFloat = 0
+    @State private var pressed: Int?
+    @State private var picks = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
         HStack(spacing: 0) {
             ForEach(options.indices, id: \.self) { i in
-                Button { withAnimation(.snappy) { selection = i } } label: {
+                let on = selection == i
+                Button { pick(i) } label: {
                     Text(options[i]).font(Brand.font(.callout, weight: 600))
-                        .foregroundStyle(selection == i ? Brand.cocoa : Brand.ink2)
+                        .foregroundStyle(on ? Brand.cocoa : Brand.ink2)
+                        .animation(reduceMotion ? Motion.Reduced.fade : on ? Motion.quick.delay(OptionMotion.inkDelay) : Motion.quick, value: on)
                         .frame(maxWidth: .infinity).padding(.vertical, 9)
-                        .background { if selection == i { Capsule().fill(.white).shadow(color: Brand.cocoa.opacity(0.12), radius: 1.5, y: 1) } }
                         .contentShape(Capsule())
                 }
-                .buttonStyle(.plain)
-                .accessibilityAddTraits(selection == i ? .isSelected : [])
+                .buttonStyle(SegmentPress(index: i, pressed: $pressed))
+                .accessibilityAddTraits(on ? .isSelected : [])
             }
         }
+        .background { thumb }
         .padding(4)
         .background(Capsule().fill(Brand.liquorice100))
+        .sensoryFeedback(.selection, trigger: picks)
+        .onChange(of: selection, initial: true) { _, s in
+            if (left, right) != edges(s) { still { (left, right) = edges(s) } }
+        }
+    }
+
+    /// The white thumb, shadow 0 1 3 Cocoa at 15 %.
+    private func face(squashed: Bool = false) -> some View {
+        Capsule().fill(.white).shadow(color: Brand.cocoa.opacity(0.15), radius: 1.5, y: 1)
+            .scaleEffect(squashed ? Motion.pressCompact : CGSize(width: 1, height: 1))
+            .animation(squashed ? Motion.press : Motion.release, value: squashed)
+    }
+
+    private var thumb: some View {
+        GeometryReader { g in
+            if reduceMotion {
+                ForEach(options.indices, id: \.self) { i in
+                    face()
+                        .frame(width: g.size.width / CGFloat(options.count))
+                        .offset(x: g.size.width * CGFloat(i) / CGFloat(options.count))
+                        .opacity(selection == i ? 1 : 0)
+                        .animation(Motion.Reduced.fade, value: selection)
+                }
+            } else {
+                EdgeValue(value: left) { l in EdgeValue(value: right) { r in
+                    face(squashed: pressed == selection)
+                        .frame(width: max(0, r - l) * g.size.width)
+                        .offset(x: l * g.size.width)
+                } }
+            }
+        }
+    }
+
+    private func edges(_ i: Int) -> (CGFloat, CGFloat) {
+        let n = CGFloat(max(1, options.count))
+        return (CGFloat(i) / n, CGFloat(i + 1) / n)
+    }
+
+    private func pick(_ i: Int) {
+        guard i != selection else { return }
+        let (l, r) = edges(i)
+        let right = l > left
+        withAnimation(right ? Motion.doughTrail : Motion.doughLead) { left = l }
+        withAnimation(right ? Motion.doughLead : Motion.doughTrail) { self.right = r }
+        picks += 1
+        selection = i
+    }
+
+    private func still(_ change: () -> Void) {
+        var t = Transaction()
+        t.disablesAnimations = true
+        withTransaction(t, change)
+    }
+
+    /// The segment's press, reported so the thumb under it squashes with it.
+    private struct SegmentPress: ButtonStyle {
+        var index: Int
+        @Binding var pressed: Int?
+        func makeBody(configuration: Configuration) -> some View {
+            configuration.label
+                .doughPress(configuration.isPressed, squash: Motion.pressCompact)
+                .onChange(of: configuration.isPressed) { _, p in pressed = p ? index : (pressed == index ? nil : pressed) }
+        }
     }
 }
 

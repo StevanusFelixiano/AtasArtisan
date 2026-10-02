@@ -41,7 +41,7 @@ func removeItemConfirm(_ store: GroupStore, _ item: Item, action: @escaping () a
     let names = others.count > 1 ? others.dropLast().joined(separator: ", ") + " and " + others.last! : others.first ?? ""
     return Confirm(title: "Remove \(item.name)?",
                    message: others.isEmpty ? "It comes out of your order." : "It’s split with \(names). Removing it cancels the split and clears their shares.",
-                   button: "Remove item", keep: "Keep it", action: action)
+                   button: "Remove item", keep: "Keep it", delay: SheetMotion.rowAfterRemove, action: action)
 }
 
 func itemPhrase(_ items: [Item]) -> String {
@@ -93,7 +93,8 @@ struct GroupBar<Content: View>: View {
     var body: some View {
         let offline = groupOffline
         VStack(spacing: 8) {
-            HStack(spacing: 10) { content }.disabled(offline)
+            // Bottom-aligned: an async pill's error line grows its column upwards.
+            HStack(alignment: .bottom, spacing: 10) { content }.disabled(offline)
             if offline { Text("Reconnect to change your order").ui(GFont.manrope(13), Brand.ink2).padding(.bottom, 2) }
         }
             .padding(12)

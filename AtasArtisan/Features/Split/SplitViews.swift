@@ -41,11 +41,18 @@ enum Slices {
 struct SplitProposeView: View {
     var store: GroupStore
     var item: Item
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.closeSheet) private var close
     @State private var chosen: [UUID] = []
     @State private var slices: [UUID: Int] = [:]
     @State private var busy = false
     @State private var problem: Problem?
+    /// Taps on the owner's chip (it shakes) and on a stepper that can't go further (the total line shakes).
+    @State private var ownerTaps = 0
+    @State private var stuck = 0
+    @State private var evens = 0
+    /// The rows' count before this change, so an added row opens and a removed one folds.
+    @State private var rowCount: Int?
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     /// Owner first, then me, then everyone else in join order.
     private var people: [UUID] {
@@ -69,33 +76,28 @@ struct SplitProposeView: View {
                     HStack(alignment: .firstTextBaseline) {
                         Text("Shares \u{00B7} in slices of \(Slices.total)").brand(.label)
                         Spacer()
-                        Button("Split evenly") { withAnimation(.snappy) { splitEvenly() } }
+                        Button("Split evenly") { evens += 1; splitEvenly() }
                             .font(MenuFont.manrope(12, 600)).foregroundStyle(Brand.caramel)
                             .disabled(sharing.count < 2)
                     }
                     .padding(.horizontal, 4)
-                    SharesBar(slices: sharing.map { slices[$0] ?? 0 }, height: 16)
+                    // Every candidate keeps a segment (0 wide when not sharing), so a new one grows from its place.
+                    SharesBar(slices: people.map { chosen.contains($0) ? slices[$0] ?? 0 : 0 }, height: 16)
                     rows
                     status
                 }
             }
-            .padding(.horizontal, 10)
             .padding(.top, 4)
             .padding(.bottom, 24)
         }
-        .screen()
+        .scrollIndicators(.hidden)
         .safeAreaInset(edge: .bottom) {
             Button { Task { await propose() } } label: {
                 Label(mineToAsk ? "Send to \(store.name(item.owner_id)) for approval" : "Invite to share", systemImage: "chart.pie")
             }
             .buttonStyle(.pill(.primary))
             .disabled(!valid || busy)
-            .padding(.horizontal, 16)
-            .padding(.bottom, 4)
         }
-        .navigationTitle("Propose a split")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
         .onAppear {
             guard chosen.isEmpty else { return }
             chosen = [item.owner_id] + (mineToAsk ? store.me.map { [$0] } ?? [] : [])
@@ -108,6 +110,10 @@ struct SplitProposeView: View {
             }
         }
         .problemAlert($problem)
+        .sensoryFeedback(.selection, trigger: chosen) { old, _ in !old.isEmpty }
+        .sensoryFeedback(.selection, trigger: evens)
+        .sensoryFeedback(Haptic.blocked, trigger: ownerTaps)
+        .sensoryFeedback(Haptic.blocked, trigger: stuck)
     }
 
     private var itemCard: some View {
@@ -128,11 +134,9 @@ struct SplitProposeView: View {
         let on = chosen.contains(u)
         let locked = u == item.owner_id
         return Button {
-            guard !locked else { return }
-            withAnimation(.snappy) {
-                if on { chosen.removeAll { $0 == u } } else { chosen.append(u) }
-                splitEvenly()
-            }
+            guard !locked else { ownerTaps += 1; return }
+            if on { chosen.removeAll { $0 == u } } else { chosen.append(u) }
+            splitEvenly()
         } label: {
             HStack(spacing: 6) {
                 Avatar(name: store.name(u), index: store.colorIndex(u), size: 24, art: store.people[u]?.avatar, bg: store.people[u]?.avatar_bg)
@@ -142,7 +146,9 @@ struct SplitProposeView: View {
             .padding(EdgeInsets(top: 5, leading: 5, bottom: 5, trailing: 12))
             .background(Capsule().fill(on ? Brand.cocoa : .white))
             .overlay(Capsule().strokeBorder(Brand.liquorice400, lineWidth: on ? 0 : 1.5))
+            .animation(reduceMotion ? Motion.Reduced.fade : Motion.quick, value: on)
             .contentShape(Capsule())
+            .shake(locked && !reduceMotion ? ownerTaps : 0)
         }
         .buttonStyle(.plain)
         .accessibilityLabel(u == store.me ? "You" : store.name(u))
@@ -154,47 +160,62 @@ struct SplitProposeView: View {
         VStack(spacing: 0) {
             ForEach(Array(sharing.enumerated()), id: \.element) { i, u in
                 let n = slices[u] ?? 0
-                HStack(spacing: 10) {
-                    Avatar(name: store.name(u), index: store.colorIndex(u), size: 32, art: store.people[u]?.avatar, bg: store.people[u]?.avatar_bg)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(u == store.me ? "You" : store.name(u)).font(MenuFont.manrope(15, 700)).foregroundStyle(Brand.cocoa)
-                        Text("\(Slices.pctText(Double(n) * 100 / Double(Slices.total))) \u{00B7} \(Rupiah.format(amount(i)))")
-                            .font(MenuFont.manrope(12)).foregroundStyle(Brand.ink2)
+                let line = "\(Slices.pctText(Double(n) * 100 / Double(Slices.total))) \u{00B7} \(Rupiah.format(amount(i)))"
+                VStack(spacing: 0) {
+                    if i > 0 { Rectangle().fill(Brand.liquorice100).frame(height: 1) }
+                    HStack(spacing: 10) {
+                        Avatar(name: store.name(u), index: store.colorIndex(u), size: 32, art: store.people[u]?.avatar, bg: store.people[u]?.avatar_bg)
+                        VStack(alignment: .leading, spacing: 1) {
+                            Text(u == store.me ? "You" : store.name(u)).font(MenuFont.manrope(15, 700)).foregroundStyle(Brand.cocoa)
+                            Text(line)
+                                .font(MenuFont.manrope(12)).foregroundStyle(Brand.ink2)
+                                .contentTransition(reduceMotion ? .opacity : .numericText())
+                                .animation(reduceMotion ? Motion.Reduced.fade : Motion.digits, value: line)
+                        }
+                        Spacer(minLength: 4)
+                        PillStepper(value: Slices.label(n), fill: Brand.cream, gap: 10, pad: 3, minWidth: 52, countSize: 15,
+                                    canMinus: n > 1, canPlus: allocated < Slices.total,
+                                    minusLabel: "One slice less for \(store.name(u))", plusLabel: "One slice more for \(store.name(u))",
+                                    minus: { slices[u] = max(1, n - 1) }, plus: { slices[u] = n + 1 }, blocked: { stuck += 1 })
                     }
-                    Spacer(minLength: 4)
-                    PillStepper(value: Slices.label(n), fill: Brand.cream, gap: 10, pad: 3, minWidth: 52, countSize: 15,
-                                canMinus: n > 1, canPlus: allocated < Slices.total,
-                                minusLabel: "One slice less for \(store.name(u))", plusLabel: "One slice more for \(store.name(u))",
-                                minus: { slices[u] = max(1, n - 1) }, plus: { slices[u] = n + 1 })
+                    .padding(.vertical, 11)
                 }
-                .padding(.vertical, 11)
-                if i < sharing.count - 1 { Rectangle().fill(Brand.liquorice100).frame(height: 1) }
+                .transition(.itemRow)
             }
         }
         .padding(.horizontal, 14)
         .padding(.vertical, 2)
         .background(RoundedRectangle(cornerRadius: Brand.rCard, style: .continuous).fill(Brand.card))
-        .animation(.snappy, value: sharing)
+        .clipShape(RoundedRectangle(cornerRadius: Brand.rCard, style: .continuous))
+        // An added row opens on Motion.settle after 0.04 s; a removed one folds on Motion.leave. Reduce Motion snaps.
+        .animation(reduceMotion ? nil : sharing.count >= (rowCount ?? sharing.count) ? Motion.settle.delay(SplitMotion.rowDelay) : Motion.leave,
+                   value: sharing)
+        .onChange(of: sharing, initial: true) { rowCount = sharing.count }
     }
 
-    @ViewBuilder private var status: some View {
-        if valid {
-            Label { Text("\(Slices.total) of \(Slices.total) slices \u{00B7} 100%") } icon: { Image(systemName: "checkmark") }
-                .labelStyle(StatusLabel(icon: 12))
-                .font(MenuFont.manrope(13, 600)).foregroundStyle(Brand.limeInk)
-                .padding(.leading, 4)
-        } else if sharing.count < 2 {
-            Text("Pick who\u{2019}s sharing it with \(mineToAsk ? store.name(item.owner_id) : "you").")
-                .font(MenuFont.manrope(13, 600)).foregroundStyle(Brand.ink3)
-                .padding(.leading, 4)
-        } else {
-            let left = Slices.total - allocated
-            let text = "\(allocated) of \(Slices.total) slices. Give the last \(left == 1 ? "slice" : "\(left) slices") to someone so the shares add up to 100%."
-            Label { Text(text) } icon: { Image(systemName: "exclamationmark.triangle") }
-                .labelStyle(StatusLabel(icon: 15))
-                .font(MenuFont.manrope(14, 600)).lineSpacing(3).foregroundStyle(Brand.destructive)
-                .padding(.horizontal, 4)
+    /// The total line. It rolls to each new text, and shakes when a stepper can't go further.
+    private var status: some View {
+        let left = Slices.total - allocated
+        let key = valid ? "done" : sharing.count < 2 ? "pick" : "left \(left)"
+        return RollText(key: key) {
+            if valid {
+                Label { Text("\(Slices.total) of \(Slices.total) slices \u{00B7} 100%") } icon: { Image(systemName: "checkmark") }
+                    .labelStyle(StatusLabel(icon: 12))
+                    .font(MenuFont.manrope(13, 600)).foregroundStyle(Brand.limeInk)
+                    .padding(.leading, 4)
+            } else if sharing.count < 2 {
+                Text("Pick who\u{2019}s sharing it with \(mineToAsk ? store.name(item.owner_id) : "you").")
+                    .font(MenuFont.manrope(13, 600)).foregroundStyle(Brand.ink3)
+                    .padding(.leading, 4)
+            } else {
+                let text = "\(allocated) of \(Slices.total) slices. Give the last \(left == 1 ? "slice" : "\(left) slices") to someone so the shares add up to 100%."
+                Label { Text(text) } icon: { Image(systemName: "exclamationmark.triangle") }
+                    .labelStyle(StatusLabel(icon: 15))
+                    .font(MenuFont.manrope(14, 600)).lineSpacing(3).foregroundStyle(Brand.destructive)
+                    .padding(.horizontal, 4)
+            }
         }
+        .shake(reduceMotion ? 0 : stuck)
     }
 
     /// What one row costs: the server's rounding (owner absorbs it) once the shares are whole, plain thirds before.
@@ -219,7 +240,7 @@ struct SplitProposeView: View {
         await attempt($problem, "Couldn't propose the split") {
             let shares: [AnyJSON] = zip(who, pcts).map { u, h in .object(["user": .string(u.uuidString), "pct": .double(Double(h) / 100)]) }
             try await store.rpc("propose_split", ["item": .string(item.id.uuidString), "shares": .array(shares)])
-            dismiss()
+            close?()
         }
     }
 }
@@ -235,39 +256,45 @@ private struct StatusLabel: LabelStyle {
     }
 }
 
-/// The shares bar: one segment per person in slice proportion, 2 pt apart; slices nobody has yet are striped.
+/// The shares bar: one segment per person in slice proportion (each its width minus a 2 pt gap on its trailing side),
+/// in member order; slices nobody has yet are striped. A share that changes moves its segment's edges on
+/// `Motion.doughTrail` and its neighbours give way on the same spring (Reduce Motion: `Motion.Reduced.fill`). A 0
+/// entry keeps its place at zero width, so a person joining the split grows from there.
 struct SharesBar: View {
     var slices: [Int]
     var height: CGFloat = 16
     /// Grey everyone but this index and outline it (the invitee's view).
     var highlight: Int? = nil
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         GeometryReader { g in
             let used = slices.reduce(0, +)
-            let parts = slices.filter { $0 > 0 }.count + (used < Slices.total ? 1 : 0)
-            let gaps = CGFloat(max(0, parts - 1)) * 2
-            let unit = (g.size.width - gaps) / CGFloat(Slices.total)
-            HStack(spacing: 2) {
-                ForEach(Array(slices.enumerated()), id: \.offset) { i, n in
-                    if n > 0 {
-                        let mine = highlight == i
-                        Rectangle()
-                            .fill(highlight == nil ? Slices.colors[i % Slices.colors.count] : mine ? Brand.pink100 : Brand.liquorice100)
-                            .overlay { if mine { UnevenRoundedRectangle(topLeadingRadius: i == 0 ? height : 0, bottomLeadingRadius: i == 0 ? height : 0,
-                                                                         bottomTrailingRadius: i == slices.count - 1 ? height : 0, topTrailingRadius: i == slices.count - 1 ? height : 0)
-                                .strokeBorder(Brand.cocoa, lineWidth: 2) } }
-                            .frame(width: unit * CGFloat(n))
-                    }
+            let unit = g.size.width / CGFloat(Slices.total)
+            let last = slices.lastIndex { $0 > 0 }
+            ZStack(alignment: .leading) {
+                if used < Slices.total { Stripes() }
+                ForEach(slices.indices, id: \.self) { i in
+                    let n = slices[i]
+                    let before = slices[..<i].reduce(0, +)
+                    // Colours by position among the people sharing (the app's split palette).
+                    let place = slices[..<i].filter { $0 > 0 }.count
+                    let mine = highlight == i
+                    let gap = i == last && used == Slices.total ? 0 : SplitMotion.segmentGap
+                    Rectangle()
+                        .fill(highlight == nil ? Slices.colors[place % Slices.colors.count] : mine ? Brand.pink100 : Brand.liquorice100)
+                        .overlay { if mine { UnevenRoundedRectangle(topLeadingRadius: before == 0 ? height : 0, bottomLeadingRadius: before == 0 ? height : 0,
+                                                                     bottomTrailingRadius: i == last ? height : 0, topTrailingRadius: i == last ? height : 0)
+                            .strokeBorder(Brand.cocoa, lineWidth: 2) } }
+                        .frame(width: max(0, unit * CGFloat(n) - gap))
+                        .offset(x: unit * CGFloat(before))
                 }
-                if used < Slices.total { Color.clear }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background { if used < Slices.total { Stripes() } }
+            .frame(width: g.size.width, alignment: .leading)
             .clipShape(Capsule())
         }
         .frame(height: height)
-        .animation(.snappy, value: slices)
+        .animation(reduceMotion ? Motion.Reduced.fill : Motion.doughTrail, value: slices)
         .accessibilityHidden(true)
     }
 }

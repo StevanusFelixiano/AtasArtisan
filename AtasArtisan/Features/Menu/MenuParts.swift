@@ -8,7 +8,9 @@ enum MenuFont {
     static func manrope(_ size: CGFloat, _ weight: CGFloat = 500) -> Font { Brand.font(.body, size: size, weight: weight) }
 }
 
-/// Capsule stepper: 28 pt choc circles around a Roundo count (product sheet, cart, split rows).
+/// Capsule stepper: 28 pt choc circles around a Roundo count (product sheet, cart, split rows, group item rows).
+/// Each tap dips its button and plays .increase or .decrease; the count rolls up or down. At quantity 1 the minus
+/// pops into a red trash (`minusSymbol: "trash"`), whose tap the caller confirms.
 struct PillStepper: View {
     var value: String
     var fill: Color = .white
@@ -23,56 +25,234 @@ struct PillStepper: View {
     var plusLabel = "One more"
     var minus: () -> Void
     var plus: () -> Void
+    /// A tap on a disabled button, for a caller that answers it elsewhere (the split's total line shakes); without
+    /// it the button itself shakes.
+    var blocked: (() -> Void)? = nil
+    @State private var down = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         HStack(spacing: gap) {
-            circle(minusSymbol, enabled: canMinus, label: minusLabel, action: minus)
+            StepButton(symbol: minusSymbol, enabled: canMinus, label: minusLabel, blocked: blocked) { down = true; minus() }
             Text(value).font(MenuFont.roundo(countSize)).foregroundStyle(Brand.cocoa)
                 .lineLimit(1).fixedSize()
                 .frame(minWidth: minWidth).monospacedDigit()
-                .contentTransition(.numericText())
-            circle("plus", enabled: canPlus, label: plusLabel, action: plus)
+                .contentTransition(reduceMotion ? .opacity : .numericText(countsDown: down))
+                .animation(reduceMotion ? Motion.Reduced.fade : Motion.digits, value: value)
+            StepButton(symbol: "plus", enabled: canPlus, label: plusLabel, blocked: blocked) { down = false; plus() }
         }
         .padding(pad)
         .background(Capsule().fill(fill))
         .accessibilityElement(children: .contain)
     }
+}
 
-    private func circle(_ symbol: String, enabled: Bool, label: String, action: @escaping () -> Void) -> some View {
-        Button(action: action) {
-            Image(systemName: symbol).font(.system(size: 13, weight: .bold)).foregroundStyle(Brand.cocoa)
-                .frame(width: 28, height: 28).background(Circle().fill(Brand.choc100))
-                .contentShape(Rectangle().inset(by: -8))
+/// One stepper circle. Plus and minus dip to 0.8 and bounce back on each tap with .increase / .decrease; the trash
+/// pops in from 0 at −12° on Trash fill and ink (its tap plays nothing: the remove confirm follows).
+private struct StepButton: View {
+    var symbol: String
+    var enabled: Bool
+    var label: String
+    var blocked: (() -> Void)?
+    var action: () -> Void
+    @State private var taps = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    var body: some View {
+        let trash = symbol == "trash"
+        Button {
+            taps += 1
+            action()
+        } label: {
+            PopSymbol(name: symbol, animation: Motion.pop.delay(StepperMotion.addCheckDelay))
+                .font(.system(size: 13, weight: .bold))
+                .foregroundStyle(trash ? Brand.destructive : Brand.cocoa)
+                .dip(reduceMotion || trash ? 0 : taps)
         }
-        .buttonStyle(.plain)
-        .disabled(!enabled)
-        .opacity(enabled ? 1 : 0.4)
+        .buttonStyle(Style(trash: trash))
+        .sensoryFeedback(trigger: taps) { _, _ in trash ? nil : symbol == "plus" ? Haptic.up : Haptic.down }
+        .modifier(Blocked(enabled: enabled, blocked: blocked))
+        .opacity(enabled ? 1 : SplitMotion.unavailableOpacity)
         .accessibilityLabel(label)
+    }
+
+    /// A disabled tap: the button shakes (`disabled(_:reason:)`), or `blocked` answers it.
+    private struct Blocked: ViewModifier {
+        var enabled: Bool
+        var blocked: (() -> Void)?
+        func body(content: Content) -> some View {
+            if let blocked {
+                content.disabled(!enabled)
+                    .overlay { if !enabled { Color.clear.contentShape(Rectangle().inset(by: -8)).onTapGesture(perform: blocked) } }
+            } else {
+                content.disabled(!enabled, reason: nil)
+            }
+        }
+    }
+
+    private struct Style: ButtonStyle {
+        var trash: Bool
+        func makeBody(configuration: Configuration) -> some View {
+            let p = configuration.isPressed
+            configuration.label
+                .frame(width: 28, height: 28)
+                .background {
+                    Circle().fill(trash ? Brand.trashFill : p ? Brand.choc100Pressed : Brand.choc100)
+                        .pressTone(p)
+                        .animation(Motion.quick.delay(StepperMotion.addCheckDelay), value: trash)
+                }
+                .contentShape(Rectangle().inset(by: -8))
+                .doughPress(p, squash: Motion.pressIcon)
+        }
     }
 }
 
-/// Option pill with the price of that choice under it (3-16): cocoa when picked, white with a liquorice edge.
-struct PricedOptionPill: View {
-    var text: String
-    var price: String?
-    var selected: Bool
-    var action: () -> Void
+/// One option group's chips with the price each choice leads to under it (3-16), as the board layers them: white
+/// chips with a 1.5 pt liquorice ring, the cocoa selection pill, then the labels. Picking another chip moves the
+/// pill there, the edge in the direction of travel on `Motion.doughLead` and the other on `Motion.doughTrail`, while
+/// the inks swap on `Motion.quick` (the new chip 0.04 s later). A press squashes the chip, and the pill if it sits
+/// under it. Reduce Motion: the pill fades in at the new chip and a press dims.
+struct OptionChips: View {
+    struct Choice: Identifiable {
+        var id: String
+        var text: String
+        var price: String?
+        var allowed: Bool
+    }
+    var choices: [Choice]
+    var selected: String?
+    var pick: (String) -> Void
+    @State private var frames: [String: CGRect] = [:]
+    @State private var pressed: String?
+    /// The selection pill's edges, each on its own spring (left, right, top, bottom).
+    @State private var pl: CGFloat = 0
+    @State private var pr: CGFloat = 0
+    @State private var pt: CGFloat = 0
+    @State private var pb: CGFloat = 0
+    @State private var picks = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
-        Button(action: action) {
+        FlowRow(spacing: 8) {
+            ForEach(choices) { c in chip(c) }
+        }
+        .coordinateSpace(.named("chips"))
+        .background { GeometryReader { g in layers(g.size) } }
+        .sensoryFeedback(.selection, trigger: picks)
+        // The first pick, or one another group's pick forced: place the pill, or send it over.
+        .onChange(of: selected, initial: true) { old, new in
+            guard let f = new.flatMap({ frames[$0] }), (pl, pr, pt, pb) != (f.minX, f.maxX, f.minY, f.maxY) else { return }
+            if old == nil || pr == pl { still { (pl, pr, pt, pb) = (f.minX, f.maxX, f.minY, f.maxY) } } else { travel(f) }
+        }
+    }
+
+    private func chip(_ c: Choice) -> some View {
+        let on = selected == c.id
+        return Button {
+            guard !on else { return }
+            if let to = frames[c.id] { travel(to) }
+            picks += 1
+            pick(c.id)
+        } label: {
             VStack(spacing: 1) {
-                Text(text).font(MenuFont.manrope(14, 600))
-                if let price { Text(price).font(MenuFont.manrope(11)).opacity(0.75) }
+                Text(c.text).font(MenuFont.manrope(14, 600))
+                if let price = c.price { Text(price).font(MenuFont.manrope(11)).opacity(0.75) }
             }
-            .foregroundStyle(selected ? Brand.cream : Brand.cocoa)
+            .foregroundStyle(on ? Brand.cream : Brand.cocoa)
+            .animation(reduceMotion ? Motion.Reduced.fade : on ? Motion.quick.delay(OptionMotion.inkDelay) : Motion.quick, value: on)
             .lineLimit(1)
-            .padding(.horizontal, 18).padding(.vertical, price == nil ? 11 : 8)
-            .background(Capsule().fill(selected ? Brand.cocoa : .white))
-            .overlay(Capsule().strokeBorder(Brand.liquorice400, lineWidth: selected ? 0 : 1.5))
+            .padding(.horizontal, 18).padding(.vertical, c.price == nil ? 11 : 8)
             .contentShape(Capsule())
         }
-        .buttonStyle(.plain)
-        .accessibilityLabel(price.map { "\(text), \($0)" } ?? text)
-        .accessibilityAddTraits(selected ? .isSelected : [])
+        .buttonStyle(ChipPress(id: c.id, pressed: $pressed))
+        .onGeometryChange(for: CGRect.self) { $0.frame(in: .named("chips")) } action: { f in
+            still {
+                frames[c.id] = f
+                if selected == c.id { (pl, pr, pt, pb) = (f.minX, f.maxX, f.minY, f.maxY) }
+            }
+        }
+        .disabled(!c.allowed)
+        .opacity(c.allowed ? 1 : SplitMotion.unavailableOpacity)
+        .accessibilityLabel(c.price.map { "\(c.text), \($0)" } ?? c.text)
+        .accessibilityAddTraits(on ? .isSelected : [])
+    }
+
+    /// The chip faces and the selection pill, under the labels.
+    @ViewBuilder private func layers(_ size: CGSize) -> some View {
+        ZStack(alignment: .topLeading) {
+            ForEach(choices) { c in
+                if let f = frames[c.id] {
+                    Capsule().fill(.white).overlay(Capsule().strokeBorder(Brand.liquorice400, lineWidth: 1.5))
+                        .frame(width: f.width, height: f.height)
+                        .modifier(Squash(on: pressed == c.id))
+                        .offset(x: f.minX, y: f.minY)
+                        .opacity(c.allowed ? 1 : SplitMotion.unavailableOpacity)
+                }
+            }
+            if reduceMotion {
+                ForEach(choices) { c in
+                    if let f = frames[c.id] {
+                        Capsule().fill(Brand.cocoa).frame(width: f.width, height: f.height).offset(x: f.minX, y: f.minY)
+                            .opacity(selected == c.id ? 1 : 0)
+                            .animation(Motion.Reduced.fade, value: selected)
+                    }
+                }
+            } else if let s = selected, frames[s] != nil {
+                // Each edge is its own animated value, so the edge that leads and the one that trails can run on
+                // different springs.
+                Edge(value: pl) { l in Edge(value: pr) { r in Edge(value: pt) { t in Edge(value: pb) { b in
+                    Capsule().fill(Brand.cocoa)
+                        .frame(width: max(0, r - l), height: max(0, b - t))
+                        .scaleEffect(pressed == s ? Motion.pressCompact : CGSize(width: 1, height: 1))
+                        .animation(pressed == s ? Motion.press : Motion.release, value: pressed == s)
+                        .offset(x: l, y: t)
+                } } } }
+            }
+        }
+        .frame(width: size.width, height: size.height, alignment: .topLeading)
+    }
+
+    /// The pill travels to `to`: the edge in the direction of travel on doughLead, the other on doughTrail.
+    private func travel(_ to: CGRect) {
+        let right = to.midX >= (pl + pr) / 2, down = to.midY >= (pt + pb) / 2
+        withAnimation(right ? Motion.doughTrail : Motion.doughLead) { pl = to.minX }
+        withAnimation(right ? Motion.doughLead : Motion.doughTrail) { pr = to.maxX }
+        withAnimation(down ? Motion.doughTrail : Motion.doughLead) { pt = to.minY }
+        withAnimation(down ? Motion.doughLead : Motion.doughTrail) { pb = to.maxY }
+    }
+
+    /// Layout changes (a chip measured) never animate the pill; only a pick does.
+    private func still(_ change: () -> Void) {
+        var t = Transaction()
+        t.disablesAnimations = true
+        withTransaction(t, change)
+    }
+
+    /// The label's press, reported so the face and the pill under it squash with it.
+    private struct ChipPress: ButtonStyle {
+        var id: String
+        @Binding var pressed: String?
+        func makeBody(configuration: Configuration) -> some View {
+            configuration.label
+                .doughPress(configuration.isPressed, squash: Motion.pressCompact)
+                .onChange(of: configuration.isPressed) { _, p in pressed = p ? id : (pressed == id ? nil : pressed) }
+        }
+    }
+
+    /// One edge's position, animated on its own and handed to `content` frame by frame.
+    private struct Edge<Content: View>: View, Animatable {
+        var value: CGFloat
+        @ViewBuilder var content: (CGFloat) -> Content
+        var animatableData: CGFloat {
+            get { value }
+            set { value = newValue }
+        }
+        var body: some View { content(value) }
+    }
+
+    private struct Squash: ViewModifier {
+        var on: Bool
+        func body(content: Content) -> some View { content.doughPress(on, squash: Motion.pressCompact) }
     }
 }
 

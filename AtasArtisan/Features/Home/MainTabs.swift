@@ -1,31 +1,61 @@
 import SwiftUI
 import Supabase
 
-/// Tab bar (Liquid Glass on iOS 26): Home, History, Profile.
+/// Home, History and Profile under the Ataste tab bar (design board "Ataste Tab Bar", 1a).
+/// All three stacks stay alive in a ZStack, as TabView kept them; the inactive ones are hidden.
 struct MainTabs: View {
     @Environment(AppModel.self) private var app
     @State private var tab = 0
     @State private var homePath = NavigationPath()
+    @State private var historyPath = NavigationPath()
     /// The create sheet on Home: true = group order, false = for myself.
     @State private var creating: Bool?
     /// "Start my own order" on a locked invite: opens the create sheet once the invite has closed.
     @State private var createAfterJoin = false
+    /// Tabs whose root screen has something pushed over it.
+    @State private var covered: Set<Int> = []
+    @State private var retaps = [0, 0, 0]
+    @State private var keyboard = false
+    @State private var safeBottom: CGFloat = 0
+    /// A group card opening into its group (Motion board 09), and the groups opened that way: their screens zoom
+    /// back into the card.
+    @State private var opening: CardOpening?
+    @State private var zoomed: Set<UUID> = []
+    @State private var homeStill = ScreenStill()
+    @Namespace private var cards
+
+    /// Home and History push through their paths, which hides the bar as the push starts; a root's onDisappear
+    /// catches the other pushes (Profile's links), at the end of the push.
+    private var barHidden: AtasteTabBar.Hidden? {
+        if keyboard { return .keyboard }
+        let pushed = covered.contains(tab) || (tab == 0 && (!homePath.isEmpty || opening != nil)) || (tab == 1 && !historyPath.isEmpty)
+        return pushed ? .pushed : nil
+    }
 
     var body: some View {
-        TabView(selection: $tab) {
-            Tab(value: 0) {
+        ZStack(alignment: .bottom) {
+            page(0) {
                 NavigationStack(path: $homePath) {
-                    HomeView(path: $homePath, creating: $creating) { tab = $0 }
-                        .navigationDestination(for: UUID.self) { GroupView(id: $0, path: $homePath) }
+                    root(0, HomeView(path: $homePath, creating: $creating, cards: cards, openCard: openCard) { tab = $0 })
+                        .background(ScreenStillProbe(still: homeStill))
+                        .navigationDestination(for: UUID.self) { id in
+                            GroupView(id: id, path: $homePath).modifier(ZoomBack(id: id, active: zoomed.contains(id), space: cards))
+                        }
                 }
-            } label: { tabLabel("Home", "house") }
-            Tab(value: 1) {
-                NavigationStack { HistoryView() }
-            } label: { tabLabel("History", "clock.arrow.circlepath") }
-            Tab(value: 2) {
-                NavigationStack { ProfileView() }
-            } label: { tabLabel("Profile", "person") }
+            }
+            if let o = opening {
+                CardOpenOverlay(opening: o) { opening = nil }
+            }
+            page(1) { NavigationStack(path: $historyPath) { root(1, HistoryView()) } }
+            page(2) { NavigationStack { root(2, ProfileView()) } }
+            AtasteTabBar(selection: $tab, hidden: barHidden, safeBottom: keyboard ? 0 : safeBottom) { retaps[$0] += 1 }
         }
+        .background {
+            Color.clear.ignoresSafeArea(.keyboard)
+                .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.bottom } action: { safeBottom = $0 }
+        }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboard = true }
+        .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in keyboard = false }
         .fullScreenCover(item: Binding(get: { app.pendingJoin.map(JoinCode.init) }, set: { app.pendingJoin = $0?.code }),
                          onDismiss: {
                              if createAfterJoin { createAfterJoin = false; tab = 0; creating = true }
@@ -55,9 +85,42 @@ struct MainTabs: View {
 }
 
 extension MainTabs {
-    /// The design's tab icons are outlines (house, history, user); the tab bar would otherwise fill them.
-    fileprivate func tabLabel(_ title: String, _ symbol: String) -> some View {
-        Label(title, systemImage: symbol).environment(\.symbolVariants, .none)
+    fileprivate func page(_ i: Int, @ViewBuilder _ content: () -> some View) -> some View {
+        content()
+            .environment(\.pageShown, tab == i)
+            .opacity(tab == i ? 1 : 0)
+            .allowsHitTesting(tab == i)
+            .accessibilityHidden(tab != i)
+            .animation(TabMotion.screenSwap, value: tab)
+    }
+
+    /// A tab's root screen: room for the bar (its top edge plus a 16pt gap; none while typing), the re-tap count,
+    /// and whether something is pushed over it.
+    fileprivate func root(_ i: Int, _ screen: some View) -> some View {
+        screen
+            .safeAreaInset(edge: .bottom, spacing: 0) {
+                Color.clear.frame(height: keyboard ? 0 : max(0, AtasteTabBar.top + 16 - safeBottom))
+            }
+            .environment(\.tabRetap, retaps[i])
+            .onAppear { covered.remove(i) }
+            .onDisappear { covered.insert(i) }
+    }
+}
+
+extension MainTabs {
+    /// A group card was tapped: put a still of Home over the screen, push the group under it without animation, and
+    /// let the card's frame grow into the group screen.
+    fileprivate func openCard(_ id: UUID, _ frame: CGRect) {
+        guard opening == nil else { return }
+        guard let home = homeStill.capture(), frame.width > 0 else { return homePath.append(id) }
+        zoomed.insert(id)
+        opening = CardOpening(id: id, frame: frame, fill: Brand.card, home: home, card: ScreenStill.crop(home, to: frame))
+        Task { @MainActor in
+            await Task.yield()
+            var t = Transaction()
+            t.disablesAnimations = true
+            withTransaction(t) { homePath.append(id) }
+        }
     }
 }
 
@@ -68,6 +131,9 @@ struct JoinCode: Identifiable { var code: String; var id: String { code } }
 struct HomeView: View {
     @Binding var path: NavigationPath
     @Binding var creating: Bool?
+    /// The group cards' zoom sources, and the opening a card plays when tapped (its frame on screen).
+    var cards: Namespace.ID
+    var openCard: (UUID, CGRect) -> Void
     var showTab: (Int) -> Void
     @Environment(AppModel.self) private var app
     @State private var groups: [OrderGroup] = []
@@ -81,10 +147,12 @@ struct HomeView: View {
     @State private var pasting = false
     @State private var pastedCode: String?
     @State private var problem: Problem?
+    @State private var cardFrames: [UUID: CGRect] = [:]
     #if DEBUG
     @State private var debugSheet: String?
     #endif
 
+    private static let emptyID = "home"
     private var active: [OrderGroup] { groups.filter { $0.state.isLive } }
     private var pastCount: Int { groups.filter { [.delivered, .closed, .cancelled].contains($0.state) }.count }
     private var empty: Bool { loaded && active.isEmpty }
@@ -95,14 +163,16 @@ struct HomeView: View {
                 header
                 if empty { emptyState } else { list }
             }
-            .padding(.bottom, Brand.s5)
+            // Room under the last card. The empty state needs none: its buttons sit in their own bottom inset.
+            .padding(.bottom, empty ? 0 : Brand.s5)
         }
+        .pullToRefresh { await load() }
+        .scrollsToTopOnRetap()
         .scrollBounceBehavior(.basedOnSize)
         .screen()
         .navigationTitle("Home")
         .toolbar(.hidden, for: .navigationBar)
         .safeAreaInset(edge: .bottom) { if empty { emptyActions } }
-        .refreshable { await load() }
         .task(id: app.homeVersion) { await load() }
         .task {
             switch HomeDebug.screen {
@@ -186,10 +256,12 @@ struct HomeView: View {
                 }
                 .padding(.horizontal, Brand.s1)
                 ForEach(active) { g in
-                    Button { path.append(g.id) } label: {
+                    Button { openCard(g.id, cardFrames[g.id] ?? .zero) } label: {
                         OrderCard(group: g, bill: bills[g.id], host: hosts[g.host_id], groupSubtotal: subtotals[g.id], summary: summaries[g.id])
                     }
-                    .buttonStyle(.plain)
+                    .buttonStyle(DoughStyle(squash: Motion.pressCard, haptic: nil))
+                    .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { cardFrames[g.id] = $0 }
+                    .matchedTransitionSource(id: g.id, in: cards)
                 }
                 VStack(spacing: 0) {
                     RowLink(icon: "link", fill: Brand.choc100, title: "Paste a join link", subtitle: "If a link opened in Safari instead") { pasting = true }
@@ -207,12 +279,15 @@ struct HomeView: View {
 
     // MARK: Empty (2-2)
 
+    /// 2-2's first view this session plays the empty-state entrance (Motion board 22); later views are still.
     private var emptyState: some View {
         VStack(spacing: 14) {
-            CaptionedPainting(art: "paint-supper", title: "The Last Supper Club", width: 300, height: 167, tilt: -1.5)
+            CaptionedPainting(art: "paint-supper", title: "The Last Supper Club", width: 300, height: 167, tilt: -1.5, intro: Self.emptyID)
             Text("No orders baking…yet!").styled(.title1, 28).multilineTextAlignment(.center)
+                .emptyIntro(.headline, id: Self.emptyID)
             Text("Start a group so everyone’s croissants count toward the Rp 200.000 ongkir discount.")
                 .styled(.body, 15, Brand.ink2).lineSpacing(4).multilineTextAlignment(.center).frame(maxWidth: 300)
+                .emptyIntro(.body, id: Self.emptyID)
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 40)
@@ -222,18 +297,22 @@ struct HomeView: View {
     private var emptyActions: some View {
         VStack(spacing: 10) {
             Button("Start a group order") { creating = true }.buttonStyle(.pill(.primary))
+                .emptyIntro(.primary, id: Self.emptyID)
             HStack(spacing: 10) {
                 // Two pills share the row: the pill's 32pt side padding is trimmed to the design's 12.
                 Button { creating = false } label: { Text("Order for myself").padding(.horizontal, -20).frame(maxWidth: .infinity) }
                 Button { pasting = true } label: { Label("Paste link", systemImage: "link").padding(.horizontal, -20).frame(maxWidth: .infinity) }
             }
             .buttonStyle(.pill(.secondary, .medium))
+            .emptyIntro(.secondary, id: Self.emptyID)
         }
         .padding(.horizontal, Brand.s4)
         .padding(.bottom, Brand.s4)
     }
 
-    private func load() async {
+    /// Loads the active orders; says whether it worked (a failure also raises the problem alert).
+    @discardableResult
+    private func load() async -> Bool {
         do {
             var all: [OrderGroup] = try await supabase.from("groups").select().order("delivery_at").execute().value
             #if DEBUG
@@ -263,11 +342,14 @@ struct HomeView: View {
                 }
             }
         } catch where isCancellation(error) {
-            return
+            return true
         } catch {
             problem = Problem(title: "Couldn't load your orders", message: readable(error))
+            loaded = true
+            return false
         }
         loaded = true
+        return true
     }
 }
 
@@ -328,7 +410,8 @@ struct BigChoice: View {
             .clipShape(RoundedRectangle(cornerRadius: Brand.rHero, style: .continuous))
             .contentShape(RoundedRectangle(cornerRadius: Brand.rHero, style: .continuous))
         }
-        .buttonStyle(.plain)
+        // The card squashes on touch down (Motion board 09); it opens the create sheet.
+        .buttonStyle(DoughStyle(squash: Motion.pressCard, haptic: nil))
     }
 }
 

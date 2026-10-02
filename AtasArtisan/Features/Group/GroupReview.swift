@@ -319,7 +319,7 @@ extension GroupView {
                 } label: { Label("Replace", systemImage: "arrow.triangle.2.circlepath") }
                 .buttonStyle(BarPillStyle(kind: .dark, height: 52))
                 Button {
-                    confirm = removeItemConfirm(store, item) {
+                    asking = removeItemConfirm(store, item) {
                         try await store.remove(item)
                         removedInRound = true
                     }
@@ -377,7 +377,7 @@ extension GroupView {
 struct RequestEditSheet: View {
     var store: GroupStore
     var seed: RequestSeed
-    @Environment(\.dismiss) private var dismiss
+    @Environment(\.closeSheet) private var close
     @State private var member: UUID?
     @State private var picked: Set<UUID> = []
     @State private var reason: RequestSeed.Reason?
@@ -420,23 +420,18 @@ struct RequestEditSheet: View {
                         .overlay(RoundedRectangle(cornerRadius: 16, style: .continuous).strokeBorder(Brand.caramel, lineWidth: 2))
                 }
             }
-            .padding(.horizontal, 18)
             .padding(.top, 8)
+            .padding(.bottom, 16)
         }
+        .scrollIndicators(.hidden)
         .scrollDismissesKeyboard(.interactively)
-        .screen()
         .safeAreaInset(edge: .bottom) {
             Button { Task { await send() } } label: {
                 Label("Send to \(member.map { store.name($0) } ?? "them")", systemImage: "paperplane")
             }
             .buttonStyle(.pill(.primary))
             .disabled(picked.isEmpty || busy)
-            .padding(.horizontal, 24)
-            .padding(.bottom, 8)
         }
-        .navigationTitle("Request an edit")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
         .onAppear {
             member = seed.member.flatMap { people.contains($0) ? $0 : nil } ?? people.first
             if let i = seed.item { picked = [i] }
@@ -541,7 +536,7 @@ struct RequestEditSheet: View {
             for id in picked {
                 try await store.rpc("request_edit", ["item": .string(id.uuidString), "reason": .string(text.trimmingCharacters(in: .whitespacesAndNewlines))])
             }
-            dismiss()
+            close?()
         }
     }
 }

@@ -1,7 +1,7 @@
 import SwiftUI
 
 // Pieces the onboarding, History and Profile boards draw that the shared components don't have yet:
-// the painting caption, the slowly turning dashed ring (`<at-spin>`), the WhatsApp glyph (`<at-icon name="wa">`)
+// the painting caption, the dashed ring (`<at-spin>`), the WhatsApp glyph (`<at-icon name="wa">`)
 // and the 1-1 splash. Prefixed `Ob` so they can't collide with names other features add.
 
 extension View {
@@ -28,22 +28,22 @@ struct ObCaption: View {
     }
 }
 
-/// `<at-spin>`: a dashed ring turning once every 14 s.
-struct ObSpinRing: View {
+/// `<at-spin>`: the dashed ring. It turns a quarter (`Motion.ringStep`) each time `turns` goes up, on the slow
+/// critically damped `Motion.ringTurn`, then rests: a real step turns it, waiting never does. `from` is where it sits
+/// at `turns` 0. Reduce Motion keeps it still.
+struct ObRing: View {
     var size: CGFloat
     var color: Color = Brand.caramel
-    @State private var turn = false
+    var turns = 0
+    var from: Angle = .zero
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         Circle()
             .inset(by: size * 0.01)
             .stroke(color, style: StrokeStyle(lineWidth: 1.2, dash: [size * 0.03, size * 0.03]))
             .frame(width: size, height: size)
-            .rotationEffect(.degrees(turn ? 360 : 0))
-            .onAppear {
-                guard !reduceMotion else { return }
-                withAnimation(.linear(duration: 14).repeatForever(autoreverses: false)) { turn = true }
-            }
+            .rotationEffect(reduceMotion ? .zero : .degrees(from.degrees + Motion.ringStep.degrees * Double(turns)))
+            .animation(reduceMotion ? nil : Motion.ringTurn, value: turns)
             .accessibilityHidden(true)
     }
 }
@@ -91,28 +91,42 @@ struct ObWhatsAppGlyph: View {
     }
 }
 
-/// 1-1 Splash: caramel screen, giraffe in a turning ring, the cream logo pill, "Proofing the dough…".
-/// RootView shows `LoaderView` while the session loads; this is the board's version of that moment.
+/// 1-1 Splash: caramel screen, giraffe in the dashed ring, the cream logo pill, "Proofing the dough…".
+/// RootView shows it while the session loads. On launch the ring turns a quarter into place (−90° → 0°), the giraffe
+/// settles from 0.9, the logo drops in from 24 pt above and the caption fades in; while it waits nothing moves. When
+/// the app is `ready` the ring turns a further quarter and the logo bumps, then RootView crossfades to the next screen.
+/// Reduce Motion: the logo and caption fade in; the ring and giraffe are still.
 struct SplashView: View {
+    var ready = false
+    @State private var launched = false
+    @State private var bumps = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
     var body: some View {
         ZStack {
             Brand.caramel.ignoresSafeArea()
             VStack(spacing: 40) {
                 ZStack {
-                    ObSpinRing(size: 260, color: Brand.cream)
+                    ObRing(size: 260, color: Brand.cream, turns: (launched ? 1 : 0) + (ready ? 1 : 0), from: SplashMotion.ringFrom)
                     Mascot(pose: "pose-neutral", size: 216, fill: Brand.choc100)
+                        .entrance(launched, scale: SplashMotion.mascotFrom, Motion.bounce, fades: false, delay: SplashMotion.mascotDelay)
                 }
                 Text("ataste")
                     .obText(.display, 46, tracking: -0.03, Brand.caramel)
                     .padding(.horizontal, 26).padding(.top, 6).padding(.bottom, 10)
                     .background(Capsule().fill(Brand.cream))
                     .background(Capsule().fill(Brand.cocoa).offset(y: 5))
+                    .kick(reduceMotion ? 0 : bumps, from: SplashMotion.readyBump)
+                    .entrance(launched, offset: SplashMotion.logoOffset, Motion.arrive, fade: nil, delay: SplashMotion.logoDelay)
                     .accessibilityLabel("Ataste")
             }
         }
         .preferredColorScheme(.dark)
         .overlay(alignment: .bottom) {
             Text("Proofing the dough…").obText(.title2, 20, Brand.cream).padding(.bottom, 50)
+                .entrance(launched, Motion.fade, delay: SplashMotion.captionDelay)
         }
+        .onAppear { launched = true }
+        .onChange(of: ready) { _, r in if r { bumps += 1 } }
     }
 }

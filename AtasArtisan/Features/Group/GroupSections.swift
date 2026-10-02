@@ -8,10 +8,12 @@ extension GroupView {
 
     // MARK: Header
 
-    func header(_ g: OrderGroup, subtitle: Bool = false) -> some View {
+    /// `chipIn` false holds the state chip back until 5-2 plays in after the WhatsApp hand-off (it pops in then).
+    func header(_ g: OrderGroup, subtitle: Bool = false, chipIn: Bool = true) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
                 StateTag(state: g.state)
+                    .entrance(chipIn, scale: 0.01, tilt: StepperMotion.iconTilt, Motion.pop, delay: HandOffMotion.chipDelay)
                 if g.personal { Tag(text: "Just me", fill: .white, ink: Brand.ink3, dot: Brand.liquorice400) }
                 Spacer(minLength: 8)
                 headerTrailing(g)
@@ -79,8 +81,8 @@ extension GroupView {
         if g.personal {
             personalItems(g)
         } else if store.isHost {
-            listHeader("Members · \(store.activeMembers.count)") {
-                Button { sheet = .share } label: {
+            listHeader("Members", count: store.activeMembers.count) {
+                Button { openShare() } label: {
                     HStack(spacing: 4) { icon("square.and.arrow.up", 14, Brand.caramel); Text("Invite") }
                         .ui(GFont.manrope(13, 600), Brand.caramel)
                 }
@@ -89,7 +91,7 @@ extension GroupView {
             memberList(g, store.activeMembers)
         } else {
             myItemsCard(g)
-            listHeader("Everyone · \(store.activeMembers.count)") {
+            listHeader("Everyone", count: store.activeMembers.count) {
                 HStack(spacing: 3) {
                     Text("Tap")
                     Image(systemName: "chart.pie").font(.system(size: 11, weight: .semibold))
@@ -106,9 +108,13 @@ extension GroupView {
         }
     }
 
-    private func listHeader<Trailing: View>(_ title: String, @ViewBuilder trailing: () -> Trailing) -> some View {
+    /// "MEMBERS · 4": the count rolls when someone joins or leaves (Motion board 11).
+    private func listHeader<Trailing: View>(_ title: String, count: Int, @ViewBuilder trailing: () -> Trailing) -> some View {
         HStack(alignment: .firstTextBaseline) {
-            Text(title).brand(.label)
+            (Text("\(title) · ") + Text("\(count)"))
+                .brand(.label)
+                .contentTransition(reduceMotion ? .opacity : .numericText(value: Double(count)))
+                .animation(reduceMotion ? Motion.Reduced.fade : Motion.digits, value: count)
             Spacer()
             trailing()
         }
@@ -146,17 +152,21 @@ extension GroupView {
             HStack {
                 Text("My items").brand(.label)
                 Spacer()
-                Text(Rupiah.format(mine.reduce(0) { $0 + $1.total })).ui(GFont.roundo(18))
+                CountUp(amount: mine.reduce(0) { $0 + $1.total }) { Text(Rupiah.format($0)) }.ui(GFont.roundo(18))
             }
             .padding(.bottom, 10)
             if mine.isEmpty {
                 Text("Nothing in the oven…yet!").ui(GFont.manrope(13), Brand.ink4).padding(.vertical, 10)
             }
             ForEach(Array(mine.enumerated()), id: \.element.id) { i, item in
-                if i > 0 { Rectangle().fill(Brand.liquorice100).frame(height: 1) }
-                myItemRow(g, item)
+                VStack(spacing: 0) {
+                    if i > 0 { Rectangle().fill(Brand.liquorice100).frame(height: 1) }
+                    myItemRow(g, item)
+                }
+                .transition(.itemRow)
             }
         }
+        .rowMotion(mine.map(\.id))
         .surface(32, padding: EdgeInsets(top: 18, leading: 18, bottom: 8, trailing: 18))
     }
 
@@ -184,7 +194,7 @@ extension GroupView {
 
     func changeQty(_ item: Item, to q: Int, split: Split?) {
         if q == 0 {
-            confirm = removeItemConfirm(store, item) { try await store.remove(item) }
+            asking = removeItemConfirm(store, item) { try await store.remove(item) }
         } else {
             Task { await act("Couldn't change the quantity") { try await store.update(item, qty: q) } }
         }
@@ -220,13 +230,19 @@ extension GroupView {
     }
 
     /// 3-1 / 3-2 member rows. A row with splits opens to show them; rows waiting on me open by themselves.
+    /// Someone joining while the screen is open gets a row that opens at the end, its avatar popping in; someone
+    /// leaving folds theirs (Motion board 11).
     private func memberList(_ g: OrderGroup, _ members: [Member]) -> some View {
         VStack(spacing: 0) {
             ForEach(Array(members.enumerated()), id: \.element.user_id) { i, m in
-                if i > 0 { Rectangle().fill(Brand.liquorice100).frame(height: 1) }
-                memberRow(g, m)
+                VStack(spacing: 0) {
+                    if i > 0 { Rectangle().fill(Brand.liquorice100).frame(height: 1) }
+                    memberRow(g, m)
+                }
+                .transition(.itemRow)
             }
         }
+        .rowMotion(members.map(\.user_id))
         .surface(32, padding: edges(4, 18))
     }
 
@@ -240,6 +256,7 @@ extension GroupView {
         return VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
                 Avatar(name: store.name(user), index: store.colorIndex(user), size: 40, art: store.people[user]?.avatar, bg: store.people[user]?.avatar_bg)
+                    .modifier(PopOnAppear(active: joined.contains(user), delay: MembersMotion.rowDelay))
                     .frame(maxHeight: .infinity, alignment: .top)
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(alignment: .firstTextBaseline) {
@@ -281,20 +298,20 @@ extension GroupView {
         if store.isHost && user != store.me {
             if let phone = store.people[user]?.phone {
                 Button { openURL(Links.whatsApp(phone)) } label: { RoundIcon(fill: Brand.lime) { WhatsAppGlyph(size: 15) } }
-                    .buttonStyle(.plain)
+                    .buttonStyle(DoughStyle())
                     .accessibilityLabel("WhatsApp \(store.name(user))")
             }
         } else if !splittable.isEmpty && store.activeMembers.count > 1 {
             Group {
                 if splittable.count == 1 {
-                    Button { sheet = .split(splittable[0]) } label: { pieIcon }
+                    Button { sheet = .split(splittable[0]) } label: { pieIcon }.buttonStyle(DoughStyle())
                 } else {
                     Menu {
                         ForEach(splittable) { i in Button("\(i.qty)× \(i.name)") { sheet = .split(i) } }
                     } label: { pieIcon }
+                    .buttonStyle(.plain)
                 }
             }
-            .buttonStyle(.plain)
             .accessibilityLabel(user == store.me ? "Split one of my items" : "Propose a split with \(store.name(user))")
         } else {
             Color.clear.frame(width: 44, height: 44)
@@ -390,10 +407,14 @@ extension GroupView {
 
     // MARK: Sent to Atas (5-2)
 
+    /// Back from the WhatsApp hand-off (`sentIn` turning true), 5-2 is laid out at once and its parts play in: the
+    /// chip pops, the waiting card rises 16 pt as its giraffe drops in from 30 pt above, the totals follow, then the
+    /// bar's button rises 40 pt. Reduce Motion fades them in.
     @ViewBuilder func sentSections(_ g: OrderGroup) -> some View {
-        header(g)
+        header(g, chipIn: sentIn)
         HStack(spacing: 14) {
             Mascot(pose: "pose-delivery", size: 110, fill: Brand.cream)
+                .entrance(sentIn, offset: HandOffMotion.mascotOffset, Motion.bounce, fades: false, delay: HandOffMotion.mascotDelay)
             VStack(alignment: .leading, spacing: 6) {
                 Text("Waiting for Atas to reply").ui(GFont.roundo(20))
                 Text(sentBody(g)).ui(GFont.manrope(13), Brand.cocoa).lineSpacing(3)
@@ -401,6 +422,7 @@ extension GroupView {
             .fixedSize(horizontal: false, vertical: true)
         }
         .surface(32, padding: edges(20, 20), fill: Brand.choc100)
+        .entrance(sentIn, offset: HandOffMotion.cardOffset, Motion.settle, delay: HandOffMotion.cardDelay)
         VStack(spacing: 10) {
             HStack {
                 Text("Items").ui(GFont.manrope(14, 600), Brand.ink2)
@@ -414,11 +436,13 @@ extension GroupView {
             }
         }
         .surface(24, padding: edges(16, 16))
+        .entrance(sentIn, offset: HandOffMotion.cardOffset, Motion.settle, delay: HandOffMotion.totalsDelay)
         if store.isHost {
             Button { openURL(Links.whatsApp(Links.atasNumber)) } label: {
                 Label { Text("Open the Atas chat") } icon: { WhatsAppGlyph(size: 17) }
             }
             .buttonStyle(BarPillStyle(kind: .secondary, height: 52))
+            .entrance(sentIn, offset: HandOffMotion.cardOffset, Motion.settle, delay: HandOffMotion.totalsDelay)
         } else {
             myItemsCompact
         }

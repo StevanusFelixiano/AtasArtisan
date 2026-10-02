@@ -30,6 +30,7 @@ struct ProfileView: View {
             .padding(.horizontal, Brand.s4)
             .padding(.bottom, Brand.s5)
         }
+        .scrollsToTopOnRetap()
         .screen()
         .navigationTitle("Profile")
         .toolbar(.hidden, for: .navigationBar)
@@ -332,7 +333,6 @@ struct NotificationSettingsView: View {
         .screen()
         .navigationTitle("Notifications")
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar(.hidden, for: .tabBar)
     }
 
     private func binding(_ kinds: [String]) -> Binding<Bool> {
@@ -401,7 +401,6 @@ struct PayoutEditor: View {
         .screen()
         .navigationTitle(account.label.isEmpty ? "Payment method" : account.label)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar(.hidden, for: .tabBar)
         .toolbar {
             if sheet { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
         }

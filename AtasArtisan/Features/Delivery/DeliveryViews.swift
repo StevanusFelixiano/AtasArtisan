@@ -13,6 +13,9 @@ struct DeliveryView: View {
     @State private var problem: Problem?
     /// The JPEG of an upload that failed, kept for "Try again" (6-9's pattern).
     @State private var failed: Data?
+    /// The photo's upload, drawn over it as on the receipt (Motion board 18); its button gives the haptics.
+    @State private var photoUpload: UploadState?
+    @State private var retries = 0
 
     private var cameraAvailable: Bool { UIImagePickerController.isSourceTypeAvailable(.camera) }
 
@@ -28,7 +31,11 @@ struct DeliveryView: View {
         .onChange(of: pick) { _, item in
             Task { if let d = try? await item?.loadTransferable(type: Data.self) { image = UIImage(data: d) } }
         }
-        .onChange(of: image) { _, _ in failed = nil }
+        .onChange(of: image) { _, _ in
+            failed = nil
+            photoUpload = nil
+        }
+        .sensoryFeedback(Haptic.tap, trigger: retries)
         .problemAlert($problem)
         #if DEBUG
         .onAppear {
@@ -70,14 +77,23 @@ struct DeliveryView: View {
                     .frame(height: 440)
                     .overlay { Image(uiImage: image).resizable().scaledToFill() }
                     .clipShape(RoundedRectangle(cornerRadius: Brand.rHero, style: .continuous))
+                    .modifier(UploadOverlay(state: photoUpload, radius: Brand.rHero, badge: false))
+                    // A failed upload: tapping the photo tries again.
+                    .onTapGesture {
+                        guard photoUpload == .failed, !busy else { return }
+                        retries += 1
+                        Task { await retryUpload() }
+                    }
                     .accessibilityLabel("Delivery photo")
+                    .accessibilityAddTraits(photoUpload == .failed ? .isButton : [])
+                    .accessibilityHint(photoUpload == .failed ? "Uploads the photo again" : "")
                 VStack(alignment: .leading, spacing: 6) {
                     Text("Everything arrived?").font(Type5.roundo(22)).foregroundStyle(Brand.cocoa)
                     Text(closing).font(Type5.manrope(14)).lineSpacing(1).foregroundStyle(Brand.ink2)
                 }
                 .padding(.horizontal, 4)
                 if let failed {
-                    UploadFailedCard(image: UIImage(data: failed)) { Task { await confirm() } }.disabled(busy)
+                    UploadFailedCard(image: UIImage(data: failed)) { Task { await retryUpload() } }.disabled(busy)
                 }
             }
             .padding(.horizontal, Brand.s4)
@@ -85,19 +101,24 @@ struct DeliveryView: View {
             .padding(.bottom, Brand.s4)
         }
         .safeAreaInset(edge: .bottom) {
-            HStack(spacing: 10) {
+            HStack(alignment: .bottom, spacing: 10) {
                 Button("Retake") {
                     self.image = nil
                     pick = nil
                     if cameraAvailable { camera = true }
                 }
                 .buttonStyle(WidePill(fill: Brand.cream, ink: Brand.cocoa, border: Brand.choc100))
-                // 16 pt in a 1 : 1.6 split: the shared large pill's 32 pt side padding would truncate the label.
-                Button("Confirm delivered", systemImage: "checkmark") { Task { await confirm() } }
-                    .buttonStyle(WidePill(fill: Brand.caramel, ink: Brand.cream))
-                    .containerRelativeFrame(.horizontal) { w, _ in (w - 42) * 1.6 / 2.6 }
+                .disabled(busy)
+                // A 1 : 1.6 split: the shared large pill's 32 pt side padding would truncate the label, so it's tight.
+                AsyncPill(title: "Confirm delivered", icon: "checkmark", busyTitle: "Confirming…", doneTitle: "Delivered",
+                          failTitle: "Couldn’t confirm delivery", tight: true,
+                          refresh: store.refresh, reached: { store.group?.state == .delivered }) {
+                    try await confirm()
+                } then: {
+                    dismiss()
+                }
+                .containerRelativeFrame(.horizontal) { w, _ in (w - 42) * 1.6 / 2.6 }
             }
-            .disabled(busy)
             .padding(.horizontal, Brand.s4)
             .padding(.bottom, 10)
         }
@@ -110,23 +131,29 @@ struct DeliveryView: View {
     }
 
     /// Uploads the photo (a fresh path each try: the bucket allows insert only), then marks the order delivered.
-    /// A failed upload shows the failed card with the same JPEG; a refused state change is an alert.
-    private func confirm() async {
-        guard let jpeg = failed ?? image?.jpegData(compressionQuality: 0.9).flatMap(JPEG.compress) else { return }
-        busy = true
-        defer { busy = false }
+    /// A failed upload also shows the failed card with the same JPEG. Errors go to the Confirm delivered button.
+    private func confirm() async throws {
+        guard let jpeg = failed ?? image?.jpegData(compressionQuality: 0.9).flatMap(JPEG.compress) else { throw UploadError.unreadable }
         let path = "\(store.id.uuidString.lowercased())/\(UUID().uuidString.lowercased()).jpg"
+        photoUpload = .uploading
         do {
             try await supabase.storage.from("delivery").upload(path, data: jpeg, options: FileOptions(contentType: "image/jpeg"))
             failed = nil
-        } catch where isCancellation(error) {
-            return
+            photoUpload = .done
         } catch {
-            failed = jpeg
-            return
+            if !isCancellation(error) { failed = jpeg }
+            photoUpload = .failed
+            throw error
         }
+        try await store.rpc("confirm_delivered", ["g": .string(store.id.uuidString), "path": .string(path)])
+    }
+
+    /// The failed card's Try again: the whole confirm, with an alert if it fails again.
+    private func retryUpload() async {
+        busy = true
+        defer { busy = false }
         await attempt($problem, "Couldn't confirm delivery") {
-            try await store.rpc("confirm_delivered", ["g": .string(store.id.uuidString), "path": .string(path)])
+            try await confirm()
             dismiss()
         }
     }

@@ -15,6 +15,9 @@ struct ProductView: View {
     @State private var note = ""
     @State private var busy = false
     @State private var problem: Problem?
+    /// The price on show, so a change rolls up or down.
+    @State private var shownPrice = 0
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var variants: [VariantChoice] {
         product.variants.map { VariantChoice(options: $0.options, price: $0.price, available: $0.available ?? true) }
@@ -56,7 +59,12 @@ struct ProductView: View {
                 .tint(Brand.cocoa)
             }
         }
-        .onAppear { if picked.isEmpty { picked = OptionMatch.defaultPick(variants: variants) } }
+        .onAppear {
+            // The first pick shows still; only a change of choice rolls the price.
+            var still = Transaction()
+            still.disablesAnimations = true
+            if picked.isEmpty { withTransaction(still) { picked = OptionMatch.defaultPick(variants: variants) } }
+        }
         .problemAlert($problem)
     }
 
@@ -91,7 +99,9 @@ struct ProductView: View {
                     .accessibilityAddTraits(.isHeader)
                 Text(priceText).font(MenuFont.roundo(22)).foregroundStyle(soldOut ? Brand.ink4 : Brand.cocoa)
                     .fixedSize().padding(.top, 2)
-                    .contentTransition(.numericText())
+                    .contentTransition(reduceMotion ? .opacity : .numericText(countsDown: (price ?? 0) < shownPrice))
+                    .animation(reduceMotion ? Motion.Reduced.fade : Motion.digits, value: priceText)
+                    .onChange(of: price, initial: true) { _, p in shownPrice = p ?? 0 }
             }
             if !product.description.isEmpty && product.description != "Click for more size" {
                 Text(product.description).font(MenuFont.manrope(hasOptions ? 14 : 15)).foregroundStyle(Brand.ink2)
@@ -124,14 +134,10 @@ struct ProductView: View {
         let showPrices = Set(prices.compactMap { $0 }).count > 1
         return VStack(alignment: .leading, spacing: 8) {
             Text(optionGroupLabel(g.name)).brand(.label)
-            FlowRow(spacing: 8) {
-                ForEach(Array(g.choices.enumerated()), id: \.element) { i, c in
-                    PricedOptionPill(text: optionLabel(c), price: showPrices ? prices[i].map(Rupiah.format) : nil,
-                                     selected: picked[g.name] == c) { pick(g.name, c) }
-                        .disabled(!allowed.contains(c))
-                        .opacity(allowed.contains(c) ? 1 : 0.4)
-                }
-            }
+            OptionChips(choices: g.choices.enumerated().map { i, c in
+                            OptionChips.Choice(id: c, text: optionLabel(c), price: showPrices ? prices[i].map(Rupiah.format) : nil, allowed: allowed.contains(c))
+                        },
+                        selected: picked[g.name]) { pick(g.name, $0) }
         }
     }
 
@@ -151,7 +157,7 @@ struct ProductView: View {
            let v = variants.first(where: { $0.available && $0.options[group] == choice }) {
             next = v.options
         }
-        withAnimation(.snappy) { picked = next }
+        picked = next
     }
 
     private var noteField: some View {
@@ -191,7 +197,7 @@ struct ProductView: View {
     private var actionBar: some View {
         Group {
             if soldOut {
-                Button("Sold out today") {}.buttonStyle(.pill(.primary)).disabled(true)
+                Button("Sold out today") {}.buttonStyle(.pill(.primary)).disabled(true, reason: nil)
             } else if hasOptions {
                 HStack(spacing: 10) {
                     stepper(pad: 6)
