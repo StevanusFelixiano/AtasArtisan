@@ -737,6 +737,7 @@ struct AvatarPicker: View {
                     .padding(.horizontal, 14).padding(.vertical, 10)
                     .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Brand.card))
                     .overlay { if choice == nil { RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(Brand.caramel, lineWidth: 2.5) } }
+                    .padding(.top, 20)
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(choice == nil ? .isSelected : [])
