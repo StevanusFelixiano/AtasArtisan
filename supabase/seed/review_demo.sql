@@ -5,7 +5,7 @@ do $$
 declare
   rani uuid := (select id from public.profiles where phone = '6200000000001');
   ids uuid[] := array[]::uuid[];
-  n text; i int := 2; u uuid; g1 uuid; g2 uuid; s uuid; rani_acct uuid; dimas_acct uuid;
+  n text; i int := 2; u uuid; g1 uuid; g2 uuid; rani_acct uuid; dimas_acct uuid;
   p record;
 begin
   if rani is null then raise exception 'sign the review account in once first'; end if;
@@ -50,9 +50,11 @@ begin
     insert into public.items (group_id, owner_id, product_id, options, qty, note)
       select g1, p.owner, pr.id, p.opts, p.qty, p.note from public.products pr where pr.name = p.pname;
   end loop;
-  insert into public.splits (item_id, proposer_id, state)
-    select it.id, rani, 'accepted' from public.items it where it.group_id = g1 and it.name = 'Burnt Cheesecake 20 cm' returning id into s;
-  insert into public.split_shares (split_id, user_id, pct, accepted_at) values (s, rani, 50, now()), (s, ids[2], 25, now()), (s, ids[3], 25, now());
+  -- Rani shares her cheesecake in 12 pieces; Putri and Kevin claim 3 each.
+  update public.items set share_pieces = 12 where group_id = g1 and name = 'Burnt Cheesecake 20 cm';
+  insert into public.item_claims (item_id, group_id, user_id, pieces)
+    select it.id, g1, x, 3 from public.items it, unnest(array[ids[2], ids[3]]) x
+    where it.group_id = g1 and it.name = 'Burnt Cheesecake 20 cm';
 
   -- Group 2: Dimas hosts, Atas confirmed, Rani owes him.
   insert into public.groups (host_id, name, area, address_label, address_detail, delivery_at, payout_account_id, state, sent_at)

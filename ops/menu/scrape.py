@@ -5,7 +5,8 @@ atasartisan.com is an iSeller store whose pages load the menu through form-encod
   /services/Liquid/Collections  -> the 5 collections
   /services/Liquid/Products     -> products of one collection (only the default variant)
   /services/Liquid/Product      -> one product with every variant and its options (Berat, Slice, ...)
-About 40 requests a run, direct (no proxy). Photos stay on Atas's CDN; we keep only the URL.
+About 40 requests a run, direct (no proxy). Photos stay on Atas's CDN; we keep only the URL, for the product
+and, when iSeller has one, for each variant (variants[].image: a flavour's own photo).
 Skips the upload when the menu is unchanged since the last run (hash in STATE).
 
 env: ATASTE_INGEST_URL, ATASTE_SCRAPER_SECRET; STATE (default /var/lib/ataste-menu/last.sha256)
@@ -50,6 +51,25 @@ def text(s):
     return html.unescape(re.sub(r"<[^>]+>", " ", s or "")).strip()
 
 
+def src(x):
+    """An iSeller image field: an object with src / preview_image, a bare URL, or null."""
+    if isinstance(x, dict):
+        return x.get("src") or x.get("preview_image") or ""
+    return x if isinstance(x, str) else ""
+
+
+def variant_image(v, value_images):
+    """The variant's own photo, else the photo of one of its option values (a flavour), else ""."""
+    own = src(v.get("image")) or src(v.get("featured_media"))
+    if own:
+        return own
+    for o in v.get("options") or []:
+        found = src(o.get("image")) or value_images.get((o.get("option_id"), o.get("value")), "")
+        if found:
+            return found
+    return ""
+
+
 def menu():
     opener.open(SITE + "/", timeout=30).read()  # session cookie
     cols = post("/services/Liquid/Collections", {"where": {"is_active": "true"}, "page": 0, "pageSize": 50,
@@ -69,14 +89,20 @@ def menu():
                     "id": p["id"], "handle": p["handle"], "lang": "en",
                     "includes": ["discount", "selected_variant", "options_with_values", "variants.options"]})
                 names = {o["id"]: o["name"] for o in full.get("options_with_values") or []}
+                value_images = {(x.get("option_id"), x.get("value")): src(x.get("image"))
+                                for o in full.get("options_with_values") or [] for x in o.get("values") or [] if src(x.get("image"))}
                 groups = [{"name": o["name"], "choices": [v["value"] for v in sorted(o["values"], key=lambda v: v["position"])]}
                           for o in sorted(full.get("options_with_values") or [], key=lambda o: o["position"])]
                 for v in full.get("variants") or []:
-                    variants.append({
+                    variant = {
                         "options": {names[o["option_id"]]: o["value"] for o in v.get("options") or [] if o["option_id"] in names},
                         "price": int(v.get("final_price") or v["price"]),
                         "available": bool(v.get("available")) and v.get("stock_status") != "out-of-stock",
-                    })
+                    }
+                    image = variant_image(v, value_images)
+                    if image:  # only when iSeller has one, so menus without variant photos hash the same as before
+                        variant["image"] = image
+                    variants.append(variant)
                 time.sleep(0.5)  # be gentle with a small shop's server
             base = int(p.get("final_price") or p.get("price_min") or p["price"])
             products.append({
