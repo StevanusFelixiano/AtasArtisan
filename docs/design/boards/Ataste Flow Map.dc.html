@@ -23,6 +23,7 @@
     <span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;border-radius:4px;background:#fff;box-shadow:inset 0 0 0 1.5px #D1B6BB"></span>Anyone</span>
     <span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;border-radius:4px;background:#F39E60"></span>Host only</span>
     <span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;border-radius:4px;background:#F9B7D2"></span>Member only</span>
+    <span style="display:flex;align-items:center;gap:6px"><span style="width:14px;height:14px;border-radius:4px;background:#F9CFAF;box-shadow:inset 0 0 0 2px #2B1A12"></span>Shared component</span>
     <span style="display:flex;align-items:center;gap:6px"><span style="width:22px;height:0;border-top:2px solid #9D5C1D"></span>Main path</span>
     <span style="display:flex;align-items:center;gap:6px"><span style="width:22px;height:0;border-top:2px dashed #A08A80"></span>Branch</span>
   </div>
@@ -57,7 +58,7 @@ class Component extends DCLogic {
     const N = [
       ['1-1','Splash','Giraffe loader','any',0,0],['1-2','Welcome','Continue with WhatsApp','any',0,1],['1-3','Verify via WhatsApp','Code ATASTE 4K9X · no number typed','any',0,2],
       ['1-4a','Waiting','timed out 1-4c · no WhatsApp 1-4d','any',0,3],['1-4b','Verified','Not you? → try again','any',0,4],['1-5','Your name','','any',0,5],['1-6','Notification primer','then system prompt','any',0,6],
-      ['2-1','Home','active orders · empty 2-2','any',1,0],['2-3','Paste a join link','clipboard detected','any',1,1],['6-1','History','empty 6-3 · skeleton 6-4','any',1,3],['6-2','History detail','Reorder my items','any',1,4],['6-5','Profile','picture 6-5b/c · payment · language','any',1,5],
+      ['2-1','Home','active orders · empty 2-2','any',1,0],['2-3','Paste a join link','clipboard detected','any',1,1],['TB','Tab bar','Home · History · Profile · custom','comp',1,2],['6-1','History','empty 6-3 · skeleton 6-4','any',1,3],['6-2','History detail','Reorder my items','any',1,4],['6-5','Profile','picture 6-5b/c · payment · language','any',1,5],['MO','Motion','springs · haptics · every interaction','comp',1,6],
       ['2-4','Create group','late cutoff 2-4e · address 2-4f · created 2-4d','host',2,0],['2-5','Share / invite','link · QR · copy','host',2,1],['2-7','Web fallback','Safari · TestFlight','member',2,2],['2-6','Join preview','logged out · locked · already in','member',2,3],['3-8','Personal order','Order for myself','any',2,5],
       ['3-1','Group order','member 3-1 · host 3-2 · unlocked 3-3','any',3,0],['3-9','Menu','stale 3-10 · skeleton 3-11','any',3,1],['3-13','Product detail','options 3-16 · promo 3-14 · sold out 3-15','any',3,2],
       ['4-1','Propose split','custom shares · error 4-1e','any',3,3],['4-2','Owner review','accept / decline','any',3,4],['4-3','Invitee accept','each named person','any',3,5],['3-6','Leave group','Open only','member',3,6],
@@ -68,13 +69,13 @@ class Component extends DCLogic {
     const pos = {};
     const nodes = N.map(([id,name,note,role,c,r]) => {
       const x = X0 + c*CW, y = Y0 + r*RH; pos[id] = { x, y, c, r };
-      return { id, name, note, x: x+'px', y: y+'px', href: files[id[0]] + '#' + id,
-        bg: role==='host' ? '#FDE4D2' : role==='member' ? '#FDE6F0' : '#fff',
-        ring: role==='host' ? 'inset 0 0 0 2px #F39E60' : role==='member' ? 'inset 0 0 0 2px #F9B7D2' : 'inset 0 0 0 1.5px #D1B6BB' };
+      return { id, name, note, x: x+'px', y: y+'px', href: id==='MO' ? 'Ataste Motion.dc.html' : role==='comp' ? 'Ataste Tab Bar.dc.html' : files[id[0]] + '#' + id,
+        bg: role==='host' ? '#FDE4D2' : role==='member' ? '#FDE6F0' : role==='comp' ? '#F9CFAF' : '#fff',
+        ring: role==='host' ? 'inset 0 0 0 2px #F39E60' : role==='member' ? 'inset 0 0 0 2px #F9B7D2' : role==='comp' ? 'inset 0 0 0 2px #2B1A12' : 'inset 0 0 0 1.5px #D1B6BB' };
     });
     const E = [
       ['1-1','1-2',1],['1-2','1-3',1],['1-3','1-4a',1,'Open WhatsApp'],['1-4a','1-4b',1,'message arrives'],['1-4b','1-5',1],['1-5','1-6',1],['1-6','2-1',1],['1-4b','1-3',0,'Not you?'],
-      ['2-1','2-3'],['2-3','2-6',0,'link'],['2-1','6-1'],['6-1','6-2'],['2-1','6-5'],['2-1','3-8',0,'for myself'],
+      ['2-1','2-3'],['2-3','2-6',0,'link'],['2-1','6-1',0,'tab bar'],['6-1','6-2'],['2-1','6-5',0,'tab bar'],['2-1','3-8',0,'for myself'],
       ['2-1','2-4',1,'start group'],['2-4','2-5',1],['2-5','2-7',0,'no app'],['2-7','2-6'],['2-5','3-1',1],['2-6','3-1',0,'Join'],['3-8','3-9'],
       ['3-1','3-9',1,'Add items'],['3-9','3-13',1],['3-13','3-1'],['3-1','4-1'],['4-1','4-2'],['4-2','4-3'],['3-1','3-6'],
       ['3-1','4-5',1,'Lock order'],['4-5','4-6'],['4-6','4-9'],['4-9','4-7'],['4-7','4-8'],['4-5','5-1',1,'Send to Atas'],['4-8','5-1'],

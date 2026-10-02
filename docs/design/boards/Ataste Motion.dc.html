@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=roundo@1&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&family=Shrikhand&display=swap">
+<script src="./ataste-art.js"></script>
+<script src="./ataste-motion.js"></script>
+<script src="./ataste-motion-2.js"></script>
+<script src="./ataste-motion-3.js"></script>
+<style>body{margin:0;background:#F2E9DF;color:#2B1A12;font-family:Manrope,sans-serif;-webkit-font-smoothing:antialiased}a{color:#9D5C1D;text-decoration:none}a:hover{color:#2B1A12}</style>
+</helmet>
+
+<section style="padding:56px 64px 32px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid rgba(43,26,18,.1)">
+  <span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase;color:#9D5C1D">Ataste · Motion</span>
+  <h1 style="margin:0;font:700 56px/1 Roundo,sans-serif;letter-spacing:-.02em">Motion across the app</h1>
+  <p style="margin:0;max-width:820px;font:500 15px/1.5 Manrope;color:#5A4237;text-wrap:pretty">Carries the tab bar’s motion language (<a href="Ataste Tab Bar.dc.html#1a">1a</a>) to every screen: springs with a little bounce, a squash on press, edges that stretch like dough, light haptics. Motion starts only from a touch or a real state change, and always comes to rest. It has the ship order for every interaction, the shared springs and haptics, and all 22 ranks as live prototypes with their spec, plus a fix for the onboarding ring, which used to turn forever. Boards: <a href="Ataste Design System.dc.html">Design system</a> · <a href="Ataste Tab Bar.dc.html">Tab bar</a> · <a href="Ataste Flow Map.dc.html">Flow map</a></p>
+</section>
+
+<section id="order" style="padding:48px 64px;border-bottom:1px solid rgba(43,26,18,.1)">
+  <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><h2 style="margin:0;font:700 28px/1 Roundo,sans-serif">Ship order</h2><span style="font:500 13px Manrope;color:#7A6257">Ranked by how often people meet it and how much it clears up. Ship top to bottom.</span></div>
+  <div style="margin-top:24px;background:#fff;border-radius:32px;overflow:hidden;min-width:1180px;max-width:1400px">
+    <div style="display:grid;grid-template-columns:56px minmax(220px,1.1fr) minmax(320px,2fr) minmax(150px,.8fr) 130px;gap:20px;padding:16px 24px;background:#2B1A12;color:#FBF3EA;font:600 11px/1.3 Manrope;letter-spacing:.03em;text-transform:uppercase">
+      <span>Rank</span><span>Interaction</span><span>What it adds</span><span>Screens</span><span>Spec</span>
+    </div>
+    <sc-for list="{{ order }}" as="o" hint-placeholder-count="22">
+      <div style="display:grid;grid-template-columns:56px minmax(220px,1.1fr) minmax(320px,2fr) minmax(150px,.8fr) 130px;gap:20px;align-items:center;padding:14px 24px;border-top:1px solid #EDE2E4;background:{{ o.bg }}">
+        <span style="font:700 26px/1 Roundo,sans-serif;color:{{ o.rc }}">{{ o.n }}</span>
+        <span style="font:700 15px/1.35 Manrope">{{ o.name }}</span>
+        <span style="font:500 13px/1.5 Manrope;color:#5A4237;text-wrap:pretty">{{ o.adds }}</span>
+        <span style="font:500 12px/1.5 ui-monospace,Menlo,monospace;color:#7A6257">{{ o.where }}</span>
+        <a href="{{ o.href }}" style="justify-self:start;padding:4px 12px;border-radius:999px;background:{{ o.pb }};box-shadow:{{ o.ps }};font:600 11px/1.4 Manrope;letter-spacing:.03em;text-transform:uppercase;color:#2B1A12;white-space:nowrap">{{ o.part }}</a>
+      </div>
+    </sc-for>
+  </div>
+  <p style="margin:16px 0 0;max-width:820px;font:500 14px/1.5 Manrope;color:#5A4237;text-wrap:pretty"><b style="color:#2B1A12">Fix, ship with rank 1:</b> the dashed onboarding ring on 1-1 and 1-4a turned forever on a 14s linear loop. It now turns a quarter on each real step and rests. See <a href="#m23">Fix</a>.</p>
+</section>
+
+<section id="shared" style="padding:48px 64px;border-bottom:1px solid rgba(43,26,18,.1)">
+  <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap"><h2 style="margin:0;font:700 28px/1 Roundo,sans-serif">Shared springs &amp; haptics</h2><span style="font:500 13px Manrope;color:#7A6257">Every spring is a TabMotion value under a name that says what it’s for. A new value needs a reason the feel is different.</span></div>
+  <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start;margin-top:24px">
+    <div style="flex:1 1 640px;max-width:780px;background:#fff;border-radius:32px;padding:26px 28px;display:flex;flex-direction:column">
+      <div style="display:flex;justify-content:space-between;align-items:baseline;padding-bottom:12px"><span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase">Springs · Motion.*</span><span style="font:500 12px Manrope;color:#7A6257">Curve: 0 → 1 over 0.9s, dashed line is the target</span></div>
+      <sc-for list="{{ springs }}" as="s" hint-placeholder-count="11">
+        <div style="display:grid;grid-template-columns:170px 124px minmax(0,1fr);gap:18px;align-items:center;padding:12px 0;border-top:1px solid #EDE2E4">
+          <div style="display:flex;flex-direction:column;gap:3px"><span style="font:700 13px/1.3 ui-monospace,Menlo,monospace">{{ s.name }}</span><span style="font:500 12px/1.3 ui-monospace,Menlo,monospace;color:#9D5C1D">{{ s.val }}</span><span style="font:500 11px/1.3 Manrope;color:#7A6257">= {{ s.from }}</span></div>
+          {{ s.spark }}
+          <span style="font:500 13px/1.45 Manrope;color:#5A4237;text-wrap:pretty">{{ s.use }}</span>
+        </div>
+      </sc-for>
+    </div>
+    <div style="flex:1 1 440px;max-width:560px;display:flex;flex-direction:column;gap:20px">
+      <div style="background:#fff;border-radius:32px;padding:26px 28px;display:flex;flex-direction:column">
+        <span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase;padding-bottom:12px">Curves</span>
+        <sc-for list="{{ curves }}" as="c" hint-placeholder-count="10">
+          <div style="display:grid;grid-template-columns:150px minmax(0,1fr);gap:14px;padding:9px 0;border-top:1px solid #EDE2E4;align-items:baseline">
+            <span style="font:700 12.5px/1.4 ui-monospace,Menlo,monospace">{{ c.name }}</span>
+            <div style="display:flex;flex-direction:column;gap:2px"><span style="font:500 12px/1.4 ui-monospace,Menlo,monospace;color:#9D5C1D">{{ c.val }}</span><span style="font:500 12.5px/1.4 Manrope;color:#5A4237">{{ c.use }}</span></div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="background:#2B1A12;color:#FBF3EA;border-radius:32px;padding:26px 28px;display:flex;flex-direction:column">
+        <span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase;color:#D1B6BB;padding-bottom:12px">Haptics · Haptic.*</span>
+        <sc-for list="{{ haptics }}" as="h" hint-placeholder-count="9">
+          <div style="display:grid;grid-template-columns:150px minmax(0,1fr);gap:14px;padding:9px 0;border-top:1px solid rgba(251,243,234,.12);align-items:baseline">
+            <span style="font:600 12.5px/1.4 ui-monospace,Menlo,monospace;color:#E9FF83">{{ h.name }}</span>
+            <div style="display:flex;flex-direction:column;gap:2px"><span style="font:500 12px/1.4 ui-monospace,Menlo,monospace;color:#F9CFAF">{{ h.val }}</span><span style="font:500 12.5px/1.4 Manrope">{{ h.use }}</span></div>
+          </div>
+        </sc-for>
+      </div>
+      <div style="background:#fff;border-radius:32px;padding:26px 28px;display:flex;flex-direction:column;gap:10px">
+        <span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase">Rules</span>
+        <sc-for list="{{ rules }}" as="r" hint-placeholder-count="5"><span style="display:flex;gap:8px;font:500 13px/1.5 Manrope"><span style="color:#9D5C1D">•</span><span style="text-wrap:pretty">{{ r }}</span></span></sc-for>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="prototypes" style="padding:16px 64px 48px;border-bottom:1px solid rgba(43,26,18,.1)">
+  <sc-for list="{{ protos }}" as="p" hint-placeholder-count="6">
+    <div id="{{ p.id }}" style="display:flex;flex-direction:column;gap:14px;padding:32px 0">
+      <div style="display:flex;align-items:baseline;gap:12px;flex-wrap:wrap">
+        <a href="#{{ p.id }}" style="font:600 12px ui-monospace,Menlo,monospace;padding:4px 9px;border-radius:6px;background:#2B1A12;color:#FBF3EA">{{ p.num }}</a>
+        <h2 style="margin:0;font:700 28px/1 Roundo,sans-serif">{{ p.title }}</h2>
+        <span style="font:500 13px Manrope;color:#7A6257">{{ p.where }}</span>
+      </div>
+      <p style="margin:0;max-width:820px;font:500 15px/1.5 Manrope;color:#5A4237;text-wrap:pretty">{{ p.sub }}</p>
+      <div style="display:flex;flex-wrap:wrap;gap:24px;align-items:flex-start;margin-top:10px">
+        <div style="width:402px;flex:none;border-radius:40px;overflow:hidden;background:#FBF3EA;box-shadow:0 1px 3px rgba(43,26,18,.08)">
+          <sc-if value="{{ p.is1 }}" hint-placeholder-val="{{ false }}"><atm-buttons ref="{{ p.ref }}" rm="{{ p.rmA }}" slow="{{ p.slowA }}"></atm-buttons></sc-if>
+          <sc-if value="{{ p.is2 }}" hint-placeholder-val="{{ false }}"><atm-basket ref="{{ p.ref }}" rm="{{ p.rmA }}" slow="{{ p.slowA }}"></atm-basket></sc-if>
+          <sc-if value="{{ p.is3 }}" hint-placeholder-val="{{ false }}"><atm-unlock ref="{{ p.ref }}" rm="{{ p.rmA }}" slow="{{ p.slowA }}"></atm-unlock></sc-if>
+          <sc-if value="{{ p.is4 }}" hint-placeholder-val="{{ false }}"><atm-async ref="{{ p.ref }}" rm="{{ p.rmA }}" slow="{{ p.slowA }}" result="{{ p.resA }}"></atm-async></sc-if>
+          <sc-if value="{{ p.is5 }}" hint-placeholder-val="{{ false }}"><atm-copy ref="{{ p.ref }}" rm="{{ p.rmA }}" slow="{{ p.slowA }}"></atm-copy></sc-if>
+          <sc-if value="{{ p.is6 }}" hint-placeholder-val="{{ false }}"><atm-status ref="{{ p.ref }}" rm="{{ p.rmA }}" slow="{{ p.slowA }}"></atm-status></sc-if>
+          <sc-if value="{{ p.is7 }}" hint-placeholder-val="{{ false }}"><atm-sheets ref="{{ p.ref }}" rm="{{ p.rmA }}" slow="{{ p.slowA }}"></atm-sheets></sc-if>
+          <sc-if value="{{ p.is8 }}" hint-placeholder-val="{{ false }}"><atm-banner ref="{{ p.ref }}" rm="{{ p.rmA }}" slow="{{ p.slowA }}"></atm-banner></sc-if>
+          <sc-if value="{{ p.is9 }}" hint-placeholder-val="{{ false }}"><atm-cards ref="{{ p.ref }}" rm="{{ p.rmA }}" slow="{{ p.slowA }}"></atm-cards></sc-if>
+          <sc-if value="{{ p.is10 }}" hint-placeholder-val="{{ false }}"><atm-split ref="{{ p.ref }}" rm="{{ p.rmA }}" slow="{{ p.slowA }}"></atm-split></sc-if>
+          <sc-if value="{{ p.is11 }}" hint-placeholder-val="{{ false }}"><atm-members ref="{{ p.ref }}" rm="{{ p.rmA }}" slow="{{ p.slowA }}"></atm-members></sc-if>
+          <sc-if value="{{ p.is12 }}" hint-placeholder-val="{{ false }}"><atm-bill ref="{{ p.ref }}" rm="{{ p.rmA }}" slow="{{ p.slowA }}"></atm-bill></sc-if>
+          <sc-if value="{{ p.is13 }}" hint-placeholder-val="{{ false }}"><atm-options ref="{{ p.ref }}" rm="{{ p.rmA }}" slow="{{ p.slowA }}"></atm-options></sc-if>
+          <sc-if value="{{ p.is14 }}" hint-placeholder-val="{{ false }}"><atm-skeleton ref="{{ p.ref }}" rm="{{ p.rmA }}" slow="{{ p.slowA }}"></atm-skeleton></sc-if>
+          <sc-if value="{{ p.is15 }}" hint-placeholder-val="{{ false }}"><atm-refresh ref="{{ p.ref }}" rm="{{ p.rmA }}" slow="{{ p.slowA }}" result="{{ p.resA }}"></atm-refresh></sc-if>
+          <sc-if value="{{ p.is16 }}" hint-placeholder-val="{{ false }}"><atm-signin ref="{{ p.ref }}" rm="{{ p.rmA }}" slow="{{ p.slowA }}"></atm-signin></sc-if>
+          <sc-if value="{{ p.is17 }}" hint-placeholder-val="{{ false }}"><atm-sendwa ref="{{ p.ref }}" rm="{{ p.rmA }}" slow="{{ p.slowA }}"></atm-sendwa></sc-if>
+          <sc-if value="{{ p.is18 }}" hint-placeholder-val="{{ false }}"><atm-upload ref="{{ p.ref }}" rm="{{ p.rmA }}" slow="{{ p.slowA }}" result="{{ p.resA }}"></atm-upload></sc-if>
+          <sc-if value="{{ p.is19 }}" hint-placeholder-val="{{ false }}"><atm-board ref="{{ p.ref }}" rm="{{ p.rmA }}" slow="{{ p.slowA }}"></atm-board></sc-if>
+          <sc-if value="{{ p.is20 }}" hint-placeholder-val="{{ false }}"><atm-share ref="{{ p.ref }}" rm="{{ p.rmA }}" slow="{{ p.slowA }}"></atm-share></sc-if>
+          <sc-if value="{{ p.is21 }}" hint-placeholder-val="{{ false }}"><atm-bands ref="{{ p.ref }}" rm="{{ p.rmA }}" slow="{{ p.slowA }}"></atm-bands></sc-if>
+          <sc-if value="{{ p.is22 }}" hint-placeholder-val="{{ false }}"><atm-empty ref="{{ p.ref }}" rm="{{ p.rmA }}" slow="{{ p.slowA }}"></atm-empty></sc-if>
+          <sc-if value="{{ p.is23 }}" hint-placeholder-val="{{ false }}"><atm-ring ref="{{ p.ref }}" rm="{{ p.rmA }}" slow="{{ p.slowA }}"></atm-ring></sc-if>
+        </div>
+        <div style="width:360px;display:flex;flex-direction:column;gap:16px">
+          <div style="background:#fff;border-radius:28px;padding:22px;display:flex;flex-direction:column;gap:16px">
+            <span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase">Controls</span>
+            <sc-for list="{{ p.segs }}" as="c" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;gap:8px">
+                <span style="font:600 13px Manrope;color:#5A4237">{{ c.label }}</span>
+                <div style="display:flex;padding:4px;border-radius:999px;background:#EDE2E4">
+                  <sc-for list="{{ c.opts }}" as="o" hint-placeholder-count="2"><span onClick="{{ o.pick }}" style="flex:1;text-align:center;padding:8px 0;border-radius:999px;background:{{ o.bg }};box-shadow:{{ o.sh }};font:600 13px Manrope;color:{{ o.fg }};cursor:pointer;user-select:none">{{ o.label }}</span></sc-for>
+                </div>
+              </div>
+            </sc-for>
+            <div style="display:flex;flex-wrap:wrap;gap:8px">
+              <sc-for list="{{ p.sims }}" as="b" hint-placeholder-count="1"><span onClick="{{ b.run }}" style="display:inline-flex;align-items:center;gap:6px;padding:6px 14px;border-radius:999px;background:{{ b.bg }};border:3px solid {{ b.bd }};font:600 13px/1.25 Manrope;cursor:pointer;user-select:none">{{ b.label }}</span></sc-for>
+            </div>
+          </div>
+          <div ref="{{ p.hapRef }}" style="background:#2B1A12;border-radius:28px;padding:20px 22px;display:flex;flex-direction:column;gap:8px;color:#FBF3EA">
+            <span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase;color:#D1B6BB">Last haptic</span>
+            <span style="font:600 15px/1.35 ui-monospace,Menlo,monospace;color:#E9FF83">{{ p.hapType }}</span>
+            <span style="font:500 13px/1.4 Manrope">{{ p.hapWhy }}</span>
+          </div>
+          <div style="background:#fff;border-radius:28px;padding:22px;display:flex;flex-direction:column;gap:12px">
+            <span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase">Try</span>
+            <sc-for list="{{ p.tries }}" as="t" hint-placeholder-count="4">
+              <div style="display:flex;gap:10px;align-items:flex-start"><span style="flex:none;width:22px;height:22px;border-radius:50%;background:#F9CFAF;display:flex;align-items:center;justify-content:center;font:700 12px/1 Roundo,sans-serif">{{ t.n }}</span><span style="font:500 13px/1.5 Manrope;text-wrap:pretty">{{ t.t }}</span></div>
+            </sc-for>
+          </div>
+        </div>
+      </div>
+    </div>
+  </sc-for>
+</section>
+
+<section id="spec" style="padding:48px 64px">
+  <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap"><h2 style="margin:0;font:700 28px/1 Roundo,sans-serif">Motion spec</h2><span style="flex:1;min-width:240px;font:500 13px Manrope;color:#7A6257">Same columns as the tab bar. Springs are named Motion values; (response / dampingFraction) follows each name. Rows for all 22 ranks and the onboarding ring fix.</span>
+    <div style="display:flex;gap:10px">
+      <span onClick="{{ copyTable }}" style="display:inline-flex;align-items:center;gap:6px;padding:6px 16px;border-radius:999px;background:#FBF3EA;border:3px solid #EDE2E4;font:600 13px/1.25 Manrope;cursor:pointer;user-select:none"><at-icon name="copy" size="14"></at-icon>{{ copyTableLabel }}</span>
+      <span onClick="{{ copySwift }}" style="display:inline-flex;align-items:center;gap:6px;padding:6px 16px;border-radius:999px;background:#2B1A12;border:3px solid #2B1A12;color:#FBF3EA;font:600 13px/1.25 Manrope;cursor:pointer;user-select:none"><at-icon name="copy" size="14"></at-icon>{{ copySwiftLabel }}</span>
+    </div>
+  </div>
+  <div style="margin-top:24px;background:#fff;border-radius:32px;overflow:hidden;min-width:1500px;max-width:1640px">
+    <div style="display:grid;grid-template-columns:180px 200px minmax(240px,1.4fr) minmax(240px,1.3fr) 70px minmax(220px,1.1fr) minmax(200px,1fr);gap:16px;padding:16px 24px;background:#2B1A12;color:#FBF3EA;font:600 11px/1.3 Manrope;letter-spacing:.03em;text-transform:uppercase">
+      <span>Interaction</span><span>Trigger</span><span>Property</span><span>Spring or duration + curve</span><span>Delay s</span><span>Haptic</span><span>Reduce Motion</span>
+    </div>
+    <sc-for list="{{ spec }}" as="r" hint-placeholder-count="40">
+      <div style="display:flex;flex-direction:column">
+        <sc-if value="{{ r.g }}" hint-placeholder-val="{{ false }}"><div style="padding:14px 24px 8px;background:#FBF3EA;font:700 15px/1 Roundo,sans-serif;border-top:1px solid #EDE2E4">{{ r.g }}</div></sc-if>
+        <div style="display:grid;grid-template-columns:180px 200px minmax(240px,1.4fr) minmax(240px,1.3fr) 70px minmax(220px,1.1fr) minmax(200px,1fr);gap:16px;padding:14px 24px;border-top:1px solid #EDE2E4;align-items:start">
+          <span style="font:700 14px/1.35 Manrope">{{ r.name }}</span>
+          <span style="font:500 13px/1.45 Manrope;color:#5A4237;text-wrap:pretty">{{ r.trig }}</span>
+          <span style="font:500 13px/1.45 Manrope;text-wrap:pretty">{{ r.prop }}</span>
+          <span style="font:500 12px/1.55 ui-monospace,Menlo,monospace;color:#9D5C1D;text-wrap:pretty">{{ r.anim }}</span>
+          <span style="font:500 12px/1.55 ui-monospace,Menlo,monospace">{{ r.delay }}</span>
+          <span style="font:500 12px/1.55 ui-monospace,Menlo,monospace;text-wrap:pretty">{{ r.hap }}</span>
+          <span style="font:500 13px/1.45 Manrope;color:#5A4237;text-wrap:pretty">{{ r.rm }}</span>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+  <div style="display:flex;flex-wrap:wrap;gap:20px;align-items:flex-start;margin-top:20px">
+    <pre style="margin:0;flex:1 1 720px;max-width:900px;background:#2B1A12;color:#FBF3EA;border-radius:32px;padding:28px 32px;font:500 12.5px/1.6 ui-monospace,Menlo,monospace;white-space:pre;overflow-x:auto;box-sizing:border-box">{{ swift }}</pre>
+    <div style="flex:0 1 440px;display:flex;flex-direction:column;gap:20px">
+      <div style="background:#fff;border-radius:32px;padding:26px 28px;display:flex;flex-direction:column;gap:12px">
+        <span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase">Reduce Motion</span>
+        <sc-for list="{{ rmNotes }}" as="n" hint-placeholder-count="7"><span style="display:flex;gap:8px;font:500 13px/1.5 Manrope"><span style="color:#9D5C1D">•</span><span style="text-wrap:pretty">{{ n }}</span></span></sc-for>
+      </div>
+      <div style="background:#fff;border-radius:32px;padding:26px 28px;display:flex;flex-direction:column;gap:12px">
+        <span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase">Build notes</span>
+        <sc-for list="{{ buildNotes }}" as="n" hint-placeholder-count="6"><span style="display:flex;gap:8px;font:500 13px/1.5 Manrope"><span style="color:#9D5C1D">•</span><span style="text-wrap:pretty">{{ n }}</span></span></sc-for>
+      </div>
+    </div>
+  </div>
+</section>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { cfg: {}, hap: {}, result: 'ok', copiedT: false, copiedS: false };
+  _el = {}; _hr = {};
+  refFns = Object.fromEntries(['m01','m02','m03','m04','m05','m06','m07','m08','m09','m10','m11','m12','m13','m14','m15','m16','m17','m18','m19','m20','m21','m22','m23'].map(id => [id, el => this.attach(id, el)]));
+  hapFns = Object.fromEntries(['m01','m02','m03','m04','m05','m06','m07','m08','m09','m10','m11','m12','m13','m14','m15','m16','m17','m18','m19','m20','m21','m22','m23'].map(id => [id, el => { this._hr[id] = el; }]));
+  attach(id, el) {
+    if (!el || el._hooked) return; el._hooked = 1; this._el[id] = el;
+    el.addEventListener('haptic', e => {
+      this.setState(s => ({ hap: { ...s.hap, [id]: e.detail } }));
+      const h = this._hr[id], k = this.cfg(id).slow;
+      if (h && h.animate) h.animate([{ transform:'scale(1.03)', background:'#4A3329' }, { transform:'none', background:'#2B1A12' }], { duration: 320 * k, easing:'cubic-bezier(0,0,.58,1)' });
+    });
+  }
+  cfg(id) { return this.state.cfg[id] || { rm:false, slow:1 }; }
+  setCfg(id, patch) { this.setState(s => ({ cfg: { ...s.cfg, [id]: { ...this.cfg(id), ...patch } } })); }
+  call(id, fn, ...a) { const el = this._el[id]; if (el && el[fn]) el[fn](...a); }
+  copy(text, key) {
+    const done = () => { this.setState({ [key]: true }); setTimeout(() => this.setState({ [key]: false }), 1600); };
+    if (navigator.clipboard) navigator.clipboard.writeText(text).then(done, done); else done();
+  }
+  renderVals() {
+    const s = this.state;
+    const ORDER = [
+      ['Button press & release, every style, plus disabled tap','Every tap in the app answers the finger with the tab bar’s squash. The disabled shake and reason line say why nothing happened.','all screens',1,'m01'],
+      ['Add item, quantity stepper, basket total','The core loop. Confirms an add without opening the basket; the trash state at 1 is visibly different before it’s tapped.','3-1 3-8 3-9 3-13',1,'m02'],
+      ['Rp 200.000 bar and Discount unlocked','The reason to group up, and the one big celebration in the app, earned by the group.','3-1 3-3 3-8',1,'m03'],
+      ['Async buttons: loading, success, failure','Shows the request is moving and when it landed. Stops double locks and double sends.','4-5 4-8 5-1 5-5 5-10 5-11',1,'m04'],
+      ['Copy account number, copy link: the toast','Copying is otherwise invisible, and every member copies the account number to pay.','2-5 5-5',1,'m05'],
+      ['Status chips and the order timeline','Order state is what everyone watches. A change seen live gets noticed; one that happened elsewhere doesn’t replay.','3-1 3-2 5-4 5-5 5-9 6-2',1,'m06'],
+      ['Sheets and alerts: enter, drag, dismiss','Remove, leave and cancel confirms, request edits and pickers all use them; the drag to dismiss should feel like the rest.','3-6 4-6 4-9 3-13',2],
+      ['Notifications arriving while the app is open','Order changes land while people look at something else. A banner that drops in and folds away keeps them in place.','all screens',2],
+      ['Home choice cards and group cards opening','The biggest move on Home. The card growing into the group screen tells you where you went.','2-1 2-2 3-1 3-8',2],
+      ['Split: assigning items to people','Splitting is the fiddliest task. Seeing an item land on a person confirms who pays.','4-1 4-2 4-3',2],
+      ['Avatars joining a group','Small, frequent social proof while the host waits for friends.','3-1 3-2 2-6',2],
+      ['The bill settling into its final numbers','The moment ongkir and discount land in each person’s total after Atas confirms.','5-3 5-4 5-5',2],
+      ['Variant and option chips','Weight and slice are picked on every loaf; the choice should feel physical.','3-13 3-16',2],
+      ['Skeleton rows turning into content','Covers the wait on History and Menu without a spinner.','3-11 6-4',2],
+      ['Pull to refresh','A manual check for Atas’s reply, with the mascot instead of the system spinner.','2-1 5-2 6-1',2],
+      ['Sign-in: WhatsApp code, waiting, verified','First impression, and the longest wait in the app.','1-3 1-4a 1-4b',3],
+      ['Send to WhatsApp and coming back','Leaving the app is the riskiest step; the hand-off and the return should read as one move.','5-1 5-2',3],
+      ['Upload a payment photo','Proof of payment and delivery, with progress people can see.','5-5 5-11 5-12',3],
+      ['Mark paid on the payment board','Each row settling into collected adds up to done for the host.','5-9 5-10',3],
+      ['Share an invite','Link and QR. Mostly the system share sheet; the hand-off and return.','2-5',3],
+      ['Running-text band: flick, coast, drag, fling','Flicks once on appear and coasts to a stop. Already on the unlocked card in 03; part 3 covers every band.','1-2 3-3 2-2',3],
+      ['Empty states','The mascot reacts once on first view, then rests.','2-2 6-3',3]
+    ];
+    const order = ORDER.map(([name, adds, where, part, id], i) => ({
+      n: i + 1, name, adds, where, href: '#m' + String(i + 1).padStart(2, '0'),
+      part: 'Part ' + part + ' · ' + String(i + 1).padStart(2, '0') + ' below',
+      pb: part <= 2 ? '#E9FF83' : '#fff',
+      ps: part <= 2 ? 'inset 0 0 0 1.5px #BCD947' : 'inset 0 0 0 1.5px #D1B6BB',
+      bg: part <= 2 ? '#fff' : '#FDFAF6', rc: part <= 2 ? '#9D5C1D' : '#D1B6BB'
+    }));
+
+    const h = React.createElement;
+    const spark = (r, d) => {
+      const w = 2 * Math.PI / r, k = w * w, c = 2 * d * w; let v = 0, vel = 0, pts = [];
+      for (let i = 0; i <= 216; i++) { if (i % 3 === 0) pts.push([2 + (i / 216) * 116, 34 - v * 24]); for (let j = 0; j < 1; j++) { vel += (-k * (v - 1) - c * vel) / 240; v += vel / 240; } }
+      const d0 = 'M' + pts.map(p => p[0].toFixed(1) + ' ' + p[1].toFixed(1)).join(' L');
+      return h('svg', { width: 124, height: 40, viewBox: '0 0 124 40', style: { display: 'block' } },
+        h('line', { x1: 2, y1: 10, x2: 120, y2: 10, stroke: '#D1B6BB', strokeDasharray: '3 3' }),
+        h('line', { x1: 2, y1: 34, x2: 120, y2: 34, stroke: '#EDE2E4' }),
+        h('path', { d: d0, fill: 'none', stroke: '#9D5C1D', strokeWidth: 2, strokeLinecap: 'round', strokeLinejoin: 'round' }));
+    };
+    const springs = [
+      ['press',.20,.75,'TabMotion.pressDown','Finger down on anything pressable.'],
+      ['release',.38,.50,'TabMotion.pressUp','Finger up. The dough bounce back to rest.'],
+      ['pop',.32,.50,'TabMotion.badgeIn','Something new appears: a check, the trash, the unlocked headline, a timeline step.'],
+      ['bump',.30,.60,'TabMotion.badgeBump','Something already there changes: basket bar, chip, toast, a button after success.'],
+      ['bounce',.38,.45,'TabMotion.iconBounce','An icon after its dip; the mascot landing.'],
+      ['doughLead',.30,.78,'TabMotion.pillLead','Leading edge of anything that grows: chip width, the async fill finishing.'],
+      ['doughTrail',.44,.82,'TabMotion.pillTrail','Trailing edge; the Rp 200.000 fill; the timeline line.'],
+      ['settle',.40,.86,'TabMotion.labelOpen, no delay','Layout that opens: item rows, the headline row, reason and error lines.'],
+      ['arrive',.42,.72,'TabMotion.popShow, no delay','Things that come in from an edge: toast, basket bar. Sheets and banners in part 2.'],
+      ['leave',.32,1.0,'TabMotion.pushHide','Collapses and exits. No bounce on the way out.'],
+      ['glide',.50,1.0,'TabMotion.scrollToTop','Counting numbers and long travel.']
+    ].map(([n, r, d, from, use]) => ({ name: 'Motion.' + n, val: `(${r.toFixed(2)} / ${d.toFixed(2)})`, from, use, spark: spark(r, d) }));
+    const curves = [
+      ['Motion.quickIn','.easeOut(duration: 0.08) = TabMotion.haloIn','Pressed tone on'],
+      ['Motion.quick','.easeOut(duration: 0.12) = TabMotion.iconSwap','Colours and crossfades inside a control'],
+      ['Motion.digits','.easeOut(duration: 0.18), timing of TabMotion.labelIn','numericText rolls, label swaps'],
+      ['Motion.fade','.easeOut(duration: 0.20) = TabMotion.fadeBack(delay: 0)','Things appearing in place'],
+      ['Motion.fadeOut','.easeIn(duration: 0.15) = TabMotion.badgeOut','Things leaving in place; tone off'],
+      ['Motion.dip','.easeOut(duration: 0.07) = TabMotion.iconDip','Scale down before a bounce'],
+      ['Motion.shake','TabMotion.shake keyframes','Blocked taps and failures'],
+      ['Motion.creep','.easeOut(duration: 2.4) · new','Async fill while waiting; slows and holds at 85%'],
+      ['Motion.coast','decay, .normal rate 0.998 / ms · new','The running-text band after a flick or fling'],
+      ['Motion.Reduced.fade','.easeInOut(duration: 0.20) = TabMotion.Reduced.pill','Reduce Motion stand-in for travel and scale']
+    ].map(([name, val, use]) => ({ name, val, use }));
+    const haptics = [
+      ['Haptic.tap','.impact(weight: .light)','Button commit, add from menu, copy, async start'],
+      ['Haptic.heavy','.impact(weight: .medium)','Destructive commit, removing an item'],
+      ['Haptic.blocked','.impact(weight: .light, intensity: 0.5)','Disabled tap, as on the tab bar'],
+      ['Haptic.select','.selection','Tabs; option chips in part 2'],
+      ['Haptic.up','.increase','Stepper plus, add again'],
+      ['Haptic.down','.decrease','Stepper minus'],
+      ['Haptic.done','.success','Discount unlocked, async success, Confirmed by Atas, Paid, Delivered'],
+      ['Haptic.warn','.warning','Edits requested'],
+      ['Haptic.fail','.error','Async failure, Cancelled']
+    ].map(([name, val, use]) => ({ name, val, use }));
+    const rules = [
+      'Motion starts from a touch or a real state change and always comes to rest. Nothing loops or idles.',
+      'A change that happened while the screen was away is shown still when it appears.',
+      'Mascot and painting art react once, to a celebration or a success, then settle.',
+      'One event, one haptic. Whoever caused a change gets the button’s haptic; the resulting chip change adds none.',
+      'Every row has a Reduce Motion version. Haptics never change with it.'
+    ];
+
+    const seg = (label, cur, opts, set) => ({ label, opts: opts.map(([v, l]) => ({ label: l, bg: v === cur ? '#fff' : 'transparent', sh: v === cur ? '0 1px 3px rgba(43,26,18,.15)' : 'none', fg: v === cur ? '#2B1A12' : '#5A4237', pick: () => set(v) })) });
+    const sim = (label, run, primary) => ({ label, run, bg: primary ? '#F9CFAF' : '#FBF3EA', bd: primary ? '#F9CFAF' : '#EDE2E4' });
+    const P = [
+      { id:'m01', title:'Buttons: press, release, disabled tap', where:'Design system buttons · every screen',
+        sub:'One press model for every button, scaled to its size: wide pills squash less than icon buttons, so the squash reads the same. Tone shifts to the pressed token on touch down. Destructive buttons commit with a heavier haptic. A disabled button doesn’t squash; it shakes and says why.',
+        sims: id => [sim('Reset', () => this.call(id, 'reset'))],
+        tries: ['Press and hold any button to see the squash. Slide off before letting go to cancel.','Tap Leave group: its haptic is heavier than the others.','Tap the disabled Lock again. It shakes and the reason line appears.','Switch to Reduce Motion: presses dim instead of squashing.'] },
+      { id:'m02', title:'Add item, stepper, basket total', where:'3-9 Menu · 3-1 My items · basket bar',
+        sub:'Adding from the menu flips + to a check, opens the row in My items and counts the basket up. The stepper rolls its digit in the direction of the change. At 1, minus becomes the trash with its own fill and colour, so the destructive tap is visible before it happens.',
+        sims: id => [sim('Reset', () => this.call(id, 'reset'))],
+        tries: ['Tap + on Butter Croissant: check, new row, basket counts up.','Step Pain Au Chocolate down to 1. Minus turns into the trash.','Tap the trash. In the app it opens the remove confirm first (alert motion is in part 2).','Tap ✓ on a menu card to add one more.'] },
+      { id:'m03', title:'Rp 200.000 bar and Discount unlocked', where:'3-1 → 3-3',
+        sub:'The fill follows the group total with the dough trail spring. Crossing the line while the screen is open plays the one celebration in the app, a beat at a time: card, headline, sunburst, mascot, band. The band flicks once and coasts to a stop. Then everything rests.',
+        sims: id => [sim('Dimas adds Almond Croissant · Rp 24.000', () => this.call(id, 'change', 24000, 'Dimas', 'D', 'added Almond Croissant · Rp 24.000'), true), sim('Nadia adds Banana Cake · Rp 50.000', () => this.call(id, 'change', 50000, 'Nadia', 'N', 'added Banana Cake · Rp 50.000'), true), sim('Dimas removes the croissant', () => this.call(id, 'change', -24000, 'Dimas', 'D', 'removed Almond Croissant · Rp 24.000')), sim('Reset', () => this.call(id, 'reset'))],
+        tries: ['Add Dimas’s croissant, then Nadia’s cake. The cake crosses Rp 200.000.','Watch the unlock at ¼×: fill, card, headline, mascot, band, each a beat apart.','Drag and fling the band. It coasts to a stop and stays there.','Remove the croissant to drop back below the line. No celebration in reverse.'] },
+      { id:'m04', title:'Async buttons: loading, success, failure', where:'Lock order · Send to Atas · Mark paid · Confirm delivery',
+        sub:'The button keeps its place and shows the wait inside itself: the label changes and a cream fill creeps across, slowing until it holds. Success completes the fill and turns the button into the Success style with a check. Failure drains the fill, shakes and offers Try again. Nothing spins.',
+        sims: id => [sim('Reset', () => this.call(id, 'reset'))], result: 'result', resOpts: [['ok','Succeeds'],['fail','Fails']],
+        tries: ['Tap Lock order. It fills while it waits and lands on Locked.','Set Result to Fails, reset, and tap again. It shakes and offers Try again.','Tap while it’s loading. Nothing happens, by design.'] },
+      { id:'m05', title:'Copy and the toast', where:'5-5 My bill · 2-5 Share',
+        sub:'The copy icon flips to a check where the finger is, and one toast rises above the bottom bar. Copying again while it shows changes its text and bumps it rather than stacking a second one.',
+        sims: id => [sim('Reset', () => this.call(id, 'reset'))],
+        tries: ['Copy the account number: the icon flips to a check and the toast rises.','Copy the name straight after. The same toast changes its text and bumps.','Leave it. The toast drops away after 1.8s; the icon returns after 1.6s.'] },
+      { id:'m06', title:'Status chips and the order timeline', where:'3-1 · 5-4 · 5-5 · 6-2',
+        sub:'A chip stretches to its new label from its leading edge while its colours cross over, then bumps. The timeline line fills down to the next step, the finished step pops its check and the new one pops in. Haptics only for changes that matter to the person watching.',
+        sims: id => [sim('Next step', () => this.call(id, 'next'), true), sim('Request edits', () => this.call(id, 'edits')), sim('Cancel group', () => this.call(id, 'cancel')), sim('Next payment state', () => this.call(id, 'payNext')), sim('Reset', () => this.call(id, 'reset'))],
+        tries: ['Next step walks the order from Open to Closed.','At Locked, try Request edits, then Next step to go back to Locked.','Next payment state: Unpaid → Says paid → Paid.','Cancel group dims the timeline.'] },
+      { id:'m07', title:'Sheets and confirms: enter, drag, dismiss', where:'3-6 · 4-1 · 4-6 · 4-9 · the remove confirm',
+        sub:'Confirms and sheets rise with the arrive spring and settle with a small stretch, as if pushed up from the bottom like dough. They follow the finger down; dragged above the top they stretch instead of lifting. Let go past 30% of the height, or fast, and they leave with the speed you gave them; otherwise they spring back.',
+        sims: id => [sim('Reset', () => this.call(id, 'reset'))],
+        tries: ['Tap the trash on Pain Au Chocolate. The remove confirm rises.','Drag it down and let go before a third of the way: it springs back. Flick it down: it leaves.','Drag it up: it stretches instead of lifting.','Tap Remove: the confirm leaves, then the row collapses.','Open Request an edit and close it with Cancel or a tap on the scrim.'] },
+      { id:'m08', title:'Notifications while the app is open', where:'N-3 banner · any screen',
+        sub:'The banner drops from under the status bar on the arrive spring. A second event while it shows changes its text and bumps instead of stacking. It holds 4 seconds, pauses under a finger, swipes up to dismiss and stretches if pulled down. Its haptic is the event’s haptic, so it never doubles up with the screen underneath.',
+        sims: id => [sim('Rani asks Dimas to edit', () => this.call(id, 'show', 'edit'), true), sim('Nadia joined', () => this.call(id, 'show', 'join'), true), sim('Bill final', () => this.call(id, 'show', 'final'), true), sim('Cutoff in 30 min', () => this.call(id, 'show', 'cutoff')), sim('Reset', () => this.call(id, 'reset'))],
+        tries: ['Send “Rani asks Dimas to edit”, then “Nadia joined” while it shows.','Swipe the banner up, or pull it down and let go.','Tap it: it presses, then leaves for the screen it’s about.','Compare the haptics: warning, light, success, none.'] },
+      { id:'m09', title:'Home cards opening into their screen', where:'2-1 Home → 3-8 · 2-4 · 3-1',
+        sub:'Choice cards and group cards press with a gentler squash for their size. On release the card itself grows into the next screen: top and sides lead, the bottom edge trails, so it stretches downward before it settles. Back reverses it into the same card.',
+        sims: id => [sim('Reset', () => this.call(id, 'reset'))],
+        tries: ['Press and hold a card, then slide off to cancel.','Tap Start a group order at ¼×: the bottom edge trails.','Tap Back. The screen shrinks back into its card.','Try the Friday Treats order card too.'] },
+      { id:'m10', title:'Split: assigning shares to people', where:'4-1 Propose a split',
+        sub:'People join or leave the split from the chips, and their share row opens or folds away. The shares bar is one strip of dough: when one share grows, its neighbours give way on the same spring. Over-assigning is blocked with the tab bar’s shake.',
+        sims: id => [sim('Reset', () => this.call(id, 'reset'))],
+        tries: ['Add Dimas, then give him slices. Plus dims once all 12 are used.','Tap Split evenly with four people sharing.','Tap Rani’s chip. She owns the cheesecake, so it shakes.','Take slices away and watch the total line change.'] },
+      { id:'m11', title:'Avatars joining a group', where:'3-1 · 3-2 · 2-1 group card',
+        sub:'A new member’s avatar pops onto the end of the stack and their row opens at the bottom of the list while the count rolls. Someone leaving shrinks out and the stack closes the gap. No haptic here: the host feels the join on the banner (08).',
+        sims: id => [sim('Nadia joins', () => this.call(id, 'join', 'N'), true), sim('Arief joins', () => this.call(id, 'join', 'A'), true), sim('Kevin leaves', () => this.call(id, 'leave', 'K')), sim('Reset', () => this.call(id, 'reset'))],
+        tries: ['Add Nadia, then Arief. Each pops in at the end.','Remove Kevin. The stack closes up.','At ¼× the row opens a beat after the avatar.'] },
+      { id:'m12', title:'The bill settling into its final numbers', where:'5-6 → 5-5',
+        sub:'When Atas confirms while the bill is open, the estimate turns into the bill in one short sequence: the chip, each line’s detail, the discount line, then the total counting to its final value. I’ve paid becomes available last. One success haptic covers the whole moment.',
+        sims: id => [sim('Atas confirms', () => this.call(id, 'confirm'), true), sim('Reset', () => this.call(id, 'reset'))],
+        tries: ['Tap Atas confirms and watch at ¼×.','The ≈ folds away as the total counts up.','The waiting card leaves; I’ve paid wakes up last.'] },
+      { id:'m13', title:'Variant and option chips', where:'3-13 · 3-16 product detail',
+        sub:'The Cocoa selection behaves like the tab bar pill: it travels between chips on a leading and a trailing edge, stretching on the way. Chips squash on press, the price rolls in the direction it changed, and every change is a selection tick.',
+        sims: id => [sim('Reset', () => this.call(id, 'reset'))],
+        tries: ['Switch Weight between 600 gr and 1000 gr. The price rolls down and up.','Switch Slice. The pill stretches across the gap.','Re-tap the selected chip: no change, no haptic.'] },
+      { id:'m14', title:'Skeleton rows turning into content', where:'6-4 → 6-1 · 3-11',
+        sub:'Skeletons stay still while they wait: no shimmer, no pulse. When data arrives each row swaps its skeleton for content with a short rise, one after another, and month labels open into place.',
+        sims: id => [sim('Data arrives', () => this.call(id, 'arrive'), true), sim('Reset', () => this.call(id, 'reset'))],
+        tries: ['Tap Data arrives. Rows land top to bottom, 0.04s apart.','Switch to Reduce Motion: rows crossfade in place.'] },
+      { id:'m15', title:'Pull to refresh', where:'6-1 · 2-1 · 5-2',
+        sub:'Pulling stretches the list on a rubber band and brings the waiting mascot in. Crossing 72pt gives a light tick and a bump. Letting go holds the list at 64pt while a ring fills around the mascot instead of a spinner. When the reply lands the ring completes, the list springs back and new rows open at the top.',
+        sims: id => [sim('Reset', () => this.call(id, 'reset'))], result: 'result15', resOpts: [['ok','Finds new'],['fail','Fails']],
+        tries: ['Drag the list down past the tick and let go.','Drag less than 72pt: it slides back with no refresh.','Set Result to Fails and pull again.'] },
+      { id:'m23', num:'Fix', title:'Onboarding ring: turn, then rest', where:'1-1 Splash · 1-4a Waiting',
+        sub:'The dashed ring used to turn forever on a 14s linear loop. It now turns a quarter on each real step, on a slow critically damped spring, and stays still in between: once when the splash appears, once when the app is ready. On 1-4a it turns when the wait starts and when the message arrives (16).',
+        sims: id => [sim('Launch', () => this.call(id, 'launch'), true), sim('App ready', () => this.call(id, 'done'), true), sim('Reset', () => this.call(id, 'reset'))],
+        tries: ['Tap Launch: the ring turns a quarter and stops, the giraffe settles, the logo drops in.','Wait. Nothing moves while it loads.','Tap App ready: one more quarter turn, then Welcome.'] },
+      { id:'m16', title:'Sign-in: WhatsApp code, the wait, verified', where:'1-3 → 1-4a → 1-4b · 1-4c',
+        sub:'Coming back from WhatsApp, the code card shrinks into the code chip on the dough springs while the mascot swaps to waiting and the ring turns once. The wait is still apart from the countdown text. When the message lands the screen turns Cocoa and celebrates once: sunburst, disc, mascot, headline, Continue, each a beat apart.',
+        sims: id => [sim('Message arrives', () => this.call(id, 'arrive'), true), sim('Code times out', () => this.call(id, 'expire')), sim('Reset', () => this.call(id, 'reset'))],
+        tries: ['Tap Open WhatsApp. When you “come back”, the code card becomes the chip.','Tap Message arrives and watch at ¼×.','Reset, open WhatsApp again, then tap Code times out: shake, new code.'] },
+      { id:'m17', title:'Send to WhatsApp and coming back', where:'5-1 → 5-2',
+        sub:'The message language switches with the same travelling pill as option chips, and the message rolls to the other language. Open WhatsApp hands off to the system. On return the screen is already 5-2: the Sent chip pops and the cards rise into place. Coming back doesn’t buzz; the tap already did.',
+        sims: id => [sim('Come back from WhatsApp', () => this.call(id, 'back'), true), sim('Reset', () => this.call(id, 'reset'))],
+        tries: ['Switch between Bahasa Indonesia and English.','Tap Open WhatsApp, then Come back from WhatsApp.'] },
+      { id:'m18', title:'Upload a payment photo', where:'5-5 receipt · 5-11 → 5-12 delivery photo',
+        sub:'The chosen photo settles into the slot and uploads behind a ring that fills and holds, like the async buttons. Done: the ring completes, a check pops on the corner and I’ve paid wakes up. Failed: the ring drains, the photo shakes, and tapping it retries.',
+        sims: id => [sim('Reset', () => this.call(id, 'reset'))], result: 'result18', resOpts: [['ok','Uploads'],['fail','Fails']],
+        tries: ['Tap Add your transfer receipt.','Set Result to Fails, reset, and try again. Tap the photo to retry.'] },
+      { id:'m19', title:'Mark paid on the payment board', where:'5-9 Payments · 5-10 Receipt',
+        sub:'Marking paid flips the chip, folds the button away, and moves the amount along the owed bar from To check to Collected while the totals count. Nudge confirms in place and can’t be sent twice in a day.',
+        sims: id => [sim('Reset', () => this.call(id, 'reset'))],
+        tries: ['Mark Putri paid, then Arief. Watch the bar and the totals.','Nudge Kevin, then tap Nudged again.'] },
+      { id:'m20', title:'Share an invite', where:'2-5 Share',
+        sub:'The invite sheet uses the sheet springs from 07. The QR code is revealed from its centre as the sheet lands. Copy link uses the toast from 05; Send on WhatsApp hands off as in 17; the share button opens the system sheet.',
+        sims: id => [sim('Reset', () => this.call(id, 'reset'))],
+        tries: ['Tap Invite people. The QR opens from its centre.','Copy the link twice.','Close with × or a tap on the scrim.'] },
+      { id:'m21', title:'Running-text band: flick, coast, drag, fling', where:'1-2 · 2-1 · 3-3',
+        sub:'Bands never auto-scroll. The first time a band’s screen appears in a session it gets one flick and coasts to a stop on the scroll view’s normal deceleration. After that it moves only under a finger: drag it 1:1, fling it, and it coasts again.',
+        sims: id => [sim('Screen appears', () => this.call(id, 'appear'), true), sim('Reset', () => this.call(id, 'reset'))],
+        tries: ['Tap Screen appears. Each band flicks once, a beat apart.','Drag a band and let go fast. Drag it slowly and it stops where you leave it.','Touch a coasting band to stop it.'] },
+      { id:'m22', title:'Empty states', where:'2-2 Home empty · 6-3 History empty',
+        sub:'The first time an empty state shows in a session, the painting drops in on its hook and settles at its tilt, then the copy and buttons rise. After that it shows still.',
+        sims: id => [sim('First view', () => this.call(id, 'first'), true), sim('Seen before', () => this.call(id, 'again')), sim('Reset', () => this.call(id, 'reset'))],
+        tries: ['Tap First view at ¼×: the painting swings to −1.5° and rests.','Tap Seen before: everything is already in place.'] }
+    ];
+    const protos = P.map((p, i) => {
+      const c = this.cfg(p.id), hp = s.hap[p.id];
+      const segs = [
+        seg('Motion', c.rm ? 'rm' : 'std', [['std','Standard'],['rm','Reduce Motion']], v => this.setCfg(p.id, { rm: v === 'rm' })),
+        seg('Speed', c.slow, [[1,'1×'],[4,'¼× slow motion']], v => this.setCfg(p.id, { slow: v }))
+      ];
+      if (p.result) segs.push(seg('Result', s[p.result] || 'ok', p.resOpts, v => this.setState({ [p.result]: v })));
+      const o = { id: p.id, num: p.num || p.id.slice(1), title: p.title, where: p.where, sub: p.sub, segs, sims: p.sims(p.id),
+        tries: p.tries.map((t, j) => ({ n: j + 1, t })), ref: this.refFns[p.id], hapRef: this.hapFns[p.id],
+        rmA: c.rm ? '1' : '0', slowA: String(c.slow), resA: p.result ? (s[p.result] || 'ok') : 'ok',
+        hapType: hp ? hp.type : '—', hapWhy: hp ? hp.why : 'Interact with the prototype' };
+      for (let j = 1; j <= 23; j++) o['is' + j] = p.id === 'm' + String(j).padStart(2, '0');
+      return o;
+    });
+
+    const S = [
+      ['01 Buttons','Press down','Touch down on an enabled button','Face scale: full-width pills x 1.02 y 0.92 · compact pills x 1.04 y 0.92 · icon buttons x 1.08 y 0.88. Fill and border → pressed token (#B5773A, #4A3329, #FDF8F2 + #FCE3D0, #EE4D5B)','Motion.press (0.20 / 0.75) · tone Motion.quickIn','0','None. Prepare the generator','Opacity → 0.6, Motion.Reduced.press. Tone still changes. No scale'],
+      ['','Release','Touch up, or the finger leaves the 16pt slop','Scale → 1, overshooting into a short stretch and back · tone → rest','Motion.release (0.38 / 0.50) · tone Motion.fadeOut','0','None','Opacity → 1, Motion.Reduced.release'],
+      ['','Commit','Touch up inside','Runs the action','—','0','Pill, secondary, icon: .sensoryFeedback(.impact(weight: .light)) · destructive: .sensoryFeedback(.impact(weight: .medium))','Same haptics'],
+      ['','Disabled tap','Touch up on a disabled button. Touch down does nothing','Content offset x +4, −3, +2, −1, 0 · reason line under the button: opacity 0 → 1, offset y −4 → 0, holds, then fades','Motion.shake · reason Motion.settle (0.40 / 0.86), out Motion.fadeOut','0 · out 2.4','.sensoryFeedback(.impact(weight: .light, intensity: 0.5))','No shake. Reason line fades in and out'],
+      ['02 Add item & stepper','Add from menu','Tap + on a menu card, item not in the basket','Button fill peach → lime · plus scale → 0 · check scale 0 → 1, rotation −12° → 0°','fill Motion.quick · check Motion.pop (0.32 / 0.50)','0 · check 0.04','.sensoryFeedback(.impact(weight: .light))','Fill and icons crossfade, Motion.Reduced.fade'],
+      ['','Add again','Tap ✓ on a menu card','Button scale 1.2 → 1 · the row’s number rolls up','Motion.bump (0.30 / 0.60)','0','.sensoryFeedback(.increase)','Number crossfades, no bump'],
+      ['','Row opens','Item enters My items','Row height 0 → 76 · contents opacity 0 → 1','Motion.settle · opacity Motion.fade','0 · 0.06','—','Height snaps, contents fade'],
+      ['','Stepper +','Tap plus','Digit rolls up 8pt, .contentTransition(.numericText()) · plus button scale 1 → 0.8 → 1','digits Motion.digits · Motion.dip, then Motion.bounce (0.38 / 0.45)','0','.sensoryFeedback(.increase)','Digits crossfade, no dip'],
+      ['','Stepper −','Tap minus, quantity 2 or more','Digit rolls down 8pt · minus button dip','Same','0','.sensoryFeedback(.decrease)','Same'],
+      ['','Trash state','Quantity reaches 1','Minus scale → 0 · trash scale 0 → 1, rotation −12° → 0° · button fill → #FBE0E3, ink → #E40014','Motion.pop · colours Motion.quick','0.04','None. The .decrease of that tap covers it','Crossfade'],
+      ['','Remove','Tap trash, after the remove confirm','Row height → 0, opacity → 0 · menu button lime → peach, check → plus','Motion.leave (0.32 / 1.0) · opacity Motion.fadeOut','0','.sensoryFeedback(.impact(weight: .medium))','Opacity only, then height snaps'],
+      ['','Basket bar · change','Basket count or total changes','Bar scale 1.06 → 1 · “n items” rolls · total counts old → new, rounded to Rp 500 each frame','bump Motion.bump · total Motion.glide (0.50 / 1.0) · roll Motion.digits','0','None','Values swap with a crossfade'],
+      ['','Basket bar · show, hide','First item added · last item removed','Offset y 90 → 0, opacity 0 → 1 · and back','Motion.arrive (0.42 / 0.72) · hide Motion.leave','0','None','Opacity only'],
+      ['03 Rp 200.000 bar','Fill','Group total changes while the screen is open','Fill width → min(total / 200.000, 1)','Motion.doughTrail (0.44 / 0.82)','0','None','.easeInOut(duration: 0.25), no overshoot. The fill still grows'],
+      ['','Numbers','Same','Total and “Rp X more” count old → new','Motion.glide','0','—','Crossfade to the new value'],
+      ['','Unlock · card','Total crosses 200.000 while the screen is open','Card white → lime, ring #BCD947 · fill → Cocoa','Motion.fade · fill Motion.quick','0.18','.sensoryFeedback(.success)','Same'],
+      ['','Unlock · headline','Same','“Discount unlocked!” row height 0 → 72 (two lines) · text scale 0.6 → 1, rotation −6° → 0° · total type 38 → 30pt','height Motion.settle · text Motion.pop','0.18 · text 0.26','—','Row snaps open, text fades in'],
+      ['','Unlock · message','Same','“Rp X more…” out, “Atas applies…” in','Motion.fadeOut · Motion.fade','0.18 · 0.28','—','Crossfade'],
+      ['','Unlock · sunburst','Same','Rotation −40° → 0°, opacity 0 → 0.7, then still','Motion.glide · opacity Motion.fade','0.26','—','Opacity only'],
+      ['','Unlock · mascot','Same','pose-celebrating offset y 60 → 0, scale 0.8 → 1, opacity 0 → 1, then rests','Motion.bounce (0.38 / 0.45)','0.32','—','Opacity only'],
+      ['','Unlock · band','Same','Band height 0 → 31, then one flick: 800pt/s to the left, decelerating to a stop','height Motion.settle · flick Motion.coast','0.38 · flick 0.50','—','Appears still. Drag moves it 1:1 with no coasting'],
+      ['','Re-lock','Total drops below 200.000','Unlocked layers out, card → white, headline row → 0, type → 38pt','Motion.fadeOut · Motion.leave','0','None. The “Rp X more” line says it','Opacity only'],
+      ['','On appear','Screen appears with the total already past 200.000','Shown unlocked, still. The band doesn’t flick','—','—','None','Same'],
+      ['04 Async buttons','Start','Touch up on Lock order, Lock again, Send to Atas, Mark paid, Confirm delivery','Label out (y → −8) and “Locking…” in (y 8 → 0) · cream fill 0 → 85% of the width, slowing, then holds','label Motion.quick out, Motion.settle in · fill Motion.creep','0','.sensoryFeedback(.impact(weight: .light))','Labels crossfade. Fill grows the same way'],
+      ['','While loading','Any tap on the button','Inert: no squash, no haptic','—','—','None','Same'],
+      ['','Success','Request returns OK','Fill → 100%, then out · button → Success style (lime, #BCD947 border, Cocoa ink) · scale 1.05 → 1 · check scale 0 → 1, −12° → 0°, label → done text','fill Motion.doughLead (0.30 / 0.78) · colour Motion.fade · Motion.bump · check Motion.pop','0 · 0.10 · 0.10 · 0.12','.sensoryFeedback(.success)','Colour and label crossfade, no bump'],
+      ['','Hand-off','0.8s after success','The next state takes over: chip change, push or sheet','Their own rows','0.8','—','Same'],
+      ['','Failure','Request fails, or 10s timeout','Fill → 0 · shake · label → “Try again” · error line opacity 0 → 1, y −4 → 0','Motion.leave · Motion.shake · line Motion.settle','0','.sensoryFeedback(.error)','No shake. Fill, label and line fade'],
+      ['05 Copy & toast','Copy','Tap a copy button: account name, account number, invite link','Icon copy scale → 0 · check scale 0 → 1, rotation −12° → 0°','Motion.pop','0','.sensoryFeedback(.impact(weight: .light))','Crossfade'],
+      ['','Icon returns','1.6s after the last copy on that button','Check → copy','Motion.fade','1.6','—','Same'],
+      ['','Toast in','Copy with no toast showing','Offset y 24 → 0, scale 0.96 → 1, opacity 0 → 1. Sits above the bottom bar, as on 5-5','Motion.arrive (0.42 / 0.72) · opacity Motion.fade','0','—','Opacity only'],
+      ['','Toast again','Copy while a toast shows','Text rolls to the new message · scale 1.06 → 1 · timer restarts. Never stacks','Motion.digits · Motion.bump','0','Same haptic as the copy','Text crossfades'],
+      ['','Toast out','1.8s after the last copy, or swipe down','Offset y → 8, opacity → 0','Motion.fadeOut','1.8','—','Opacity only'],
+      ['06 Status & timeline','Chip · width','Order or payment state changes while the screen is open','Width → the new label’s width, grown from the leading edge','Motion.doughLead','0','By state, below','Width snaps'],
+      ['','Chip · colours','Same','Fill, ink, ring and dot → the new state’s tag tokens','Motion.quick','0','—','Motion.Reduced.fade'],
+      ['','Chip · label','Same','Old label y → −8, opacity → 0 · new from y 8 → 0','Motion.digits','0','—','Crossfade'],
+      ['','Chip · bump','Same','Scale 1.08 → 1','Motion.bump','0.06','—','None'],
+      ['','Chip · haptic','Confirmed by Atas, Paid, Delivered · Edits requested · Cancelled · Open, Locked, Sent, Says paid, Closed','—','—','—','.sensoryFeedback(.success) · .warning · .error · none. Whoever caused it already felt their button','Same'],
+      ['','Timeline · line','The order reaches the next step','Connector from step n to n + 1 fills top to bottom','Motion.doughTrail','0','—','Fades in'],
+      ['','Timeline · done','Same','Step n: icon → check, fill caramel → lime, halo 5pt → 0','check Motion.pop · colours Motion.fade','0.08','—','Crossfade'],
+      ['','Timeline · now','Same','Step n + 1: scale 0.6 → 1, fill white → caramel, halo 0 → 5pt, label ink → Cocoa · its time fades in','Motion.pop · Motion.fade','0.20 · time 0.28','—','Crossfade'],
+      ['','Cancelled','The group is cancelled','Chip → Cancelled · timeline opacity → 0.45','Chip rows above · Motion.fade','0','.sensoryFeedback(.error)','Same'],
+      ['','On appear','Screen appears after the state changed elsewhere','Shown in the current state, still','—','—','None. The push notification brought it','Same'],
+      ['07 Sheets & confirms','Present','A sheet or confirm opens: remove confirm, Leave group, Request an edit, Propose a split','Offset y from sheet height + 16 → 0, overshooting into a short upward stretch: bottom padding grows, the top doesn’t lift · scrim Cocoa 30%, opacity = 1 − offset / height','Motion.arrive (0.42 / 0.72)','0','None. The tap that opened it gave its haptic','Sheet and scrim fade in, Motion.Reduced.fade'],
+      ['','Drag down','Finger on the sheet or grabber, not on a button','Offset y follows the finger 1:1 · scrim follows','Direct','0','None','Same'],
+      ['','Drag up','Finger drags above the resting position','The sheet stretches: extra height = Motion.rubberBand(distance, limit: sheet height)','Direct','0','None','Same'],
+      ['','Snap back','Released under 30% of the height and slower than 800pt/s','Offset → 0, starting with the release velocity','Motion.arrive','0','None','Motion.leave, no overshoot'],
+      ['','Dismiss','Released past 30% or faster than 800pt/s downward · Keep, Cancel, Send · scrim tap','Offset → height + 16, starting with the release velocity · scrim → 0','Motion.leave (0.32 / 1.0)','0','Keep, Send: .sensoryFeedback(.impact(weight: .light)) · drag, Cancel, scrim: none','Fade out, Motion.Reduced.fade'],
+      ['','Remove confirmed','Tap Remove on the remove confirm','Confirm dismisses; the item row collapses as it goes (02 Remove row)','Motion.leave','0 · row 0.12','.sensoryFeedback(.impact(weight: .medium))','Confirm fades, then the row fades'],
+      ['','System alerts','Permission prompts and OS alerts','System motion, untouched','—','—','System','System'],
+      ['08 Notifications in app','Arrive','An order event for this person while the app is open, about a screen that isn’t on show','Banner offset y −(height + 70) → 0, overshooting into a short downward stretch','Motion.arrive','0','The event’s: edit request .sensoryFeedback(.warning) · bill final, payment confirmed .success · someone joined (host) .impact(weight: .light) · reminders none','Fade in, Motion.Reduced.fade'],
+      ['','On that screen','The event is about the screen on show','No banner; the screen’s own change plays (06 chip, 03 bar, 12 bill)','That row','—','That row’s haptic','Same'],
+      ['','Another arrives','An event while a banner shows','Text rolls to the new one · scale 1.06 → 1 · hold restarts. Never stacks','Motion.digits · Motion.bump','0','The new event’s haptic','Text crossfades'],
+      ['','Hold','—','Stays 4s; the timer pauses while a finger is on it','—','4','—','Same'],
+      ['','Leave','Hold ends, or swipe up past 24pt or faster than 300pt/s','Offset → −(height + 70), starting with the release velocity','Motion.leave','0','None','Fade out'],
+      ['','Pull down','Finger drags the banner down','The banner stretches: extra height = Motion.rubberBand(distance, limit: 120); release springs back','Direct · back Motion.arrive','0','None','Back with Motion.leave'],
+      ['','Press & open','Touch down, then up without moving 6pt','Scale x 1.015 y 0.97 and back · banner leaves · the screen opens','Motion.press, Motion.release · Motion.leave','0','None. Navigation','Opacity 0.6 dim'],
+      ['','Home badge','The event also counts on Home','Badge pop or count change','TabMotion.badgeIn / badgeBump','0','None','Per the tab bar spec'],
+      ['09 Cards opening','Press','Touch down on a choice card or group card','Card scale x 1.015 y 0.97','Motion.press · Motion.pressCard','0','None','Opacity → 0.6'],
+      ['','Release','Touch up, or the finger leaves the 16pt slop','Scale → 1','Motion.release','0','None','Opacity → 1'],
+      ['','Open · frame','Touch up inside','The card’s frame becomes the screen: top, leading and trailing edges on doughLead, bottom edge on doughTrail so it stretches down · corner radius 32 → the display’s','Motion.doughLead (0.30 / 0.78) · Motion.doughTrail (0.44 / 0.82)','0','None. Navigation','The screen crossfades in at full size, Motion.Reduced.fade'],
+      ['','Open · colour','Same','Card fill → Cream','Motion.fade','0.06','—','Part of the crossfade'],
+      ['','Open · content','Same','Card content out · screen content in','Motion.fadeOut · Motion.fade','0 · 0.12','—','Part of the crossfade'],
+      ['','Close','Back','Reverse into the card’s frame and colour; content swaps back. The card shows again when the frame lands','Same springs','0 · card content 0.06','None','Crossfade out'],
+      ['','Edge swipe back','Interactive pop','Frame follows the gesture','System zoom transition','—','None','System'],
+      ['10 Split','Add a person','Tap an unselected chip in Who’s sharing','Chip white → Cocoa, ink → Cream, ring off · their share row opens','colours Motion.quick · row Motion.settle','0 · row 0.04','.sensoryFeedback(.selection)','Colours crossfade, row snaps open'],
+      ['','Remove a person','Tap a selected chip','Chip → white · their row folds · their slices return','Motion.quick · Motion.leave','0','.sensoryFeedback(.selection)','Same, opacity only'],
+      ['','Owner’s chip','Tap the item owner’s chip','Shake','Motion.shake','0','.sensoryFeedback(.impact(weight: .light, intensity: 0.5))','No shake'],
+      ['','Slices + / −','Stepper on a share','Number rolls · button dip · % and Rp update (02 stepper rows)','Motion.digits · Motion.dip, Motion.bounce','0','.sensoryFeedback(.increase) / (.decrease)','Crossfade'],
+      ['','Shares bar','Any share changes','Each segment’s width → slices / 12, in member order with 2pt gaps; neighbours give way on the same spring','Motion.doughTrail','0','—','Motion.Reduced.fill'],
+      ['','Split evenly','Tap Split evenly','12 slices spread across everyone sharing; leftovers go to the first in the list · rows roll, bar settles','Motion.doughTrail · Motion.digits','0','.sensoryFeedback(.selection)','Crossfades'],
+      ['','Can’t assign','Plus with all 12 assigned, or minus at 0','Total line shakes · that button’s icon is at 0.4 opacity','Motion.shake','0','.sensoryFeedback(.impact(weight: .light, intensity: 0.5))','No shake'],
+      ['','All assigned','Total reaches 12 of 12','Total line rolls to “12 of 12 slices · 100%” with a check, ink → #5E7A00','Motion.digits','0','None','Crossfade'],
+      ['11 Members','Join · stack','Someone joins while the screen is open','New avatar at the end: scale 0 → 1, rotation −12° → 0°','Motion.pop','0','None. The banner (08) carries the host’s haptic','Fades in'],
+      ['','Join · count','Same','“Members · n” rolls up','Motion.digits','0','—','Crossfade'],
+      ['','Join · row','Same','Row height 0 → 69 at the end of the list · contents fade in · its avatar pops','Motion.settle · Motion.fade · Motion.pop','0.06','—','Row snaps, contents fade'],
+      ['','Leave · stack','Someone leaves','Their avatar scale → 0, opacity → 0 · later avatars slide 30pt toward the start','Motion.fadeOut · Motion.settle','0','None','Fade out; others snap'],
+      ['','Leave · row','Same','Row height → 0, opacity → 0 · count rolls down','Motion.leave · Motion.fadeOut','0','—','Opacity, then snap'],
+      ['','On appear','Members changed while away','Shown still','—','—','None','Same'],
+      ['12 Bill settles','Chips','Atas confirms while the bill is open','Not final yet → Final (06 chip rows) · Unpaid pops in at the end of the row','06 chip rows · Motion.pop','0 · Unpaid 0.06','.sensoryFeedback(.success), once for the whole sequence','Crossfades'],
+      ['','Line detail','Same','Each line’s second line opens (my items · split with… · ÷ 6)','Motion.settle','0.10 + 0.04 per line','—','Snaps open'],
+      ['','Ongkir share','Same','“After Atas confirms” → “Rp 5.000”, ink #7A6257 → Cocoa','Motion.digits · Motion.fade','0.10','—','Crossfade'],
+      ['','Discount share','Same','New line opens: “− Rp 2.500” in #5E7A00','Motion.settle · opacity Motion.fade','0.18','—','Snaps open, fades'],
+      ['','Total','Same','“≈” narrows to 0 and fades · ≈ Rp 97.000 counts to Rp 99.500 · type 46 → 52pt · ink #7A6257 → Cocoa','Motion.settle · Motion.glide · Motion.fade','0.24','—','Crossfades to the final value'],
+      ['','Caption','Same','“Your items so far…” → “to Rani · Friday Treats”','Motion.fadeOut · Motion.fade','0.24','—','Crossfade'],
+      ['','Waiting card','Same','Height → 0, opacity → 0','Motion.leave · Motion.fadeOut','0.30','—','Fades, then snaps'],
+      ['','I’ve paid','Same','Disabled (#D1B6BB) → Primary (Caramel) · scale 1.05 → 1','Motion.fade · Motion.bump','0.40','—','Colour crossfade'],
+      ['','On appear','The bill turned final while away','Shown final, still','—','—','None. The push brought it','Same'],
+      ['13 Option chips','Press','Touch down on an option chip','Chip, and the selection under it, scale x 1.04 y 0.92','Motion.press · Motion.pressCompact','0','None','Opacity → 0.6'],
+      ['','Select · pill','Touch up on another chip in the group','The Cocoa selection travels: the edge in the direction of travel on doughLead, the other on doughTrail','Motion.doughLead · Motion.doughTrail','0','.sensoryFeedback(.selection)','Pill fades in at the new chip, Motion.Reduced.fade'],
+      ['','Select · ink','Same','Old chip Cream → Cocoa · new chip Cocoa → Cream','Motion.quick','0 · new 0.04','—','Motion.Reduced.fade'],
+      ['','Price','The choice changes the price','Price rolls up or down with the change','Motion.digits','0','—','Crossfade'],
+      ['','Re-tap','Touch up on the selected chip','Press and release only','—','—','None','Same'],
+      ['14 Skeleton → content','Rows arrive','Data loads after the skeleton has shown for at least 0.3s','Per row: skeleton out · content offset y 6 → 0, opacity 0 → 1 · month labels open 0 → 30','Motion.fadeOut · Motion.settle · Motion.fade','0.04 per row, capped at 0.32','None','Crossfade in place; labels snap open'],
+      ['','Fast load','Data in under 0.15s','No skeleton; content shows still','—','—','None','Same'],
+      ['','Waiting','Skeleton on screen','Still. No shimmer, no pulse','—','—','None','Same'],
+      ['15 Pull to refresh','Pull','Drag down at the top of a list','Content offset = Motion.rubberBand(drag, limit: list height) · pose-waiting opacity = offset / 40, scale 0.6 → 1 by 72pt','Direct','0','None','Mascot opacity only'],
+      ['','Threshold','Offset crosses 72pt','Mascot scale 1.12 → 1','Motion.bump','0','.sensoryFeedback(.impact(weight: .light)), each crossing','No bump'],
+      ['','Release short','Released under 72pt','Offset → 0','Motion.leave','0','None','Same'],
+      ['','Refreshing','Released past 72pt','Offset → 64 · ring around the mascot 0 → 85%, slowing, then holds','Motion.settle · ring Motion.creep','0','None','Same'],
+      ['','Done','Reply arrives','Ring → 100% · then offset → 0, mascot fades · new rows open at the top','ring Motion.doughLead · Motion.arrive · Motion.fadeOut · rows Motion.settle','0 · 0.20','None','Offset with Motion.leave; rows fade'],
+      ['','Failed','Refresh fails or times out (10s)','Ring drains · mascot shakes · offset → 0 · then the connection toast (Tab bar board)','Motion.leave · Motion.shake','0 · offset 0.32','.sensoryFeedback(.error)','No shake'],
+      ['Fix · Onboarding ring','Launch','Splash (1-1) appears','Dashed ring rotation −90° → 0°, then still · mascot scale 0.9 → 1 · logo offset y −24 → 0, opacity 0 → 1 · caption fades in','ring Motion.ringTurn (1.2 / 1.0) · mascot Motion.bounce · logo Motion.arrive · caption Motion.fade','0 · 0.08 · 0.12 · 0.30','None','Logo and caption fade in; ring and mascot still'],
+      ['','Loading','The splash stays up','Still. Nothing turns while it waits','—','—','None','Same'],
+      ['','Ready','The app is ready','Ring turns a further 90° · logo scale 1.06 → 1 · Welcome (1-2) crossfades in','Motion.ringTurn · Motion.bump · Motion.fade','0 · Welcome 0.25','None','Crossfade'],
+      ['','Waiting ring (1-4a)','The wait starts, or the message arrives','Ring turns 90° on each of those steps, then rests','Motion.ringTurn','0','—','Still'],
+      ['16 Sign-in','Open WhatsApp','Touch up on Open WhatsApp (1-3)','Press as 01; the system switches to WhatsApp','01 rows','0','.sensoryFeedback(.impact(weight: .light))','Same'],
+      ['','Code card → chip','The app becomes active again after the hand-off','Code card (354 × 102, radius 32, dashed Caramel) becomes the code chip (236 × 38, Liquorice 100, fully rounded): sides and height on doughLead, top on doughTrail · code type 40 → 15pt · “Your code” fades out, “· m:ss left” fades in','Motion.doughLead · Motion.doughTrail · type Motion.settle · Motion.fadeOut / Motion.fade','0 · in 0.08','None','Swaps with a crossfade at the final size'],
+      ['','Mascot & ring','Same','pose-phone 140 → pose-waiting 206, crossfade · ring fades in and turns 90°, then still','Motion.settle · Motion.fade · Motion.ringTurn','0','—','Crossfade; ring still'],
+      ['','Copy & button','Same','Title and body crossfade to “Checking your WhatsApp…” · button Dark → Secondary, label rolls to “Open WhatsApp again”','Motion.fade · Motion.digits','0.08','—','Crossfade'],
+      ['','Countdown','Every second while waiting','“m:ss left” text changes. No motion','—','—','None','Same'],
+      ['','Verified · screen','The message arrives','Screen → Cocoa · ring turns 90°','Motion.fade · Motion.ringTurn','0.06','.sensoryFeedback(.success)','Crossfade'],
+      ['','Verified · sunburst','Same','Rotation −40° → 0°, scale 0.8 → 1, then still','Motion.glide · Motion.settle','0.06','—','Static'],
+      ['','Verified · disc & mascot','Same','Lime disc scale 0 → 1 · pose-celebrating offset y 60 → 0, opacity 0 → 1, then rests','Motion.pop · Motion.bounce','0.10 · 0.16','—','Fade in'],
+      ['','Verified · headline','Same','“You’re in!” scale 0.6 → 1, rotation −6° → 0° · verified line fades in','Motion.pop · Motion.fade','0.24 · 0.32','—','Fade in'],
+      ['','Verified · Continue','Same','Offset y 40 → 0, opacity 0 → 1','Motion.arrive','0.38','—','Fade in'],
+      ['','Timed out','10 minutes pass with no message','Code chip shakes, then rolls to the new code · mascot → pose-confused · copy → “We didn’t get your message” · button → Dark, “Send new code” · ring fades out','Motion.shake · Motion.digits · Motion.fade','0 · code 0.32','.sensoryFeedback(.warning)','No shake; crossfades'],
+      ['17 Send to WhatsApp','Language','Tap Bahasa Indonesia or English','Segment pill travels (13 rows) · message rolls to the other language, card height settles','Motion.doughLead / doughTrail · Motion.digits · Motion.settle','0','.sensoryFeedback(.selection)','Pill fades; height snaps'],
+      ['','Open WhatsApp','Touch up on Open WhatsApp','Press as 01; the system switches apps','01 rows','0','.sensoryFeedback(.impact(weight: .light))','Same'],
+      ['','Back · chip','The app becomes active again after the hand-off','5-1 is replaced by 5-2 · Sent to Atas chip scale 0 → 1, −12° → 0°','Motion.pop','0.06','None. The button gave the haptic','Crossfade'],
+      ['','Back · cards','Same','Waiting card offset y 16 → 0, opacity 0 → 1 · delivery mascot offset y −30 → 0 · totals card as the waiting card','Motion.settle · Motion.bounce · Motion.fade','0.10 · mascot 0.16 · totals 0.16','—','Fade in'],
+      ['','Back · button','Same','“Atas replied · enter final bill” offset y 40 → 0, opacity 0 → 1','Motion.arrive','0.24','—','Fade in'],
+      ['18 Upload a photo','Pick','Tap the receipt slot, or the shutter on 5-11','Press as 01 (compact); the system picker or camera takes over','01 rows','0','.sensoryFeedback(.impact(weight: .light))','Same'],
+      ['','Thumbnail in','Photo chosen','Thumbnail scale 0.9 → 1, opacity 0 → 1 over the empty slot','Motion.settle · Motion.fade','0','None','Fade in'],
+      ['','Uploading','Same','Cocoa 45% overlay · ring 0 → 85%, slowing, then holds','Motion.creep','0','—','Same'],
+      ['','Uploaded','The server confirms','Ring → 100% · overlay fades · lime check badge scale 0 → 1, −12° → 0° · I’ve paid Disabled → Primary, scale 1.05 → 1','Motion.doughLead · Motion.fade · Motion.pop · Motion.bump','0 · 0.20','.sensoryFeedback(.success)','Crossfades'],
+      ['','Failed','Upload fails, or 10s timeout','Ring drains · thumbnail shakes · “Tap to retry” fades in','Motion.leave · Motion.shake · Motion.fade','0 · 0.10','.sensoryFeedback(.error)','No shake'],
+      ['','Retry','Tap the failed thumbnail','Back to Uploading','—','0','.sensoryFeedback(.impact(weight: .light))','Same'],
+      ['19 Mark paid','Mark paid','Tap Mark paid on a Says paid row, or on 5-10','Chip Says paid → Paid (06 chip rows) · Mark paid opacity → 0, width → 0','06 rows · Motion.fadeOut · Motion.leave','0 · width 0.04','.sensoryFeedback(.success)','Crossfade; button fades, then snaps'],
+      ['','Owed bar','Same','The amount moves from To check to Collected: segment widths → their share of the total','Motion.doughTrail','0.10','—','Motion.Reduced.fill'],
+      ['','Totals','Same','Collected, To check and Outstanding count to their new values','Motion.glide','0.10','—','Crossfade'],
+      ['','Nudge','Tap Nudge on an Unpaid row','Label rolls to ✓ Nudged · scale 1.15 → 1 · fill → Liquorice 100','Motion.digits · Motion.bump · Motion.quick','0','.sensoryFeedback(.impact(weight: .light))','Crossfade'],
+      ['','Nudge again','Tap Nudged the same day','Shake','Motion.shake','0','.sensoryFeedback(.impact(weight: .light, intensity: 0.5))','No shake'],
+      ['','Member says paid','A member taps I’ve paid while the board is open','Their chip → Says paid · Mark paid opens (width 0 → fitted) · bar and totals move','06 rows · Motion.settle · Motion.doughTrail · Motion.glide','0','None. The banner (08) carries it','Crossfades'],
+      ['20 Share an invite','Open','Tap Invite people, or Share on the group','Sheet rows from 07','07 rows','0','.sensoryFeedback(.impact(weight: .light))','07 rows'],
+      ['','QR','The sheet presents','QR revealed by a circle growing from its centre: clip radius 0 → 75%','Motion.settle','0.18','—','Fades in'],
+      ['','Copy link','Tap Copy link','Icon flip and toast (05 rows)','05 rows','0','.sensoryFeedback(.impact(weight: .light))','05 rows'],
+      ['','Send on WhatsApp','Tap Send on WhatsApp','Hand-off and return (17 rows); the sheet is still open on return','17 rows','0','.sensoryFeedback(.impact(weight: .light))','17 rows'],
+      ['','System share','Tap the share button','System share sheet over ours','System','—','.sensoryFeedback(.impact(weight: .light))','System'],
+      ['','Close','Tap ×, the scrim, or drag','07 dismiss rows','Motion.leave','0','× .impact(weight: .light) · scrim and drag none','07 rows'],
+      ['21 Running-text band','Appear','The band’s screen appears for the first time this session','One flick: 800pt/s in the band’s reading direction, decelerating at .normal (0.998 per ms) to a stop','Motion.coast','0.30, +0.08 per further band on screen','None','No flick; still'],
+      ['','Rest','After the coast','Still. Never auto-scrolls','—','—','None','Same'],
+      ['','Drag','Finger drags the band','Offset follows the finger 1:1; the text wraps seamlessly','Direct','0','None','Same'],
+      ['','Fling','Released faster than 40pt/s','Coasts from the release velocity to a stop','Motion.coast','0','None','Stops where released'],
+      ['','Catch','Finger lands while it coasts','Stops under the finger','—','0','None','Same'],
+      ['','Return visit','The screen appears again in the same session','Still, at its last offset','—','—','None','Same'],
+      ['22 Empty states','First view · painting','An empty state shows for the first time this session','Frame offset y −24 → 0, rotation −6° → −1.5°, opacity 0 → 1, then rests','Motion.bounce (0.38 / 0.45) · Motion.fade','0','None','Fade in'],
+      ['','First view · caption','Same','Opacity 0 → 1','Motion.fade','0.18','—','Same'],
+      ['','First view · copy','Same','Headline, then body: offset y 8 → 0, opacity 0 → 1','Motion.settle · Motion.fade','0.12 · 0.18','—','Fade in'],
+      ['','First view · buttons','Same','Primary, then the secondary row: offset y 24 → 0, opacity 0 → 1','Motion.arrive · Motion.fade','0.24 · 0.30','—','Fade in'],
+      ['','Seen before','The same empty state again this session','Shown still','—','—','None','Same']
+    ];
+    const spec = S.map(([g, name, trig, prop, anim, delay, hap, rmv]) => ({ g, name, trig, prop, anim, delay, hap, rm: rmv }));
+    const esc = t => String(t).replace(/\|/g, '\\|');
+    const md = ['| Group | Interaction | Trigger | Property | Spring or duration + curve | Delay (s) | Haptic | Reduce Motion |','|---|---|---|---|---|---|---|---|']
+      .concat(spec.map(r => '| ' + [r.g, r.name, r.trig, r.prop, r.anim, r.delay, r.hap, r.rm].map(esc).join(' | ') + ' |')).join('\n');
+
+    const swift = `import SwiftUI
+
+/// Ataste app motion. Extends TabMotion (Tab Bar board): the shared springs are
+/// TabMotion values under names that say what they're for. Values match the
+/// Motion board prototypes one to one.
+enum Motion {
+    // Springs
+    static let press      = TabMotion.pressDown      // (0.20 / 0.75) finger down
+    static let release    = TabMotion.pressUp        // (0.38 / 0.50) finger up, the dough bounce
+    static let pop        = TabMotion.badgeIn        // (0.32 / 0.50) something new appears
+    static let bump       = TabMotion.badgeBump      // (0.30 / 0.60) something there changes
+    static let bounce     = TabMotion.iconBounce     // (0.38 / 0.45) after a dip; mascot landing
+    static let doughLead  = TabMotion.pillLead       // (0.30 / 0.78) leading edge of a growing thing
+    static let doughTrail = TabMotion.pillTrail      // (0.44 / 0.82) trailing edge, progress fill
+    static let settle     = Animation.spring(response: 0.40, dampingFraction: 0.86) // TabMotion.labelOpen, no delay
+    static let arrive     = Animation.spring(response: 0.42, dampingFraction: 0.72) // TabMotion.popShow, no delay
+    static let leave      = TabMotion.pushHide       // (0.32 / 1.0) collapses and exits
+    static let glide      = TabMotion.scrollToTop    // (0.50 / 1.0) counting, long travel
+
+    // Curves
+    static let quickIn    = TabMotion.haloIn         // .easeOut(0.08) pressed tone on
+    static let quick      = TabMotion.iconSwap       // .easeOut(0.12) colours inside a control
+    static let digits     = Animation.easeOut(duration: 0.18)   // numericText rolls
+    static let fade       = Animation.easeOut(duration: 0.20)
+    static let fadeOut    = TabMotion.badgeOut       // .easeIn(0.15)
+    static let dip        = TabMotion.iconDip        // .easeOut(0.07), scale → 0.8 before bounce
+    static let shake      = TabMotion.shake
+    static let creep      = Animation.easeOut(duration: 2.4)    // async fill 0 → 0.85, then holds
+    static let coast      = UIScrollView.DecelerationRate.normal.rawValue  // band: 0.998 per ms
+
+    // Press scales
+    static let pressWide    = CGSize(width: 1.02, height: 0.92)  // full-width pills
+    static let pressCompact = TabMotion.pillPressScale            // 1.04 × 0.92
+    static let pressIcon    = TabMotion.pressScale                // 1.08 × 0.88
+    static let touchSlop: CGFloat = 16
+
+    /// @Environment(\\.accessibilityReduceMotion): opacity only. Haptics unchanged.
+    enum Reduced {
+        static let pressDim   = TabMotion.Reduced.pressDim       // 0.6
+        static let press      = TabMotion.Reduced.press
+        static let release    = TabMotion.Reduced.release
+        static let fade       = TabMotion.Reduced.pill           // .easeInOut(0.20)
+        static let fill       = Animation.easeInOut(duration: 0.25)
+    }
+}
+
+enum Haptic {
+    static let tap:     SensoryFeedback = .impact(weight: .light)
+    static let heavy:   SensoryFeedback = .impact(weight: .medium)
+    static let blocked: SensoryFeedback = .impact(weight: .light, intensity: 0.5)
+    static let select:  SensoryFeedback = .selection
+    static let up:      SensoryFeedback = .increase
+    static let down:    SensoryFeedback = .decrease
+    static let done:    SensoryFeedback = .success
+    static let warn:    SensoryFeedback = .warning
+    static let fail:    SensoryFeedback = .error
+}
+
+enum ButtonMotion {
+    static let reasonOffset: CGFloat = -4
+    static let reasonHold: Double = 2.4
+}
+
+enum StepperMotion {
+    static let rowHeight: CGFloat = 76
+    static let addCheckDelay: Double = 0.04
+    static let iconTilt: Angle = .degrees(-12)   // check and trash pop in from this
+    static let dipScale: CGFloat = 0.8
+    static let againBump: CGFloat = 1.2
+    // trash state: fill #FBE0E3, ink #E40014 (Destructive tokens)
+}
+
+enum BasketMotion {
+    static let bumpFrom: CGFloat = 1.06
+    static let hiddenOffset: CGFloat = 90
+    static let roundTo = 500                    // Rp, while counting
+}
+
+enum UnlockMotion {
+    static let threshold = 200_000
+    static let cardDelay: Double = 0.18         // the fill arrives first
+    static let headlineHeight: CGFloat = 72     // two lines
+    static let headlineFrom = (scale: CGFloat(0.6), tilt: Angle.degrees(-6), delay: 0.26)
+    static let totalSize = (from: CGFloat(38), to: CGFloat(30))
+    static let sunburst = (tilt: Angle.degrees(-40), opacity: 0.7, delay: 0.26)
+    static let mascot = (offset: CGFloat(60), scale: CGFloat(0.8), delay: 0.32)
+    static let band = (height: CGFloat(31), delay: 0.38, flickDelay: 0.50, flick: CGFloat(-800))
+}
+
+enum AsyncMotion {
+    static let creepTo: CGFloat = 0.85
+    static let successDelay: Double = 0.10      // colour, bump, check
+    static let successBump: CGFloat = 1.05
+    static let handOff: Double = 0.8
+    static let timeout: Double = 10
+}
+
+enum ToastMotion {
+    static let enter = (offset: CGFloat(24), scale: CGFloat(0.96))
+    static let exitOffset: CGFloat = 8
+    static let hold: Double = 1.8
+    static let iconHold: Double = 1.6
+    static let repeatBump: CGFloat = 1.06
+}
+
+enum StatusMotion {
+    static let bumpFrom: CGFloat = 1.08, bumpDelay: Double = 0.06
+    static let labelOffset: CGFloat = 8
+    static let doneDelay: Double = 0.08, nowDelay: Double = 0.20, timeDelay: Double = 0.28
+    static let nowFrom: CGFloat = 0.6
+    static let cancelledOpacity: Double = 0.45
+}
+
+/// Every button style uses this. Pass the scale for its size.
+struct DoughButtonStyle: ButtonStyle {
+    var squash = Motion.pressWide
+    @Environment(\\.accessibilityReduceMotion) private var reduceMotion
+    func makeBody(configuration: Configuration) -> some View {
+        let down = configuration.isPressed
+        configuration.label
+            .scaleEffect(down && !reduceMotion ? squash : CGSize(width: 1, height: 1))
+            .opacity(down && reduceMotion ? Motion.Reduced.pressDim : 1)
+            .animation(reduceMotion ? (down ? Motion.Reduced.press : Motion.Reduced.release)
+                                    : (down ? Motion.press : Motion.release), value: down)
+    }
+}
+
+// Haptics: one per event, on the view that owns the state
+// .sensoryFeedback(Haptic.tap, trigger: commitCount)
+// .sensoryFeedback(trigger: quantity) { old, new in new > old ? Haptic.up : Haptic.down }
+// .sensoryFeedback(Haptic.done, trigger: isUnlocked) { !$0 && $1 }
+// .sensoryFeedback(trigger: orderState) { _, new in new.watcherHaptic }  // nil for Open, Locked, Sent
+
+// MARK: - Part 2 (ranks 7–15). Additions only: part 1 names and values are unchanged.
+
+extension Motion {
+    static let pressCard = CGSize(width: 1.015, height: 0.97)   // big cards, banners
+    /// UIScrollView-style rubber band for over-drag: sheets, banners, pull to refresh.
+    static func rubberBand(_ offset: CGFloat, limit: CGFloat, c: CGFloat = 0.55) -> CGFloat {
+        (1 - 1 / (offset * c / limit + 1)) * limit
+    }
+}
+
+enum SheetMotion {
+    static let present  = Motion.arrive              // overshoot stretches the sheet, it doesn't lift
+    static let snapBack = Motion.arrive
+    static let dismiss  = Motion.leave
+    static let offscreenExtra: CGFloat = 16
+    static let dismissFraction: CGFloat = 0.3
+    static let dismissVelocity: CGFloat = 800        // pt/s, downward
+    static let scrimOpacity: Double = 0.3            // Cocoa
+    static let rowAfterRemove: Double = 0.12         // remove confirm → row collapse
+}
+
+enum BannerMotion {
+    static let hiddenExtra: CGFloat = 70             // hidden offset = −(height + 70)
+    static let hold: Double = 4
+    static let dismissDistance: CGFloat = 24, dismissVelocity: CGFloat = 300   // upward
+    static let tapSlop: CGFloat = 6
+    static let stretchLimit: CGFloat = 120
+    static let repeatBump: CGFloat = 1.06
+}
+
+enum CardMotion {
+    static let edges      = Motion.doughLead         // top, leading, trailing
+    static let bottomEdge = Motion.doughTrail
+    static let colourDelay: Double = 0.06, contentDelay: Double = 0.12, closeContentDelay: Double = 0.06
+    static let cornerRadius: CGFloat = 32
+}
+
+enum SplitMotion {
+    static let slices = 12
+    static let segmentGap: CGFloat = 2
+    static let rowDelay: Double = 0.04
+    static let unavailableOpacity: Double = 0.4
+}
+
+enum MembersMotion {
+    static let stackStep: CGFloat = 30               // 40pt avatars overlapping 10
+    static let rowHeight: CGFloat = 69
+    static let rowDelay: Double = 0.06
+}
+
+enum BillMotion {
+    static let lineStart: Double = 0.10, lineStep: Double = 0.04
+    static let discountDelay: Double = 0.18
+    static let totalDelay: Double = 0.24
+    static let totalSize = (from: CGFloat(46), to: CGFloat(52))
+    static let waitingDelay: Double = 0.30
+    static let payDelay: Double = 0.40, payBump: CGFloat = 1.05
+}
+
+enum OptionMotion {
+    static let inkDelay: Double = 0.04
+}
+
+enum SkeletonMotion {
+    static let minimumShow: Double = 0.3
+    static let skipIfFasterThan: Double = 0.15
+    static let stagger: Double = 0.04, maxStagger: Double = 0.32
+    static let contentOffset: CGFloat = 6
+    static let monthLabelHeight: CGFloat = 30
+}
+
+enum RefreshMotion {
+    static let threshold: CGFloat = 72
+    static let hold: CGFloat = 64
+    static let mascotFrom: CGFloat = 0.6, mascotFadeDistance: CGFloat = 40
+    static let thresholdBump: CGFloat = 1.12
+    static let returnDelay: Double = 0.20
+    static let timeout: Double = 10
+}
+
+// Card opening: .navigationTransition(.zoom(sourceID: id, in: ns)) on the destination and
+// .matchedTransitionSource(id: id, in: ns) on the card give the frame and the swipe back.
+// The system zoom uses its own spring; for doughLead / doughTrail exactly, use a custom overlay.
+
+// MARK: - Part 3 (ranks 16–22 + the onboarding ring). Additions only: part 1 and part 2 are unchanged.
+
+extension Motion {
+    /// The dashed onboarding ring (1-1, 1-4a). Replaces the 14 s linear loop:
+    /// a quarter turn per real step on a slow critically damped spring, then still.
+    static let ringTurn = Animation.spring(response: 1.2, dampingFraction: 1.0)
+    static let ringStep = Angle.degrees(90)
+}
+
+enum SplashMotion {
+    static let ringFrom = Angle.degrees(-90)
+    static let mascotFrom: CGFloat = 0.9, mascotDelay: Double = 0.08
+    static let logoOffset: CGFloat = -24, logoDelay: Double = 0.12
+    static let captionDelay: Double = 0.30
+    static let readyBump: CGFloat = 1.06, welcomeDelay: Double = 0.25
+}
+
+enum SignInMotion {
+    static let card = CGSize(width: 354, height: 102), cardRadius: CGFloat = 32
+    static let chip = CGSize(width: 236, height: 38)
+    static let codeSize = (card: CGFloat(40), chip: CGFloat(15))
+    static let mascotSize = (send: CGFloat(140), wait: CGFloat(206))
+    static let waitInDelay: Double = 0.08
+    static let codeLifetime: Double = 600
+    static let newCodeDelay: Double = 0.32     // after the shake
+    // Verified
+    static let screenDelay: Double = 0.06
+    static let sunburst = (tilt: Angle.degrees(-40), scale: CGFloat(0.8), delay: 0.06)
+    static let discDelay: Double = 0.10
+    static let mascot = (offset: CGFloat(60), delay: 0.16)
+    static let headline = (scale: CGFloat(0.6), tilt: Angle.degrees(-6), delay: 0.24)
+    static let lineDelay: Double = 0.32
+    static let continueButton = (offset: CGFloat(40), delay: 0.38)
+}
+
+enum HandOffMotion {
+    static let chipDelay: Double = 0.06
+    static let cardOffset: CGFloat = 16, cardDelay: Double = 0.10
+    static let mascotOffset: CGFloat = -30, mascotDelay: Double = 0.16
+    static let totalsDelay: Double = 0.16
+    static let buttonOffset: CGFloat = 40, buttonDelay: Double = 0.24
+}
+
+enum UploadMotion {
+    static let thumbFrom: CGFloat = 0.9
+    static let overlayOpacity: Double = 0.45   // Cocoa
+    static let creepTo = AsyncMotion.creepTo   // 0.85
+    static let doneDelay: Double = 0.20, retryDelay: Double = 0.10
+    static let timeout: Double = 10
+}
+
+enum BoardMotion {
+    static let buttonCollapseDelay: Double = 0.04
+    static let barDelay: Double = 0.10
+    static let nudgeBump: CGFloat = 1.15
+}
+
+enum ShareMotion {
+    static let qrRevealDelay: Double = 0.18
+    static let qrRevealRadius: CGFloat = 0.75  // of the QR tile, circle from the centre
+}
+
+enum BandMotion {
+    static let flickVelocity: CGFloat = 800    // pt/s; UnlockMotion.band.flick is the same value
+    static let flickDelay: Double = 0.30, stagger: Double = 0.08
+    static let flingThreshold: CGFloat = 40    // pt/s
+    static let rate = Motion.coast             // 0.998 per ms
+}
+
+enum EmptyMotion {
+    static let frameOffset: CGFloat = -24
+    static let frameTilt = (from: Angle.degrees(-6), to: Angle.degrees(-1.5))
+    static let captionDelay: Double = 0.18
+    static let copyOffset: CGFloat = 8, headlineDelay: Double = 0.12, bodyDelay: Double = 0.18
+    static let buttonOffset: CGFloat = 24, primaryDelay: Double = 0.24, secondaryDelay: Double = 0.30
+}`;
+
+    const rmNotes = [
+      'Presses dim to 0.6 instead of squashing. Pressed tones still change.',
+      'No travel, scale, rotation or overshoot. Things fade in place with Motion.Reduced.fade.',
+      'Layout changes snap: item rows, chip widths, the headline row. Their contents fade.',
+      'Numbers swap with a crossfade instead of counting.',
+      'Progress fills still grow, with .easeInOut(duration: 0.25) and no overshoot. The growth is the information.',
+      'The mascot and sunburst fade in; they don’t jump or turn. The band appears still and can be dragged, without coasting.',
+      'Sheets, banners and opening cards fade in place. Dragging still follows the finger; snap-backs use Motion.leave so nothing overshoots.',
+      'Skeleton rows crossfade without rising; month labels snap open.',
+      'Celebrations (Discount unlocked, You’re in!) keep their haptic and crossfade in; the ring, sunburst and mascot don’t turn or jump.',
+      'Bands never flick and don’t coast after a fling. They still follow a finger.',
+      'Haptics stay the same. Try it with the Motion control on each prototype.'
+    ];
+    const buildNotes = [
+      'Only animate changes that happen while the screen is visible. Keep the last state each screen showed; if it differs on appear, show the new state still.',
+      'Count-ups: animate a Double through an Animatable modifier and format to the nearest Rp 500 each frame.',
+      'Growing edges: animate leading and trailing edges as two values with doughLead and doughTrail, as the tab pill does.',
+      'Prepare feedback generators on touch down for press-driven haptics, as the tab bar does.',
+      'The unlock plays once per crossing. Dropping below and crossing again plays it again; reopening the screen doesn’t.',
+      'Async buttons go to the failure state after 10s without a reply.',
+      'Sheets and confirms are custom presentations so present can use Motion.arrive; keep the 30% and 800pt/s dismiss rule if you fall back to system sheets.',
+      'In-app banners are custom views. Don’t show one for an event about the screen on show; that screen’s own change plays instead.',
+      'Card opening: see the note at the end of the Swift file on zoom transitions.',
+      'Session-once motion (band flick, empty-state drop) is keyed per screen per app session; returning to a screen shows it still.',
+      'Sign-in: animate the code card → chip when scenePhase becomes .active after the WhatsApp hand-off, not when the button is tapped.',
+      'QR reveal: mask the QR with a Circle scaled from 0 to 1.5× (75% of the tile’s width as radius) on Motion.settle.'
+    ];
+
+    return {
+      order, springs, curves, haptics, rules, protos, spec, swift, rmNotes, buildNotes,
+      copyTable: () => this.copy(md, 'copiedT'), copySwift: () => this.copy(swift, 'copiedS'),
+      copyTableLabel: s.copiedT ? 'Copied' : 'Copy table as Markdown', copySwiftLabel: s.copiedS ? 'Copied' : 'Copy Swift'
+    };
+  }
+}
+</script>
+</body>
+</html>

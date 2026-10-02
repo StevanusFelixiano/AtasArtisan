@@ -9,6 +9,8 @@ The source of truth for every screen, for developers without Claude Design acces
 | `boards/Ataste Design System.dc.html` | Colours, type scale, spacing, radii, buttons, tags, fields, cards, states. Maps to `AtasArtisan/Shared/Brand.swift` and `Components.swift`. |
 | `boards/Ataste Flow Map.dc.html` | How the screens connect. |
 | `boards/Ataste Notifications.dc.html` | Wording of all 22 push notifications (server side: `supabase/migrations/*notification_copy.sql`). |
+| `boards/Ataste Tab Bar.dc.html` | The custom tab bar (direction 1a): states, live prototype, motion table. Maps to `Features/Home/AtasteTabBar.swift`. |
+| `boards/Ataste Motion.dc.html` | Every micro-interaction, ranked 1–22: live prototypes (Standard / Reduce Motion, slow motion), the motion spec table and the Swift constants. Maps to `Shared/Motion*.swift`. |
 
 Boards: 1 Onboarding · 2 Home and groups · 3 Group and menu · 4 Split and review · 5 Send, bill and after · 6 History, profile and states · Brand.
 
