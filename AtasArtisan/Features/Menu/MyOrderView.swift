@@ -114,6 +114,6 @@ struct MyOrderView: View {
 
     private func change(_ item: Item, _ qty: Int) {
         if qty < 1 { removing = item; return }
-        Task { await attempt($problem, "Couldn't change the quantity") { try await store.update(item, qty: qty) } }
+        Task { await attempt($problem, "Couldn't change the quantity") { try await store.setQty(item, qty) } }
     }
 }
