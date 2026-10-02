@@ -195,7 +195,7 @@ struct DeliveryPhotos: View {
             Text("Delivered").brand(.label)
             ForEach(store.proofs.filter { !$0.hidden }) { p in
                 VStack(alignment: .leading, spacing: Brand.s2) {
-                    AsyncImage(url: urls[p.id]) { $0.resizable().scaledToFill() } placeholder: { Brand.liquorice100 }
+                    CachedPhoto(url: urls[p.id], key: p.path, side: 400, fill: Brand.liquorice100)
                         .frame(height: 220).clipShape(RoundedRectangle(cornerRadius: Brand.rSmall))
                         .accessibilityLabel("Delivery photo by \(store.name(p.by_user))")
                     HStack {

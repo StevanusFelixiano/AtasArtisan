@@ -75,7 +75,7 @@ struct HistoryDetailView: View {
     private func deliveryPhoto(_ proof: DeliveryProof) -> some View {
         ZStack(alignment: .bottomLeading) {
             Brand.liquorice100
-            AsyncImage(url: photo) { $0.resizable().scaledToFill() } placeholder: { Brand.liquorice100 }
+            CachedPhoto(url: photo, key: proof.path, side: 400, fill: Brand.liquorice100)
             Text("\(store.name(proof.by_user)) · \(Wita.string(proof.created_at, "EEE HH:mm"))")
                 .obText(.footnote, 12, weight: 600, Brand.cream)
                 .padding(.horizontal, 12).padding(.vertical, 5)

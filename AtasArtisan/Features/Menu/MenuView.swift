@@ -171,10 +171,17 @@ struct MenuView: View {
     private func grid(_ items: [Product]) -> some View {
         let photo = min(150, (width - 32 - 12) / 2 - 24)
         let counts = Dictionary(store.myItems.map { ($0.product_id, $0.qty) }, uniquingKeysWith: +)
-        return LazyVGrid(columns: [GridItem(.flexible(), spacing: 12), GridItem(.flexible(), spacing: 12)], spacing: 12) {
-            ForEach(items) { p in
-                Button { picked = p } label: { ProductCard(product: p, photo: photo, inOrder: counts[p.id] ?? 0) }
-                    .buttonStyle(.plain)
+        // ponytail: eager Grid, not LazyVGrid. Lazy grids nested in one scroll only estimate the rows not yet built,
+        // so the content height shifted under the finger and threw the scroll back to the top. The menu is about 35
+        // products and lays out in full cheaply; go back to lazy (with fixed card heights) if it grows to hundreds.
+        return Grid(horizontalSpacing: 12, verticalSpacing: 12) {
+            ForEach(Array(stride(from: 0, to: items.count, by: 2)), id: \.self) { i in
+                GridRow {
+                    ForEach(items[i..<min(i + 2, items.count)]) { p in
+                        Button { picked = p } label: { ProductCard(product: p, photo: photo, inOrder: counts[p.id] ?? 0) }
+                            .buttonStyle(.plain)
+                    }
+                }
             }
         }
     }

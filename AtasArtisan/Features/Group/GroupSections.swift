@@ -196,7 +196,7 @@ extension GroupView {
         if q == 0 {
             asking = removeItemConfirm(store, item) { try await store.remove(item) }
         } else {
-            Task { await act("Couldn't change the quantity") { try await store.update(item, qty: q) } }
+            Task { await act("Couldn't change the quantity") { try await store.setQty(item, q) } }
         }
     }
 
@@ -528,7 +528,7 @@ extension GroupView {
 
     private func deliveredCard(_ p: DeliveryProof) -> some View {
         VStack(alignment: .leading, spacing: 12) {
-            AsyncImage(url: proofURLs[p.id]) { $0.resizable().scaledToFill() } placeholder: { Brand.liquorice100 }
+            CachedPhoto(url: proofURLs[p.id], key: p.path, side: 400, fill: Brand.liquorice100)
                 .frame(height: 200).frame(maxWidth: .infinity)
                 .clipShape(RoundedRectangle(cornerRadius: 20, style: .continuous))
                 .contextMenu { Button(role: .destructive) { reporting = p } label: { Label("Report photo", systemImage: "flag") } }

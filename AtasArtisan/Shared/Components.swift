@@ -371,11 +371,47 @@ struct ProductPhoto: View {
         ZStack {
             if ring { Circle().strokeBorder(Brand.caramel.opacity(0.6), style: StrokeStyle(lineWidth: 1.5, dash: [4.5, 3])) }
             Circle().fill(fill).padding(pad)
-            AsyncImage(url: url) { img in img.resizable().scaledToFill() } placeholder: { Color.clear }
+            CachedPhoto(url: url, side: size - pad * 2)
                 .frame(width: size - pad * 2, height: size - pad * 2).clipShape(Circle())
         }
         .frame(width: size, height: size)
         .accessibilityHidden(true)
+    }
+}
+
+/// A remote photo kept in memory, decoded off the main thread so its shorter side is `side` points. A view that is
+/// rebuilt (scrolled back, data refreshed, screen reopened) reads the cache in its first frame instead of going
+/// blank and fetching again; AsyncImage keeps nothing. `key` names a signed URL's file, whose URL changes per fetch
+/// (only for paths never overwritten). Fills its frame over `fill`; the caller clips.
+struct CachedPhoto: View {
+    var url: URL?
+    var key: String? = nil
+    var side: CGFloat
+    var fill: Color = .clear
+    @State private var fetched: UIImage?
+    @Environment(\.displayScale) private var scale
+    private static let cache = NSCache<NSString, UIImage>()
+
+    var body: some View {
+        let key = (key ?? url?.absoluteString).map { "\($0)#\(Int(side * scale))" as NSString }
+        fill.overlay {
+            if let img = key.flatMap({ Self.cache.object(forKey: $0) }) ?? fetched {
+                Image(uiImage: img).resizable().scaledToFill()
+            }
+        }
+        .task(id: url) {
+            guard let url, let key, Self.cache.object(forKey: key) == nil,
+                  let (data, _) = try? await URLSession.shared.data(from: url) else { return }
+            let px = side * scale
+            let img = await Task.detached {
+                guard let full = UIImage(data: data), full.size.width > 0, full.size.height > 0 else { return nil as UIImage? }
+                let k = px / min(full.size.width, full.size.height)
+                return k < 1 ? full.preparingThumbnail(of: CGSize(width: full.size.width * k, height: full.size.height * k)) : full
+            }.value
+            guard let img else { return }
+            Self.cache.setObject(img, forKey: key)
+            fetched = img
+        }
     }
 }
 
