@@ -17,6 +17,7 @@ struct ProfileView: View {
     @FocusState private var editingName: Bool
     /// DEBUG `ATASTE_PROFILE` = notifications (6-7) | payout (6-6, the first payment method).
     @State private var debugNotifications = false
+    @State private var showMessageLanguage = false
 
     var body: some View {
         ScrollView {
@@ -144,25 +145,39 @@ struct ProfileView: View {
                 }
             }
             .buttonStyle(.plain)
-            Menu {
-                Picker("Atas message language", selection: Binding(get: { app.profile?.msg_lang ?? "id" },
-                                                                   set: { v in Task { try? await app.saveProfile(msgLang: v) } })) {
-                    Text("Bahasa Indonesia").tag("id")
-                    Text("English").tag("en")
-                }
+            Button {
+                showMessageLanguage = true
             } label: {
                 ProfileRow(divider: true, vertical: 13) {
                     ObWhatsAppGlyph(size: 19)
+
                     VStack(alignment: .leading, spacing: 1) {
-                        Text("Atas message language").obText(.headline, 15, weight: 600)
-                        Text("Used when you send a group order").obText(.footnote, 12, Brand.ink3)
+                        Text("Atas message language")
+                            .obText(.headline, 15, weight: 600)
+
+                        Text("Used when you send a group order")
+                            .obText(.footnote, 12, Brand.ink3)
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    Text(app.profile?.msg_lang == "en" ? "English" : "Bahasa Indonesia").obText(.callout, 13, Brand.ink3)
-                    Chevron()
+
+                    HStack(spacing: 8) {
+                        Text(
+                            app.profile?.msg_lang == "en"
+                            ? "English"
+                            : "Bahasa Indonesia"
+                        )
+                        .obText(.callout, 13, Brand.ink3)
+                        .lineLimit(1)
+                        .fixedSize(horizontal: true, vertical: false)
+
+                        Chevron()
+                    }
                 }
             }
             .buttonStyle(.plain)
+            .sheet(isPresented: $showMessageLanguage) {
+                MessageLanguagePicker()
+            }
             NavigationLink { SavedPlacesView() } label: {
                 ProfileRow(divider: true, vertical: 13) {
                     Image(systemName: "mappin.and.ellipse").rowIcon()
@@ -213,7 +228,7 @@ struct ProfileView: View {
             Text("Ataste is an independent app and is not affiliated with Atas Artisan.")
                 .obText(.footnote, 12, Brand.ink3).multilineTextAlignment(.center)
                 .frame(maxWidth: .infinity)
-                .offset(y: 30)
+                .offset(y: 56)
         }
         .padding(.bottom, 36)
     }
@@ -231,6 +246,98 @@ struct ProfileView: View {
         guard !n.isEmpty, n.count <= 60 else { name = app.profile?.name ?? ""; return }
         guard n != app.profile?.name else { return }
         await attempt($problem, "Couldn't save your name") { try await app.saveProfile(name: n) }
+    }
+}
+
+private struct MessageLanguagePicker: View {
+    @Environment(AppModel.self) private var app
+    @Environment(\.dismiss) private var dismiss
+
+    @State private var selectedLanguage = "id"
+
+    var body: some View {
+        NavigationStack {
+            VStack(spacing: 0) {
+
+                VStack(spacing: 0) {
+                    languageRow(
+                        title: "Bahasa Indonesia",
+                        value: "id"
+                    )
+
+                    Divider()
+                        .padding(.horizontal, 16)
+
+                    languageRow(
+                        title: "English",
+                        value: "en"
+                    )
+                }
+                .background(
+                    RoundedRectangle(cornerRadius: 22, style: .continuous)
+                        .fill(.quaternary.opacity(0.45))
+                )
+                .padding(.horizontal, 20)
+                .padding(.top, 18)
+
+                Spacer()
+
+                Button("Done") {
+                    dismiss()
+                }
+                .font(.system(size: 17, weight: .semibold))
+                .frame(maxWidth: .infinity)
+                .frame(height: 50)
+                .background(
+                    RoundedRectangle(cornerRadius: 16, style: .continuous)
+                        .fill(.thinMaterial)
+                )
+                .padding(.horizontal, 20)
+                .padding(.bottom, 14)
+                .padding(.top, 12)
+            }
+            .padding(.top, 8)
+            .navigationTitle("Atas message language")
+            .navigationBarTitleDisplayMode(.inline)
+            .toolbarBackground(.hidden, for: .navigationBar)
+        }
+        .presentationDetents([.height(220)])
+        .presentationDragIndicator(.visible)
+        .onAppear {
+            selectedLanguage = app.profile?.msg_lang ?? "id"
+        }
+    }
+    
+    private func languageRow(
+        title: String,
+        value: String
+    ) -> some View {
+        Button {
+            guard selectedLanguage != value else { return }
+
+            selectedLanguage = value
+
+            Task {
+                try? await app.saveProfile(msgLang: value)
+            }
+        } label: {
+            HStack {
+                Text(title)
+                    .foregroundStyle(.primary)
+
+                Spacer()
+
+                if selectedLanguage == value {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 16, weight: .semibold))
+                        .foregroundStyle(.tint)
+                }
+            }
+            .padding(.horizontal, 20)
+            .frame(height: 52)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
     }
 }
 
@@ -629,6 +736,7 @@ struct AvatarPicker: View {
                     .padding(.horizontal, 14).padding(.vertical, 10)
                     .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Brand.card))
                     .overlay { if choice == nil { RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(Brand.caramel, lineWidth: 2.5) } }
+                    .padding(.top, 20)
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(choice == nil ? .isSelected : [])
@@ -726,4 +834,9 @@ struct AvatarPicker: View {
             dismiss()
         }
     }
+}
+
+#Preview("Profile") {
+    NavigationStack { ProfileView() }
+        .environment(PreviewData.app)
 }

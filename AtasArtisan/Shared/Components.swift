@@ -285,11 +285,15 @@ enum Art {
     /// How each painting sits in a round avatar (design `ataste-art.js` ART table): image size, the face centre as a
     /// fraction of the image (cx, cy), and how much of the image width the circle shows (cw).
     static let paintingCrop: [String: (w: CGFloat, h: CGFloat, cx: CGFloat, cy: CGFloat, cw: CGFloat)] = [
-        "paint-croissant": (716, 1113, 0.42, 0.3, 0.8), "paint-creation": (1140, 735, 0.5, 0.5, 0.42),
-        "paint-brioche": (900, 1117, 0.52, 0.3, 0.7), "paint-monalisa": (900, 1117, 0.52, 0.26, 0.62),
-        "paint-scream": (900, 1117, 0.52, 0.3, 0.64), "paint-gothic": (900, 1117, 0.5, 0.3, 1),
-        "paint-sonofbun": (900, 1117, 0.5, 0.28, 0.62), "paint-vangogh": (900, 1117, 0.47, 0.28, 0.62),
-        "paint-supper": (1400, 781, 0.5, 0.4, 0.45),
+        "paint-croissant": (716, 1113, 0.42, 0.3, 1.00),
+        "paint-creation":  (1140, 735, 0.5, 0.5, 0.65),
+        "paint-brioche":   (900, 1117, 0.52, 0.3, 1.00),
+        "paint-monalisa":  (900, 1117, 0.52, 0.26, 0.95),
+        "paint-scream":    (900, 1117, 0.52, 0.3, 0.95),
+        "paint-gothic":    (900, 1117, 0.5, 0.3, 1.00),
+        "paint-sonofbun":  (900, 1117, 0.5, 0.28, 0.95),
+        "paint-vangogh":   (900, 1117, 0.47, 0.28, 0.90),
+        "paint-supper":    (1400, 781, 0.5, 0.4, 0.58),
     ]
 }
 
