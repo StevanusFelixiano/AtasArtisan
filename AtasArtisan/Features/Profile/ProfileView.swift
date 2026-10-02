@@ -18,7 +18,7 @@ struct ProfileView: View {
     /// DEBUG `ATASTE_PROFILE` = notifications (6-7) | payout (6-6, the first payment method).
     @State private var debugNotifications = false
     @State private var showMessageLanguage = false
-
+    
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
@@ -51,15 +51,15 @@ struct ProfileView: View {
             Button("Log out", role: .destructive) { Task { await app.signOut() } }
             Button("Cancel", role: .cancel) {}
         } message: { Text("You can sign back in with WhatsApp any time.") }
-        .alert("Delete your account?", isPresented: $confirmDelete) {
-            Button("Delete", role: .destructive) { Task { await attempt($problem, "Couldn't delete your account") { try await app.deleteAccount() } } }
-            Button("Cancel", role: .cancel) {}
-        } message: { Text("Your profile, orders, payment methods, receipts and photos are deleted. Groups you host are deleted for everyone. This can't be undone.") }
-        .problemAlert($problem)
+            .alert("Delete your account?", isPresented: $confirmDelete) {
+                Button("Delete", role: .destructive) { Task { await attempt($problem, "Couldn't delete your account") { try await app.deleteAccount() } } }
+                Button("Cancel", role: .cancel) {}
+            } message: { Text("Your profile, orders, payment methods, receipts and photos are deleted. Groups you host are deleted for everyone. This can't be undone.") }
+            .problemAlert($problem)
     }
-
+    
     // MARK: Header
-
+    
     private var header: some View {
         VStack(spacing: Brand.s2) {
             Button { pickingAvatar = true } label: {
@@ -101,9 +101,9 @@ struct ProfileView: View {
         .padding(.top, 14)
         .padding(.bottom, 4)
     }
-
+    
     // MARK: Cards
-
+    
     private var payoutCard: some View {
         VStack(spacing: 0) {
             ForEach(accounts) { a in
@@ -134,7 +134,7 @@ struct ProfileView: View {
         .padding(.horizontal, Brand.s4).padding(.vertical, Brand.s1)
         .background(RoundedRectangle(cornerRadius: Brand.rCard, style: .continuous).fill(Brand.card))
     }
-
+    
     private var settingsCard: some View {
         VStack(spacing: 0) {
             NavigationLink { NotificationSettingsView() } label: {
@@ -160,23 +160,38 @@ struct ProfileView: View {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                    HStack(spacing: 8) {
-                        Text(
-                            app.profile?.msg_lang == "en"
-                            ? "English"
-                            : "Bahasa Indonesia"
-                        )
-                        .obText(.callout, 13, Brand.ink3)
-                        .lineLimit(1)
-                        .fixedSize(horizontal: true, vertical: false)
+                    Text(
+                        app.profile?.msg_lang == "en"
+                        ? "English"
+                        : "Bahasa Indonesia"
+                    )
+                    .obText(.callout, 13, Brand.ink3)
+                    .lineLimit(1)
+                    .fixedSize(horizontal: true, vertical: false)
 
-                        Chevron()
-                    }
+                    Chevron()
                 }
             }
             .buttonStyle(.plain)
-            .sheet(isPresented: $showMessageLanguage) {
-                MessageLanguagePicker()
+            .popover(
+                isPresented: $showMessageLanguage,
+                attachmentAnchor: .point(.topTrailing),
+                arrowEdge: .top
+            ) {
+                VStack(spacing: 0) {
+                    languageOption(
+                        title: "Bahasa Indonesia",
+                        value: "id"
+                    )
+
+                    languageOption(
+                        title: "English",
+                        value: "en"
+                    )
+                }
+                .padding(.vertical, 6)
+                .frame(width: 220)
+                .presentationCompactAdaptation(.popover)
             }
             NavigationLink { SavedPlacesView() } label: {
                 ProfileRow(divider: true, vertical: 13) {
@@ -199,7 +214,36 @@ struct ProfileView: View {
         .padding(.horizontal, Brand.s4).padding(.vertical, Brand.s1)
         .background(RoundedRectangle(cornerRadius: Brand.rCard, style: .continuous).fill(Brand.card))
     }
+    
+    @ViewBuilder
+    private func languageOption(
+        title: String,
+        value: String
+    ) -> some View {
+        Button {
+            showMessageLanguage = false
 
+            Task {
+                try? await app.saveProfile(msgLang: value)
+            }
+        } label: {
+            HStack(spacing: 12) {
+                Text(title)
+                    .obText(.body, 15)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+
+                if app.profile?.msg_lang == value {
+                    Image(systemName: "checkmark")
+                        .font(.system(size: 14, weight: .semibold))
+                }
+            }
+            .padding(.horizontal, 14)
+            .padding(.vertical, 10)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+    }
+    
     private var aboutCard: some View {
         VStack(alignment: .leading, spacing: 0) {
             ForEach([("Privacy Policy", Links.privacy, "hand.raised"), ("Terms of Use", Links.terms, "doc.text"),
@@ -232,112 +276,20 @@ struct ProfileView: View {
         }
         .padding(.bottom, 36)
     }
-
+    
     // MARK: Data
-
+    
     private func load() async {
         name = app.profile?.name ?? ""
         accounts = (try? await supabase.from("payout_accounts").select().eq("user_id", value: app.userID ?? UUID()).order("created_at").execute().value) ?? []
         addresses = (try? await supabase.from("addresses").select().order("created_at").execute().value) ?? []
     }
-
+    
     private func saveName() async {
         let n = name.trimmingCharacters(in: .whitespaces)
         guard !n.isEmpty, n.count <= 60 else { name = app.profile?.name ?? ""; return }
         guard n != app.profile?.name else { return }
         await attempt($problem, "Couldn't save your name") { try await app.saveProfile(name: n) }
-    }
-}
-
-private struct MessageLanguagePicker: View {
-    @Environment(AppModel.self) private var app
-    @Environment(\.dismiss) private var dismiss
-
-    @State private var selectedLanguage = "id"
-
-    var body: some View {
-        NavigationStack {
-            VStack(spacing: 0) {
-
-                VStack(spacing: 0) {
-                    languageRow(
-                        title: "Bahasa Indonesia",
-                        value: "id"
-                    )
-
-                    Divider()
-                        .padding(.horizontal, 16)
-
-                    languageRow(
-                        title: "English",
-                        value: "en"
-                    )
-                }
-                .background(
-                    RoundedRectangle(cornerRadius: 22, style: .continuous)
-                        .fill(.quaternary.opacity(0.45))
-                )
-                .padding(.horizontal, 20)
-                .padding(.top, 18)
-
-                Spacer()
-
-                Button("Done") {
-                    dismiss()
-                }
-                .font(.system(size: 17, weight: .semibold))
-                .frame(maxWidth: .infinity)
-                .frame(height: 50)
-                .background(
-                    RoundedRectangle(cornerRadius: 16, style: .continuous)
-                        .fill(.thinMaterial)
-                )
-                .padding(.horizontal, 20)
-                .padding(.bottom, 14)
-                .padding(.top, 12)
-            }
-            .padding(.top, 8)
-            .navigationTitle("Atas message language")
-            .navigationBarTitleDisplayMode(.inline)
-            .toolbarBackground(.hidden, for: .navigationBar)
-        }
-        .presentationDetents([.height(220)])
-        .presentationDragIndicator(.visible)
-        .onAppear {
-            selectedLanguage = app.profile?.msg_lang ?? "id"
-        }
-    }
-    
-    private func languageRow(
-        title: String,
-        value: String
-    ) -> some View {
-        Button {
-            guard selectedLanguage != value else { return }
-
-            selectedLanguage = value
-
-            Task {
-                try? await app.saveProfile(msgLang: value)
-            }
-        } label: {
-            HStack {
-                Text(title)
-                    .foregroundStyle(.primary)
-
-                Spacer()
-
-                if selectedLanguage == value {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(.tint)
-                }
-            }
-            .padding(.horizontal, 20)
-            .frame(height: 52)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
     }
 }
 
@@ -372,7 +324,7 @@ enum PayoutKind {
     /// The label chips, banks first. Anything else is typed under "Other…".
     static let all = banks + wallets
     static func isWallet(_ label: String) -> Bool { wallets.contains { $0.caseInsensitiveCompare(label) == .orderedSame } }
-
+    
     /// BCA 0951228441 7 → "•••• 4417"; GoPay 081290345521 → "0812 9034 5521".
     static func shown(_ a: PayoutAccount) -> String {
         if isWallet(a.label) { return PayoutCard.grouped(a.number) }
@@ -384,7 +336,7 @@ enum PayoutKind {
 
 struct NotificationSettingsView: View {
     @Environment(AppModel.self) private var app
-
+    
     /// Each row mutes the notification kinds the server sends for it (`profiles.notify_mute`).
     private let sections: [(String, [(String, [String])])] = [
         ("Your orders", [
@@ -411,7 +363,7 @@ struct NotificationSettingsView: View {
             ("Everyone has paid", ["everyone_paid"]),
         ]),
     ]
-
+    
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 10) {
@@ -443,14 +395,14 @@ struct NotificationSettingsView: View {
         .navigationTitle("Notifications")
         .navigationBarTitleDisplayMode(.inline)
     }
-
+    
     private func binding(_ kinds: [String]) -> Binding<Bool> {
         Binding(get: { !kinds.contains { (app.profile?.notify_mute ?? []).contains($0) } },
                 set: { on in
-                    var mute = Set(app.profile?.notify_mute ?? [])
-                    if on { mute.subtract(kinds) } else { mute.formUnion(kinds) }
-                    Task { try? await app.saveProfile(mute: Array(mute).sorted()) }
-                })
+            var mute = Set(app.profile?.notify_mute ?? [])
+            if on { mute.subtract(kinds) } else { mute.formUnion(kinds) }
+            Task { try? await app.saveProfile(mute: Array(mute).sorted()) }
+        })
     }
 }
 
@@ -468,18 +420,18 @@ struct PayoutEditor: View {
     @State private var problem: Problem?
     @State private var confirmDelete = false
     @State private var busy = false
-
+    
     init(account: PayoutAccount, sheet: Bool = true, saved: @escaping (PayoutAccount) -> Void) {
         _account = State(initialValue: account)
         _other = State(initialValue: !account.label.isEmpty && !PayoutKind.all.contains(account.label))
         self.sheet = sheet
         self.saved = saved
     }
-
+    
     private var existing: Bool { account.user_id != nil }
     private var label: String { account.label.trimmingCharacters(in: .whitespaces) }
     private var valid: Bool { !label.isEmpty && !account.account_name.isEmpty && account.number.count >= 3 }
-
+    
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
@@ -523,9 +475,9 @@ struct PayoutEditor: View {
             Button("Delete", role: .destructive) { Task { await delete() } }
             Button("Cancel", role: .cancel) {}
         } message: { Text("Groups you host that use it will show no payment method until you pick another.") }
-        .problemAlert($problem)
+            .problemAlert($problem)
     }
-
+    
     private func save() async {
         busy = true
         defer { busy = false }
@@ -538,7 +490,7 @@ struct PayoutEditor: View {
             dismiss()
         }
     }
-
+    
     private func delete() async {
         await attempt($problem, "Couldn't delete") {
             try await supabase.from("payout_accounts").delete().eq("id", value: account.id).execute()
@@ -568,7 +520,7 @@ struct SavedPlacesView: View {
     @State private var addresses: [Address] = []
     @State private var editing: Address?
     @State private var loaded = false
-
+    
     var body: some View {
         ScrollView {
             VStack(spacing: 10) {
@@ -590,7 +542,7 @@ struct SavedPlacesView: View {
         .navigationDestination(item: $editing) { a in AddressEditor(address: a, sheet: false) { _ in Task { await load() } } }
         .task { await load() }
     }
-
+    
     private func load() async {
         addresses = (try? await supabase.from("addresses").select().order("created_at").execute().value) ?? []
         loaded = true
@@ -604,9 +556,9 @@ struct AddressEditor: View {
     @Environment(\.dismiss) private var dismiss
     @State private var problem: Problem?
     @State private var confirmDelete = false
-
+    
     private var valid: Bool { !address.label.isEmpty && (address.maps_url.isEmpty || address.maps_url.hasPrefix("https://")) }
-
+    
     var body: some View {
         Form {
             Section("Name") { TextField("e.g. Academy Bali", text: $address.label) }
@@ -635,9 +587,9 @@ struct AddressEditor: View {
             Button("Delete", role: .destructive) { Task { await delete() } }
             Button("Cancel", role: .cancel) {}
         } message: { Text("Orders already placed keep their address.") }
-        .problemAlert($problem)
+            .problemAlert($problem)
     }
-
+    
     private func save() async {
         await attempt($problem, "Couldn't save") {
             var a = address
@@ -647,7 +599,7 @@ struct AddressEditor: View {
             dismiss()
         }
     }
-
+    
     private func delete() async {
         await attempt($problem, "Couldn't delete") {
             try await supabase.from("addresses").delete().eq("id", value: address.id).execute()
@@ -669,7 +621,7 @@ struct AvatarPicker: View {
     @State private var started = false
     @State private var busy = false
     @State private var problem: Problem?
-
+    
     /// Each giraffe's own pastel before a background is chosen, as an index into `Brand.people`
     /// (choc-100 3, pink-100 1, lime 2, liquorice-100 4).
     private static let poseFill: [String: Int] = [
@@ -679,7 +631,7 @@ struct AvatarPicker: View {
     /// Board order for the paintings.
     private static let paintings = ["paint-croissant", "paint-creation", "paint-brioche", "paint-monalisa", "paint-scream",
                                     "paint-gothic", "paint-sonofbun", "paint-vangogh", "paint-supper"]
-
+    
     static func title(_ art: String?) -> String {
         switch art {
         case "paint-monalisa": "Mona Loafa"
@@ -697,14 +649,14 @@ struct AvatarPicker: View {
         default: "Initial"
         }
     }
-
+    
     /// "Cake-box giraffe · Sour lime"; a painting fills its circle, so it shows its name alone.
     private var caption: String {
         let name = Self.title(choice)
         guard choice?.hasPrefix("paint-") != true, let colour = Art.backgrounds.first(where: { $0.key == bg })?.name else { return name }
         return "\(name) · \(colour)"
     }
-
+    
     var body: some View {
         let me = app.profile?.name ?? "?"
         ScrollView {
@@ -766,7 +718,7 @@ struct AvatarPicker: View {
         }
         .problemAlert($problem)
     }
-
+    
     /// Seven 36 pt swatches in 44 pt tap areas, spread across the row; the chosen one has a cream gap, a cocoa
     /// ring and a check (cream on Caramel).
     private var swatches: some View {
@@ -795,9 +747,9 @@ struct AvatarPicker: View {
             }
         }
     }
-
+    
     private func index(_ art: String?) -> Int { art.flatMap { Self.poseFill[$0] } ?? 0 }
-
+    
     private func section(_ title: String, _ arts: [String], onColour: Bool) -> some View {
         VStack(alignment: .leading, spacing: 12) {
             Text(title).brand(.label).padding(.horizontal, 4).padding(.top, 2)
@@ -824,7 +776,7 @@ struct AvatarPicker: View {
             }
         }
     }
-
+    
     private func save() async {
         busy = true
         defer { busy = false }
