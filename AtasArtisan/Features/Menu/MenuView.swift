@@ -10,7 +10,12 @@ struct MenuView: View {
     @State private var collections: [Collection] = []
     @State private var products: [Product] = []
     @State private var synced: Date?
+    /// The section at the top of the scroll, read from the scroll offset (never written back to it).
     @State private var section: String?
+    /// The tab just tapped, shown while the scroll animates to it.
+    @State private var jump: String?
+    /// Each section's top in the scroll content.
+    @State private var tops: [String: CGFloat] = [:]
     @State private var query = ""
     @State private var picked: Product?
     @State private var loaded = false
@@ -60,53 +65,62 @@ struct MenuView: View {
     // MARK: Content
 
     private var content: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        ScrollViewReader { proxy in
             VStack(alignment: .leading, spacing: 12) {
-                if let synced, isStale(synced) {
-                    NoticeBanner(icon: "exclamationmark.triangle",
-                                 text: "Menu last updated \(staleWhen(synced)). Prices or stock may have changed.",
-                                 fill: Brand.choc100, actionTitle: "Refresh") { Task { await load() } }
-                }
-                searchField
-                if query.isEmpty { tabs }
-            }
-            .padding(.horizontal, 16)
-            ScrollView {
                 VStack(alignment: .leading, spacing: 12) {
-                    if query.isEmpty {
-                        if let synced, !isStale(synced) {
-                            Label { Text("Menu updated \(ago(synced))") } icon: { Image(systemName: "arrow.triangle.2.circlepath") }
-                                .labelStyle(UpdatedLabel())
-                                .font(MenuFont.manrope(12)).foregroundStyle(Brand.ink3)
-                                .padding(.leading, 4)
-                        }
-                        VStack(alignment: .leading, spacing: 12) {
-                            ForEach(Array(sections.enumerated()), id: \.element.id) { i, s in
-                                VStack(alignment: .leading, spacing: 12) {
-                                    Text(s.name).brand(.label).padding(.top, i == 0 ? 8 : 12).padding(.leading, 4)
-                                        .accessibilityAddTraits(.isHeader)
-                                    grid(s.products)
-                                }
-                                .id(s.id)
-                            }
-                        }
-                        .scrollTargetLayout()
-                    } else if results.isEmpty {
-                        EmptyStateView(pose: "pose-confused", fill: Brand.pink100, size: 120, title: "Nothing by that name",
-                                       message: "Atas doesn't have \u{201C}\(query)\u{201D} on today's menu.")
-                    } else {
-                        grid(results)
+                    if let synced, isStale(synced) {
+                        NoticeBanner(icon: "exclamationmark.triangle",
+                                     text: "Menu last updated \(staleWhen(synced)). Prices or stock may have changed.",
+                                     fill: Brand.choc100, actionTitle: "Refresh") { Task { await load() } }
                     }
+                    searchField
+                    if query.isEmpty { tabs(proxy) }
                 }
                 .padding(.horizontal, 16)
-                .padding(.bottom, 96)
+                ScrollView {
+                    VStack(alignment: .leading, spacing: 12) {
+                        if query.isEmpty {
+                            if let synced, !isStale(synced) {
+                                Label { Text("Menu updated \(ago(synced))") } icon: { Image(systemName: "arrow.triangle.2.circlepath") }
+                                    .labelStyle(UpdatedLabel())
+                                    .font(MenuFont.manrope(12)).foregroundStyle(Brand.ink3)
+                                    .padding(.leading, 4)
+                            }
+                            VStack(alignment: .leading, spacing: 12) {
+                                ForEach(Array(sections.enumerated()), id: \.element.id) { i, s in
+                                    VStack(alignment: .leading, spacing: 12) {
+                                        Text(s.name).brand(.label).padding(.top, i == 0 ? 8 : 12).padding(.leading, 4)
+                                            .accessibilityAddTraits(.isHeader)
+                                        grid(s.products)
+                                    }
+                                    .id("section:" + s.id)
+                                    .onGeometryChange(for: CGFloat.self) { $0.frame(in: .named("menu")).minY } action: { tops[s.id] = $0 }
+                                    .onDisappear { tops[s.id] = nil }
+                                }
+                            }
+                        } else if results.isEmpty {
+                            EmptyStateView(pose: "pose-confused", fill: Brand.pink100, size: 120, title: "Nothing by that name",
+                                           message: "Atas doesn't have \u{201C}\(query)\u{201D} on today's menu.")
+                        } else {
+                            grid(results)
+                        }
+                    }
+                    .coordinateSpace(.named("menu"))
+                    .padding(.horizontal, 16)
+                    .padding(.bottom, 96)
+                }
+                .onScrollGeometryChange(for: String?.self) { g in
+                    // At the bottom the last section can be too short to reach the top; it is still the one being read.
+                    if g.visibleRect.maxY >= g.contentSize.height - 1, let last = tops.max(by: { $0.value < $1.value }) { return last.key }
+                    return tops.filter { $0.value <= g.visibleRect.minY + 8 }.max(by: { $0.value < $1.value })?.key
+                } action: { _, id in withAnimation(.snappy) { section = id } }
+                .onScrollPhaseChange { _, phase in if phase != .animating { withAnimation(.snappy) { jump = nil } } }
+                .scrollDismissesKeyboard(.immediately)
             }
-            .scrollPosition(id: $section, anchor: .top)
-            .scrollDismissesKeyboard(.immediately)
+            .padding(.top, 4)
+            .overlay(alignment: .bottom) { cartBar }
+            .onChange(of: [cart.count, cart.total]) { old, new in if old[0] > 0 && new[0] > 0 { cartBumps += 1 } }
         }
-        .padding(.top, 4)
-        .overlay(alignment: .bottom) { cartBar }
-        .onChange(of: [cart.count, cart.total]) { old, new in if old[0] > 0 && new[0] > 0 { cartBumps += 1 } }
     }
 
     private var searchField: some View {
@@ -127,13 +141,15 @@ struct MenuView: View {
         .overlay(Capsule().strokeBorder(Brand.liquorice100, lineWidth: 1.5))
     }
 
-    private var tabs: some View {
+    /// `menu` scrolls the list. Section ids carry a prefix because each tab's ForEach id is the bare section id and
+    /// `scrollTo` takes the first scroll view holding a match. The strip keeps its own reader to centre the tab.
+    private func tabs(_ menu: ScrollViewProxy) -> some View {
         ScrollViewReader { proxy in
             ScrollView(.horizontal, showsIndicators: false) {
                 HStack(spacing: 8) {
                     ForEach(sections) { s in
-                        let on = (section ?? sections.first?.id) == s.id
-                        Button { withAnimation(.snappy) { section = s.id } } label: {
+                        let on = (jump ?? section ?? sections.first?.id) == s.id
+                        Button { withAnimation(.snappy) { jump = s.id; menu.scrollTo("section:" + s.id, anchor: .top) } } label: {
                             Text(s.name).font(MenuFont.manrope(14, 600)).lineLimit(1)
                                 .foregroundStyle(on ? Brand.cream : Brand.cocoa)
                                 .padding(.horizontal, 16).padding(.vertical, 9)
@@ -141,14 +157,14 @@ struct MenuView: View {
                                 .contentShape(Capsule())
                         }
                         .buttonStyle(.plain)
-                        .id(s.id)
+                        .id("tab:" + s.id)
                         .accessibilityAddTraits(on ? .isSelected : [])
                     }
                 }
                 .padding(.trailing, 16)
             }
             .padding(.trailing, -16)
-            .onChange(of: section) { _, id in withAnimation { proxy.scrollTo(id, anchor: .center) } }
+            .onChange(of: jump ?? section) { _, id in if let id { withAnimation(.snappy) { proxy.scrollTo("tab:" + id, anchor: .center) } } }
         }
     }
 
