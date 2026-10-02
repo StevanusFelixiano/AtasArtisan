@@ -122,7 +122,7 @@ struct ProfileView: View {
                 .accessibilityLabel("\(a.label), \(a.account_name)")
                 .accessibilityHint("Edit payment method")
             }
-            Button { editingAccount = PayoutAccount() } label: {
+            Button { editingAccount = PayoutAccount(label: "BCA", account_name: app.profile?.name ?? "") } label: {
                 ProfileRow(divider: false) {
                     Image(systemName: "plus").font(.system(size: 14, weight: .bold))
                         .frame(width: 28, height: 28).background(Circle().fill(Brand.choc100))
@@ -367,8 +367,10 @@ private extension Image {
 
 /// Banks show a masked number, e-wallets the phone number they're tied to.
 enum PayoutKind {
-    static let banks = ["BCA", "Mandiri", "BNI", "BRI"]
-    static let wallets = ["GoPay", "OVO", "DANA", "ShopeePay"]
+    static let banks = ["BCA", "Mandiri", "BNI", "BRI", "BSI", "CIMB Niaga", "Permata", "Danamon", "BTN", "Jago", "SeaBank", "blu"]
+    static let wallets = ["GoPay", "OVO", "DANA", "ShopeePay", "LinkAja"]
+    /// The label chips, banks first. Anything else is typed under "Other…".
+    static let all = banks + wallets
     static func isWallet(_ label: String) -> Bool { wallets.contains { $0.caseInsensitiveCompare(label) == .orderedSame } }
 
     /// BCA 0951228441 7 → "•••• 4417"; GoPay 081290345521 → "0812 9034 5521".
@@ -452,48 +454,50 @@ struct NotificationSettingsView: View {
     }
 }
 
-// MARK: Payment method (6-6)
+// MARK: Payment method (2-4c, 6-6)
 
+/// The one payment method form, from Create group (a sheet with Cancel) and Profile (pushed, with Delete for a saved
+/// one): label chips with "Other…" for a typed label, account name, account number.
 struct PayoutEditor: View {
-    @State var account: PayoutAccount
+    @State private var account: PayoutAccount
     /// Presented in its own sheet (Create group) with a Cancel button, or pushed from Profile with a back button.
     var sheet = true
     var saved: (PayoutAccount) -> Void
+    @State private var other: Bool
     @Environment(\.dismiss) private var dismiss
     @State private var problem: Problem?
     @State private var confirmDelete = false
     @State private var busy = false
 
+    init(account: PayoutAccount, sheet: Bool = true, saved: @escaping (PayoutAccount) -> Void) {
+        _account = State(initialValue: account)
+        _other = State(initialValue: !account.label.isEmpty && !PayoutKind.all.contains(account.label))
+        self.sheet = sheet
+        self.saved = saved
+    }
+
     private var existing: Bool { account.user_id != nil }
-    private var valid: Bool { !account.label.isEmpty && !account.account_name.isEmpty && account.number.count >= 3 }
+    private var label: String { account.label.trimmingCharacters(in: .whitespaces) }
+    private var valid: Bool { !label.isEmpty && !account.account_name.isEmpty && account.number.count >= 3 }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 18) {
                 VStack(alignment: .leading, spacing: Brand.s2) {
-                    Text("Label").brand(.label).padding(.leading, 4)
-                    Menu {
-                        Picker("Label", selection: $account.label) {
-                            ForEach(PayoutKind.banks + PayoutKind.wallets, id: \.self) { Text($0).tag($0) }
+                    FieldLabel("Label")
+                    FlowLayout(spacing: Brand.s2) {
+                        ForEach(PayoutKind.all, id: \.self) { l in
+                            OptionPill(text: l, selected: !other && account.label == l) { other = false; account.label = l }
                         }
-                    } label: {
-                        HStack {
-                            Text(account.label.isEmpty ? "Choose a bank or e-wallet" : account.label)
-                                .font(Brand.font(.body)).foregroundStyle(account.label.isEmpty ? Brand.ink4 : Brand.cocoa)
-                            Spacer()
-                            Image(systemName: "chevron.up.chevron.down").font(.system(size: 13, weight: .semibold)).foregroundStyle(Brand.ink4)
-                        }
-                        .padding(.horizontal, 16)
-                        .frame(minHeight: 52)
-                        .background(RoundedRectangle(cornerRadius: Brand.rField, style: .continuous).fill(Brand.cream))
-                        .overlay(RoundedRectangle(cornerRadius: Brand.rField, style: .continuous).strokeBorder(Brand.liquorice100, lineWidth: 1.5))
+                        OptionPill(text: "Other…", selected: other) { other = true; account.label = "" }
                     }
-                    .accessibilityLabel("Label, \(account.label.isEmpty ? "not chosen" : account.label)")
+                    if other { BrandField(placeholder: "e.g. Bank Neo, Flip, Jenius", text: $account.label) }
                 }
                 BrandField(label: "Account name", placeholder: "e.g. Rani Pratiwi", text: $account.account_name)
-                VStack(alignment: .leading, spacing: 6) {
+                    .textContentType(.name)
+                VStack(alignment: .leading, spacing: Brand.s2) {
                     BrandField(label: "Account number", placeholder: "Account number", text: $account.number, keyboard: .numberPad)
-                    Text("Members see this on their bill with a copy button.").obText(.footnote, 12, Brand.ink3).padding(.leading, 4)
+                    Text("Members see this on their bill with a copy button.").styled(.body, 13, Brand.ink2).padding(.leading, Brand.s1)
                 }
                 if existing {
                     Button { confirmDelete = true } label: { Label("Delete payment method", systemImage: "trash") }
@@ -502,22 +506,18 @@ struct PayoutEditor: View {
                         .padding(.top, 10)
                 }
             }
-            .padding(.horizontal, Brand.s4)
+            .padding(.horizontal, 20)
             .padding(.top, Brand.s2)
         }
+        .foregroundStyle(Brand.cocoa)
         .screen()
-        .navigationTitle(account.label.isEmpty ? "Payment method" : account.label)
+        .navigationTitle(existing && !label.isEmpty ? label : "Payment method")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             if sheet { ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } } }
-        }
-        .safeAreaInset(edge: .bottom) {
-            Button("Save") { Task { await save() } }
-                .buttonStyle(.pill(.primary))
-                .disabled(!valid || busy)
-                .padding(12)
-                .glassEffect(.regular, in: RoundedRectangle(cornerRadius: 36, style: .continuous))
-                .padding(.horizontal, 12)
+            ToolbarItem(placement: .confirmationAction) {
+                Button("Save") { Task { await save() } }.disabled(!valid || busy)
+            }
         }
         .alert("Delete this payment method?", isPresented: $confirmDelete) {
             Button("Delete", role: .destructive) { Task { await delete() } }
@@ -532,6 +532,7 @@ struct PayoutEditor: View {
         await attempt($problem, "Couldn't save") {
             var a = account
             a.user_id = nil
+            a.label = label
             let row: PayoutAccount = try await supabase.from("payout_accounts").upsert(a).select().single().execute().value
             saved(row)
             dismiss()

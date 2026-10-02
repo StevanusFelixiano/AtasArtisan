@@ -161,7 +161,7 @@ enum PreviewData {
 
 #Preview("Payment method") {
     NavigationStack {
-        PaymentMethodSheet(name: PreviewData.profile.name, saved: { _ in })
+        PayoutEditor(account: PayoutAccount(label: "BCA", account_name: PreviewData.profile.name), saved: { _ in })
     }
 }
 

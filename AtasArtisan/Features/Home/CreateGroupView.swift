@@ -68,7 +68,9 @@ struct CreateGroupView: View {
             NavigationStack { NewAddressSheet { saved in addresses.append(saved); addressID = saved.id } }
         }
         .sheet(isPresented: $addingAccount) {
-            NavigationStack { PaymentMethodSheet(name: app.profile?.name ?? "") { saved in accounts.append(saved); accountID = saved.id } }
+            NavigationStack {
+                PayoutEditor(account: PayoutAccount(label: "BCA", account_name: app.profile?.name ?? "")) { saved in accounts.append(saved); accountID = saved.id }
+            }
         }
         .onChange(of: delivery) { _, d in
             if useCutoff && cutoff > d { cutoff = Wita.atasDeadline(for: d).addingTimeInterval(-3600) }
@@ -320,71 +322,6 @@ struct DateField<Content: View>: View {
                 }
                 .presentationDetents([part == .date ? .height(480) : .height(320)])
             }
-    }
-}
-
-// MARK: Add payment method (2-4c)
-
-struct PaymentMethodSheet: View {
-    var saved: (PayoutAccount) -> Void
-    @State private var account: PayoutAccount
-    @State private var other = false
-    @Environment(\.dismiss) private var dismiss
-    @State private var problem: Problem?
-    @State private var busy = false
-    private let labels = ["BCA", "Mandiri", "GoPay", "OVO"]
-
-    init(name: String, saved: @escaping (PayoutAccount) -> Void) {
-        self.saved = saved
-        _account = State(initialValue: PayoutAccount(label: "BCA", account_name: name))
-    }
-
-    var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                VStack(alignment: .leading, spacing: Brand.s2) {
-                    FieldLabel("Label")
-                    FlowLayout(spacing: Brand.s2) {
-                        ForEach(labels, id: \.self) { l in OptionPill(text: l, selected: !other && account.label == l) { other = false; account.label = l } }
-                        OptionPill(text: "Other…", selected: other) { other = true; account.label = "" }
-                    }
-                    if other { BrandField(placeholder: "e.g. BNI, DANA, ShopeePay", text: $account.label) }
-                }
-                BrandField(label: "Account name", placeholder: "e.g. Rani Pratiwi", text: $account.account_name)
-                    .textContentType(.name)
-                VStack(alignment: .leading, spacing: Brand.s2) {
-                    BrandField(label: "Account number", placeholder: "Account number", text: $account.number, keyboard: .numberPad)
-                    Text("Members see this on their bill with a copy button.").styled(.body, 13, Brand.ink2).padding(.leading, Brand.s1)
-                }
-            }
-            .padding(.horizontal, 20)
-            .padding(.top, Brand.s2)
-        }
-        .foregroundStyle(Brand.cocoa)
-        .screen()
-        .navigationTitle("Payment method")
-        .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) { Button("Cancel") { dismiss() } }
-            ToolbarItem(placement: .confirmationAction) {
-                Button("Save") { Task { await save() } }
-                    .disabled(busy || account.label.trimmingCharacters(in: .whitespaces).isEmpty || account.account_name.isEmpty || account.number.count < 3)
-            }
-        }
-        .problemAlert($problem)
-    }
-
-    private func save() async {
-        busy = true
-        defer { busy = false }
-        await attempt($problem, "Couldn't save") {
-            var a = account
-            a.user_id = nil
-            a.label = a.label.trimmingCharacters(in: .whitespaces)
-            let row: PayoutAccount = try await supabase.from("payout_accounts").upsert(a).select().single().execute().value
-            saved(row)
-            dismiss()
-        }
     }
 }
 
