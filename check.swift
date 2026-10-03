@@ -40,8 +40,11 @@ func expect(_ ok: Bool, _ what: String, file: StaticString = #file, line: UInt =
         expect(Pieces.ownerAmount(price: 260_000, pieces: 12, claims: [3, 2]) == 151_667, "owner pays the rest")
         expect(Pieces.ownerAmount(price: 260_000, pieces: 12, claims: [3, 2]) + 65_000 + 43_333 == 260_000, "shares add up")
         expect(Pieces.each(price: 260_000, pieces: 12) == 21_667, "price a piece")
-        expect(Pieces.defaultCount("Burnt Cheesecake 20 cm") == 12 && Pieces.defaultCount("New York Cheesecakes 20 x 20 cm") == 16
-               && Pieces.defaultCount("Classic Sourdough") == 8, "default pieces")
+        for (name, n) in [("Burnt Cheesecake 20 cm", 8), ("New York Cheesecakes 20 x 20 cm", 8), ("Classic Brownie 20x20 cm", 8),
+                          ("Banana Cake 600 gr", 2), ("Classic Sourdough", 2), ("Multigrain Sourdough 1000 gr", 2),
+                          ("Lemon Cake 20 cm", 12), ("Focaccia 20x20", 16), ("Butter Croissant", 8)] {
+            expect(Pieces.defaultCount(name) == n, "default pieces: \(name)")
+        }
         expect(Pieces.ordinal(3) == "3rd" && Pieces.ordinal(11) == "11th" && Pieces.ordinal(22) == "22nd", "ordinal")
 
         // The Atas message, golden text in the host's own format.

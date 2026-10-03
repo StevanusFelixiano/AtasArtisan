@@ -22,10 +22,14 @@ nonisolated enum Pieces {
         pieces > 0 ? Int((Double(price) / Double(pieces)).rounded()) : price
     }
 
-    /// The piece count a product starts at, from Atas's menu: 20 cm cakes 12, 20×20 trays 16, loaves 8, anything
-    /// else 8.
+    /// The piece count a product starts at. By name first (the owner's call, 2026-10-03): cheesecakes and brownies 8,
+    /// banana cake and sourdough 2. Otherwise by size: 20×20 trays 16, 20 cm cakes 12, anything else 8.
     static func defaultCount(_ name: String) -> Int {
-        let n = name.lowercased().replacingOccurrences(of: " ", with: "")
+        let lower = name.lowercased()
+        for (word, count) in [("cheesecake", 8), ("brownie", 8), ("banana cake", 2), ("sourdough", 2)] where lower.contains(word) {
+            return count
+        }
+        let n = lower.replacingOccurrences(of: " ", with: "")
         if n.contains("20x20") || n.contains("20×20") { return 16 }
         if n.contains("20cm") { return 12 }
         return 8
