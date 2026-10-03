@@ -3,8 +3,8 @@ import Supabase
 
 // The host menu's "Edit delivery details" (3-4) and the cancelled screen's "Start an order with my items" (6-10).
 
-/// Where and when the order arrives, and (while open) when it locks. The host may update these columns while the
-/// group is open, locked or in an edit round (`host_edits` policy).
+/// Where and when the order arrives, and (while open) when it locks and how everyone pays. The host may update these
+/// columns while the group is open, locked or in an edit round (`host_edits` policy); the payment flow only while open.
 struct EditDeliverySheet: View {
     var store: GroupStore
     @Environment(\.dismiss) private var dismiss
@@ -13,6 +13,7 @@ struct EditDeliverySheet: View {
     @State private var delivery = Date()
     @State private var useCutoff = false
     @State private var cutoff = Date()
+    @State private var payFirst = false
     @State private var busy = false
     @State private var problem: Problem?
 
@@ -57,6 +58,22 @@ struct EditDeliverySheet: View {
                             .listRowBackground(Brand.choc100)
                     }
                 } footer: { Text("The group locks itself at cutoff.") }
+
+                Section {
+                    ForEach([false, true], id: \.self) { pay in
+                        Button { payFirst = pay } label: {
+                            HStack {
+                                VStack(alignment: .leading) {
+                                    Text(pay ? "Pay first" : "Order first").brand(.headline)
+                                    Text(pay ? PayRuleCopy.payFirst : PayRuleCopy.orderFirst).brand(.footnote, Brand.ink3)
+                                }
+                                Spacer()
+                                if payFirst == pay { Image(systemName: "checkmark.circle.fill").foregroundStyle(Brand.caramel) }
+                            }
+                        }
+                        .buttonStyle(.plain)
+                    }
+                } header: { Text("How does everyone pay?") } footer: { Text(PayRuleCopy.footnote) }
             }
         }
         .scrollContentBackground(.hidden)
@@ -75,6 +92,7 @@ struct EditDeliverySheet: View {
         guard let g = store.group else { return }
         delivery = g.delivery_at
         useCutoff = g.cutoff_at != nil
+        payFirst = g.payFirst
         cutoff = g.cutoff_at ?? Wita.atasDeadline(for: g.delivery_at).addingTimeInterval(-3600)
         addresses = (try? await supabase.from("addresses").select().order("created_at").execute().value) ?? []
         addressID = addresses.first { $0.label == g.address_label && $0.area == g.area }?.id
@@ -89,11 +107,13 @@ struct EditDeliverySheet: View {
             var maps_url: String
             var delivery_at: Date
             var cutoff_at: Nullable<Date>?
+            var pay_rule: String?
         }
         let a = addresses.first { $0.id == addressID }
         let patch = Patch(area: a?.area ?? g.area, address_label: a?.label ?? g.address_label, address_detail: a?.detail ?? g.address_detail,
                           maps_url: a?.maps_url ?? g.maps_url, delivery_at: delivery,
-                          cutoff_at: open && !g.personal ? Nullable(useCutoff ? cutoff : nil) : nil)
+                          cutoff_at: open && !g.personal ? Nullable(useCutoff ? cutoff : nil) : nil,
+                          pay_rule: open && !g.personal ? (payFirst ? "pay_first" : "order_first") : nil)
         busy = true
         defer { busy = false }
         await attempt($problem, "Couldn't save") {

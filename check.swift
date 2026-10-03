@@ -66,13 +66,47 @@ func expect(_ ok: Bool, _ what: String, file: StaticString = #file, line: UInt =
         1. Pain Au Chocolate (80g) @1 - 16k (catatan: dihangatkan)
         Total: 16k
 
-        Total semua: 73k (belum ongkir). Terima kasih!
+        Total semua: 73k (belum termasuk ongkir). Mohon info ongkirnya ya. Terima kasih!
         """
         if id != want { print(id); print("---want---"); print(want) }
         expect(id == want, "Indonesian message")
         let en = AtasMessage.text(order, indonesian: false)
         expect(en.contains("1. Classic Sourdough (1000gr, Sliced 15mm) @1 - 33k"), "English keeps site labels")
         expect(en.hasPrefix("PIC name: Rani"), "English header")
+        expect(en.hasSuffix("Grand total: 73k (before delivery). Please let me know the delivery fee. Thank you!"), "English under 200k")
+
+        // Closing line by flow and subtotal (F): free at Rp 200.000, the quoted ongkir in pay first, else ask.
+        expect(AtasMessage.closing(481_000, agreed: nil, indonesian: true)
+               == "Total semua: 481k. Pesanan sudah di atas Rp 200.000, jadi gratis ongkir ya. Terima kasih!", "free ID")
+        expect(AtasMessage.closing(200_000, agreed: (30_000, 0), indonesian: false)
+               == "Grand total: 200k. The order is over Rp 200.000, so it qualifies for free delivery. Thank you!", "free EN, quote ignored")
+        expect(AtasMessage.closing(155_000, agreed: (30_000, 0), indonesian: true)
+               == "Total semua: 155k + ongkir 30k = 185k, sesuai info Kakak tadi. Terima kasih!", "agreed ID")
+        expect(AtasMessage.closing(155_000, agreed: (30_000, 15_000), indonesian: true)
+               == "Total semua: 155k + ongkir 30k − diskon 15k = 170k, sesuai info Kakak tadi. Terima kasih!", "agreed with discount ID")
+        expect(AtasMessage.closing(155_000, agreed: (30_000, 15_000), indonesian: false)
+               == "Grand total: 155k + 30k delivery − 15k discount = 170k, as you quoted. Thank you!", "agreed with discount EN")
+        expect(!id.contains("mohon dibantu diskon"), "old discount line gone")
+        var paid = order
+        paid.agreed = (10_000, 0)
+        expect(AtasMessage.text(paid, indonesian: true).hasSuffix("Total semua: 73k + ongkir 10k = 83k, sesuai info Kakak tadi. Terima kasih!"), "pay first message")
+
+        // Asking Atas for the ongkir (G-2b): no item lines, the total, the question.
+        let ask = AtasMessage.askOngkir(order, indonesian: true)
+        expect(ask.hasPrefix("Halo Kak, mau tanya ongkir dulu sebelum pesan ya.\n\nNama PIC : Rani"), "ask header")
+        expect(!ask.contains("Butter Croissant") && ask.contains("Total pesanan: 73k (belum termasuk ongkir)"), "ask has no items")
+        expect(AtasMessage.askOngkir(order, indonesian: false).contains("Order total: 73k (before delivery)"), "ask EN")
+
+        // Ongkir shares (E): truncated to Rp 100 among members with items, the host takes the remainder.
+        expect(Ongkir.shares(net: 25_000, bills: [(50_000, true), (20_000, false), (30_000, false)]) == [8_400, 8_300, 8_300], "25.000 in 3")
+        expect(Ongkir.shares(net: 30_000, bills: [(0, true), (20_000, false), (30_000, false), (0, false)]) == [0, 15_000, 15_000, 0], "host without items")
+        expect(Ongkir.shares(net: 10_000, bills: [(0, true), (20_000, false), (30_000, false), (40_000, false)]) == [100, 3_300, 3_300, 3_300], "host remainder without items")
+        let neg = Ongkir.shares(net: -9_000, bills: [(10_000, true), (2_000, false), (30_000, false)])
+        expect(neg[1] == -2_000 && neg[2] == -3_000 && neg[0] == -4_000, "negative shares stop at −items")
+        expect(Ongkir.shares(net: 5_000, bills: [(0, true), (0, false)]) == [0, 0], "nobody ordered")
+        expect(Ongkir.each(net: 15_000, payers: 4) == 3_700 && Ongkir.each(net: -10_000, payers: 4) == -2_500, "each")
+        expect(Ongkir.cappedDiscount(50_000, subtotal: 20_000, ongkir: 10_000) == 30_000, "discount cap")
+        expect(Ongkir.isFree(subtotal: 200_000) && !Ongkir.isFree(subtotal: 199_999), "free from 200k")
 
         print("check.swift: all passed")
     }

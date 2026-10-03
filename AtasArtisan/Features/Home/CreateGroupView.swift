@@ -187,9 +187,10 @@ struct CreateGroupView: View {
 
     private var payRule: some View {
         VStack(alignment: .leading, spacing: 10) {
-            FieldLabel("Payment rule")
-            ChoiceCard(title: "Order first", detail: "Send the order to Atas without waiting. Everyone pays once the bill is final.", selected: !payFirst) { payFirst = false }
-            ChoiceCard(title: "Pay first", detail: "Wait until everyone has paid you, then send the order.", selected: payFirst) { payFirst = true }
+            FieldLabel("How does everyone pay?")
+            ChoiceCard(title: "Order first", detail: PayRuleCopy.orderFirst, selected: !payFirst) { payFirst = false }
+            ChoiceCard(title: "Pay first", detail: PayRuleCopy.payFirst, selected: payFirst) { payFirst = true }
+            Text(PayRuleCopy.footnote).brand(.footnote, Brand.ink3).padding(.horizontal, 4)
         }
     }
 

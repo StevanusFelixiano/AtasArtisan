@@ -167,7 +167,7 @@ struct GroupView: View {
     /// Screens that draw their own heading hide the bar title (it stays set for the back menu).
     var showsTitle: Bool {
         guard let g = store.group else { return false }
-        return [.review, .editsHost, .fixing].contains(mode(g))
+        return [.review, .editsHost, .fixing].contains(mode(g)) && g.payPhase == nil
     }
 
     /// 6-8: no network. The last loaded order stays readable; changes wait for the connection.
@@ -205,17 +205,17 @@ struct GroupView: View {
             .screen()
             .safeAreaInset(edge: .bottom) { actionBar(g, m) }
             .toolbar { toolbar(g, m) }
-            .navigationTitle([.review, .editsHost].contains(m) ? "Review order" : g.name)
+            .navigationTitle([.review, .editsHost].contains(m) && g.payPhase == nil ? "Review order" : g.name)
         }
     }
 
     @ViewBuilder private func sections(_ g: OrderGroup, _ m: Mode) -> some View {
         switch m {
         case .open: openSections(g)
-        case .review: reviewSections(g)
+        case .review: if g.payPhase != nil { payFirstHostSections(g) } else { reviewSections(g) }
         case .editsHost: editsHostSections(g)
         case .fixing: fixingSections(g)
-        case .waiting: waitingSections(g)
+        case .waiting: if g.payPhase != nil { payFirstMemberSections(g) } else { waitingSections(g) }
         case .sent: sentSections(g)
         case .confirmed: confirmedSections(g)
         case .delivered, .closed: deliveredSections(g)
@@ -260,10 +260,16 @@ struct GroupView: View {
             if [.open, .locked, .edits].contains(s) {
                 Button { sheet = .editDelivery } label: { Label("Edit delivery details", systemImage: "mappin.and.ellipse") }
             }
+            if g.payPhase == .asking && g.ongkir_asked_at != nil {
+                Button { sheet = .send } label: { Label("Ask Atas again", systemImage: "message") }
+            }
+            if g.payPhase == .collecting && !store.freeOngkir {
+                Button { sheet = .confirmAtas } label: { Label("Change the ongkir", systemImage: "pencil") }
+            }
             if s == .open && !g.personal {
                 Button { openShare() } label: { Label("Share invite", systemImage: "square.and.arrow.up") }
             }
-            if [.confirmed, .delivered, .closed].contains(s) {
+            if [.confirmed, .delivered, .closed].contains(s) || (g.billFinal && [.locked, .sent].contains(s)) {
                 Button { sheet = g.personal ? .bill : .board } label: { Label(g.personal ? "My bill" : "Payments", systemImage: "receipt") }
             }
             Divider()
@@ -295,7 +301,7 @@ struct GroupView: View {
             if s == .confirmed, unpaid != nil {
                 Button { sheet = .delivery } label: { Label("Confirm delivery", systemImage: "shippingbox") }
             }
-            if [.confirmed, .delivered, .closed].contains(s), let b = store.myBill, b.total > 0 {
+            if let b = store.myBill, b.isFinal, b.total > 0 {
                 Button { sheet = .bill } label: { Label("My bill", systemImage: "receipt") }
             }
             if s == .open {
@@ -307,9 +313,9 @@ struct GroupView: View {
 
     // MARK: Bottom bar (Liquid Glass)
 
-    /// My bill while it is still to pay.
+    /// My bill while it is still to pay: final, and not yet marked paid (pay first: before the order is sent too).
     var unpaid: BillRow? {
-        guard !store.isHost, let b = store.myBill, b.total > 0, b.paid_at == nil else { return nil }
+        guard !store.isHost, let b = store.myBill, b.due > 0 else { return nil }
         return b
     }
 
@@ -337,6 +343,8 @@ struct GroupView: View {
             } else {
                 GroupBar { Button { sheet = .menu } label: { Label("Add items", systemImage: "plus") }.buttonStyle(.pill(.primary)) }
             }
+        case .review where g.payPhase != nil:
+            payFirstHostBar(g)
         case .review:
             GroupBar {
                 FlexRow(weights: g.personal ? [1] : [1, 1.2]) {
@@ -363,14 +371,22 @@ struct GroupView: View {
         case .sent:
             if store.isHost {
                 GroupBar {
-                    Button("Atas replied · enter final bill") { sheet = .confirmAtas }.buttonStyle(.pill(.primary))
-                        .entrance(sentIn, offset: HandOffMotion.buttonOffset, Motion.arrive, fade: nil, delay: HandOffMotion.buttonDelay)
+                    Group {
+                        if g.payFirst && g.billFinal {
+                            confirmSentPill()
+                        } else {
+                            Button("Atas replied · enter final bill") { sheet = .confirmAtas }.buttonStyle(.pill(.primary))
+                        }
+                    }
+                    .entrance(sentIn, offset: HandOffMotion.buttonOffset, Motion.arrive, fade: nil, delay: HandOffMotion.buttonDelay)
                 }
+            } else {
+                memberPayBar(g)
             }
         case .confirmed:
             GroupBar {
                 if let b = unpaid {
-                    Button { sheet = .bill } label: { Label("Pay \(hostFirst) · \(Rupiah.format(b.total))", systemImage: "receipt") }
+                    Button { sheet = .bill } label: { Label("Pay \(hostFirst) · \(Rupiah.format(b.due))", systemImage: "receipt") }
                         .buttonStyle(.pill(.primary))
                 } else {
                     Button { sheet = .delivery } label: { Label("Confirm delivery", systemImage: "shippingbox") }.buttonStyle(.pill(.primary))
@@ -378,17 +394,15 @@ struct GroupView: View {
             }
         case .delivered:
             if store.isHost {
-                GroupBar {
-                    Button("Close order") { Task { await act("Couldn't close") { try await store.rpc("close_group", ["g": .string(id.uuidString)]) } } }
-                        .buttonStyle(.pill(.dark))
+                CloseOrderBar(store: store) {
+                    Task { await act("Couldn't close") { try await store.rpc("close_group", ["g": .string(id.uuidString)]) } }
                 }
-            } else if let b = unpaid {
-                GroupBar {
-                    Button { sheet = .bill } label: { Label("Pay \(hostFirst) · \(Rupiah.format(b.total))", systemImage: "receipt") }
-                        .buttonStyle(.pill(.primary))
-                }
+            } else {
+                memberPayBar(g)
             }
-        case .waiting, .closed, .cancelled:
+        case .waiting where g.payPhase != nil, .closed:
+            memberPayBar(g)
+        case .waiting, .cancelled:
             EmptyView()
         }
     }
@@ -463,7 +477,7 @@ struct GroupView: View {
         case .send: NavigationStack { SendToAtasView(store: store, handedOff: handedOff) }
         case .confirmAtas: NavigationStack { ConfirmAtasView(store: store) }
         case .bill: NavigationStack { BillView(store: store) }
-        case .board: NavigationStack { PaymentBoardView(store: store) }
+        case .board: NavigationStack { PaymentBoardView(store: store) { sheet = .send } }
         case .delivery: NavigationStack { DeliveryView(store: store) }
         case .editDelivery: NavigationStack { EditDeliverySheet(store: store) }
         }

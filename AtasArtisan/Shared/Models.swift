@@ -72,6 +72,12 @@ nonisolated struct OrderGroup: Codable, Identifiable, Hashable {
     var confirmed_at: Date?
     var delivered_at: Date?
     var closed_at: Date?
+    /// Bills are final and frozen; members may pay (pay first from lock or the entered ongkir, order first at confirm).
+    var bill_final_at: Date?
+    /// Pay first: when the host asked Atas for the ongkir.
+    var ongkir_asked_at: Date?
+    /// When the host entered Atas's ongkir; nil while not entered, and when ongkir is free from Rp 200.000.
+    var ongkir_set_at: Date?
 
     var payFirst: Bool { pay_rule == "pay_first" }
 }
@@ -102,6 +108,9 @@ nonisolated struct Member: Codable, Hashable {
     var bill_total: Int?
     /// The host's last payment reminder (the payment board shows "✓ Nudged" for the rest of that WITA day).
     var nudged_at: Date?
+    /// The frozen items part of `bill_total`, and what the host has confirmed so far.
+    var bill_items: Int?
+    var paid_total: Int?
 }
 
 nonisolated struct OptionGroup: Codable, Hashable {
@@ -207,6 +216,11 @@ nonisolated struct BillRow: Codable, Hashable {
     var bill_total: Int?
     var proof_at: Date?
     var paid_at: Date?
+    /// This bill is final and frozen.
+    var is_final: Bool?
+    /// What the host has confirmed so far, and what is still to pay (nil before final; 0 for the host and the paid).
+    var paid_total: Int?
+    var owed: Int?
 
     var total: Int { bill_total ?? (items + delivery_share) }
 }

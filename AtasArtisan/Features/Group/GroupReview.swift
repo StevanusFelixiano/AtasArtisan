@@ -71,7 +71,7 @@ extension GroupView {
         let reached = total >= goal
         return VStack(alignment: .leading, spacing: 12) {
             HStack {
-                StateTag(state: .locked)
+                StateTag(state: .locked, phase: store.group?.payPhase)
                 Spacer()
                 Text("\(people) \(people == 1 ? "person" : "people") · \(store.items.reduce(0) { $0 + $1.qty }) items")
                     .ui(GFont.manrope(13), Brand.liquorice400)

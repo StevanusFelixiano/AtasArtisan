@@ -12,7 +12,7 @@ extension GroupView {
     func header(_ g: OrderGroup, subtitle: Bool = false, chipIn: Bool = true) -> some View {
         VStack(alignment: .leading, spacing: 8) {
             HStack(spacing: 8) {
-                StateTag(state: g.state)
+                StateTag(group: g)
                     .entrance(chipIn, scale: 0.01, tilt: StepperMotion.iconTilt, Motion.pop, delay: HandOffMotion.chipDelay)
                 if g.personal { Tag(text: "Just me", fill: .white, ink: Brand.ink3, dot: Brand.liquorice400) }
                 Spacer(minLength: 8)
@@ -32,6 +32,8 @@ extension GroupView {
                     Text(locksIn(c, now: t.date)).ui(GFont.manrope(14, 700), Brand.caramel)
                 }
             }
+        } else if g.payPhase != nil {
+            Text("Pay first").ui(GFont.manrope(13, 600), Brand.ink2)
         } else if [.locked, .edits].contains(g.state), let at = times?.locked_at {
             Text("Locked at \(Wita.string(at, "HH:mm"))").ui(GFont.manrope(13, 600), Brand.ink2)
         }
@@ -361,7 +363,8 @@ extension GroupView {
 
     func timeline(_ g: OrderGroup, _ layout: Timeline.Layout) -> some View {
         Timeline(group: g, lockedAt: times?.locked_at, editsAt: store.items.compactMap(\.flagged_at).min(),
-                 hadEdits: store.members.contains { $0.done_editing_at != nil }, layout: layout)
+                 hadEdits: store.members.contains { $0.done_editing_at != nil }, layout: layout,
+                 flow: g.payFirst && !g.personal ? payFlow(g, layout) : nil)
     }
 
     /// 3-3 "My items" line: "2× Pain Au Chocolate · Rp 32.000".
@@ -408,11 +411,20 @@ extension GroupView {
             HStack {
                 Text("Ongkir").ui(GFont.manrope(14, 600), Brand.ink2)
                 Spacer()
-                Text("Waiting for Atas").ui(GFont.manrope(14, 600), Brand.ink3)
+                // Pay first agreed it before sending.
+                if g.billFinal {
+                    Text(store.freeOngkir ? "Free" : Rupiah.format(g.ongkir ?? 0)).ui(GFont.roundo(15))
+                } else {
+                    Text("Waiting for Atas").ui(GFont.manrope(14, 600), Brand.ink3)
+                }
             }
         }
         .surface(24, padding: edges(16, 16))
         .entrance(sentIn, offset: HandOffMotion.cardOffset, Motion.settle, delay: HandOffMotion.totalsDelay)
+        if g.billFinal && !g.personal {
+            // Pay first: payments go on while the order is with Atas.
+            billOrPayments(g).entrance(sentIn, offset: HandOffMotion.cardOffset, Motion.settle, delay: HandOffMotion.totalsDelay)
+        }
         if store.isHost {
             Button { openURL(Links.whatsApp(Links.atasNumber)) } label: {
                 Label { Text("Open the Atas chat") } icon: { WhatsAppGlyph(size: 17) }
@@ -429,7 +441,10 @@ extension GroupView {
         let t = Wita.string(at, "HH:mm")
         let beforeCutoff = Wita.calendar.component(.hour, from: at) < Wita.atasCutoffHour
         if !store.isHost {
-            return "\(hostFirst) sent the order at \(t) WITA. Your bill is final once Atas confirms the ongkir."
+            return "\(hostFirst) sent the order at \(t) WITA." + (g.billFinal ? "" : " Your bill is final once Atas confirms the ongkir.")
+        }
+        if g.billFinal {
+            return "Sent \(t) WITA on WhatsApp, \(beforeCutoff ? "before" : "after") Atas’s 15:00 cutoff. The bills are already final, so tap Atas confirmed once they reply."
         }
         return beforeCutoff
             ? "Sent \(t) WITA on WhatsApp, before Atas’s 15:00 cutoff. When they confirm the ongkir, enter it here so everyone’s bill is final."
@@ -453,26 +468,15 @@ extension GroupView {
     @ViewBuilder private func billOrPayments(_ g: OrderGroup) -> some View {
         if store.isHost {
             if !g.personal { paymentsRow }
-        } else if let b = store.myBill, b.total > 0 {
-            Button { sheet = .bill } label: {
-                HStack {
-                    VStack(alignment: .leading, spacing: 4) {
-                        Text("You owe \(hostFirst)").brand(.label)
-                        Text(Rupiah.format(b.total)).ui(GFont.roundo(34))
-                    }
-                    Spacer()
-                    PayTag(state: PayState(b))
-                }
-                .surface(32, padding: edges(18, 18))
-            }
-            .buttonStyle(.plain)
+        } else if let b = store.myBill, b.isFinal, b.total > 0 {
+            oweCard(b)
         }
     }
 
     /// "Payments · 4 of 5 paid · Kevin outstanding" (5-13), opens the payment board.
     private var paymentsRow: some View {
-        let owing = store.bill.filter { $0.user_id != store.group?.host_id && $0.total > 0 }
-        let open = owing.filter { $0.paid_at == nil }.map { store.name($0.user_id) }
+        let owing = store.payers
+        let open = store.owing.map { store.name($0.user_id) }
         let line: String = switch open.count {
         case 0: "Everyone paid"
         case 1: "\(owing.count - 1) of \(owing.count) paid · \(open[0]) outstanding"
@@ -498,7 +502,14 @@ extension GroupView {
     @ViewBuilder func deliveredSections(_ g: OrderGroup) -> some View {
         header(g)
         if let proof = store.proofs.filter({ !$0.hidden }).max(by: { $0.created_at < $1.created_at }) { deliveredCard(proof) }
-        billOrPayments(g)
+        if g.state == .delivered && store.isHost && !g.personal {
+            StillOwesCard(store: store)
+        } else {
+            if g.state == .delivered, unpaid != nil {
+                BillBanner(text: "The treats have arrived. \(hostFirst) can close the order once you’ve paid.", fill: Brand.choc100, circle: Brand.cream)
+            }
+            billOrPayments(g)
+        }
         if g.state == .closed { timeline(g, .inline) }
     }
 
