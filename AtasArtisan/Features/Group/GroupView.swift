@@ -254,7 +254,7 @@ struct GroupView: View {
                 Button { Task { await act("Couldn't unlock") { try await store.rpc("unlock_group", ["g": .string(id.uuidString), "new_cutoff": .null]) } } }
                     label: { Label("Unlock order", systemImage: "lock.open") }
             }
-            if [.locked, .edits].contains(s) && !g.personal {
+            if [.locked, .edits, .sent].contains(s) && !g.personal {
                 Button { sheet = .requestEdit(RequestSeed()) } label: { Label("Request edits", systemImage: "pencil") }
             }
             if [.open, .locked, .edits].contains(s) {
@@ -371,11 +371,17 @@ struct GroupView: View {
         case .sent:
             if store.isHost {
                 GroupBar {
-                    Group {
+                    // Atas may reply that something sold out: the host flags it, members fix it, the host re-sends.
+                    FlexRow(weights: g.personal ? [1] : [1, 1.2]) {
+                        if !g.personal {
+                            Button { sheet = .requestEdit(RequestSeed()) } label: { Label("Request edits", systemImage: "pencil") }
+                                .buttonStyle(BarPillStyle(kind: .secondary))
+                        }
                         if g.payFirst && g.billFinal {
                             confirmSentPill()
                         } else {
-                            Button("Atas replied · enter final bill") { sheet = .confirmAtas }.buttonStyle(.pill(.primary))
+                            Button { sheet = .confirmAtas } label: { Label("Atas replied", systemImage: "checkmark") }
+                                .buttonStyle(BarPillStyle(kind: .primary))
                         }
                     }
                     .entrance(sentIn, offset: HandOffMotion.buttonOffset, Motion.arrive, fade: nil, delay: HandOffMotion.buttonDelay)
