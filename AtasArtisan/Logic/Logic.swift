@@ -142,31 +142,19 @@ nonisolated struct AtasOrder {
     var mapsURL: String
     var delivery: Date
     var people: [(name: String, lines: [AtasLine])]
+    /// Pay first under Rp 200.000: the ongkir and discount Atas already quoted, which the closing line repeats.
+    /// nil when nothing was agreed before sending (order first, or pay first sent early).
+    var agreed: (ongkir: Int, discount: Int)? = nil
+
+    var subtotal: Int { people.reduce(0) { $0 + $1.lines.reduce(0) { $0 + $1.unitPrice * $1.qty } } }
 }
 
 nonisolated enum AtasMessage {
     /// Indonesian by default, in the format hosts already send Atas (user's template, 2026-10-01).
     /// Product names stay as Atas writes them; option labels read the way hosts write them in Indonesian.
     static func text(_ o: AtasOrder, indonesian: Bool) -> String {
-        var out: [String] = []
-        let phone = o.hostPhone.hasPrefix("62") ? "0" + o.hostPhone.dropFirst(2) : o.hostPhone
-        if indonesian {
-            out.append("Nama PIC : \(o.hostName)")
-            out.append("Nama Cafe : \(o.place)")
-            out.append("No. HP: \(phone)")
-            if !o.address.isEmpty { out.append("Alamat: \(o.address)") }
-            out.append("Link alamat Cafe: \(o.mapsURL.isEmpty ? "-" : o.mapsURL)")
-            out.append("Tanggal & Jam Pengiriman: \(Wita.string(o.delivery, "d MMMM yyyy", id: true)). Jam pengiriman \(Wita.string(o.delivery, "HH.mm")) WITA")
-            out.append("Item yang dipesan :")
-        } else {
-            out.append("PIC name: \(o.hostName)")
-            out.append("Place: \(o.place)")
-            out.append("Phone: \(phone)")
-            if !o.address.isEmpty { out.append("Address: \(o.address)") }
-            out.append("Address link: \(o.mapsURL.isEmpty ? "-" : o.mapsURL)")
-            out.append("Delivery: \(Wita.string(o.delivery, "d MMMM yyyy")), \(Wita.string(o.delivery, "HH:mm")) WITA")
-            out.append("Items:")
-        }
+        var out = header(o, indonesian: indonesian)
+        out.append(indonesian ? "Item yang dipesan :" : "Items:")
         var grand = 0
         for person in o.people where !person.lines.isEmpty {
             out.append("")
@@ -185,9 +173,65 @@ nonisolated enum AtasMessage {
             grand += sum
         }
         out.append("")
-        out.append(indonesian ? "Total semua: \(Rupiah.short(grand)) (belum ongkir). Terima kasih!"
-                              : "Grand total: \(Rupiah.short(grand)) (before delivery). Thank you!")
+        out.append(closing(grand, agreed: o.agreed, indonesian: indonesian))
         return out.joined(separator: "\n")
+    }
+
+    /// The last line (Testing Fixes F). From Rp 200.000 the order qualifies for free ongkir; under it, either the
+    /// ongkir Atas already quoted (pay first) or a request for it.
+    static func closing(_ grand: Int, agreed: (ongkir: Int, discount: Int)?, indonesian: Bool) -> String {
+        let total = indonesian ? "Total semua: \(Rupiah.short(grand))" : "Grand total: \(Rupiah.short(grand))"
+        if Ongkir.isFree(subtotal: grand) {
+            return indonesian ? "\(total). Pesanan sudah di atas Rp 200.000, jadi gratis ongkir ya. Terima kasih!"
+                              : "\(total). The order is over Rp 200.000, so it qualifies for free delivery. Thank you!"
+        }
+        guard let a = agreed else {
+            return indonesian ? "\(total) (belum termasuk ongkir). Mohon info ongkirnya ya. Terima kasih!"
+                              : "\(total) (before delivery). Please let me know the delivery fee. Thank you!"
+        }
+        let discount = Ongkir.cappedDiscount(a.discount, subtotal: grand, ongkir: a.ongkir)
+        let sum = Rupiah.short(grand + a.ongkir - discount)
+        if indonesian {
+            let less = discount > 0 ? " − diskon \(Rupiah.short(discount))" : ""
+            return "\(total) + ongkir \(Rupiah.short(a.ongkir))\(less) = \(sum), sesuai info Kakak tadi. Terima kasih!"
+        }
+        let less = discount > 0 ? " − \(Rupiah.short(discount)) discount" : ""
+        return "\(total) + \(Rupiah.short(a.ongkir)) delivery\(less) = \(sum), as you quoted. Thank you!"
+    }
+
+    /// Pay first under Rp 200.000 (G-2b): only the question, where and when, and the total; no item list. The full
+    /// order follows once everyone has paid.
+    static func askOngkir(_ o: AtasOrder, indonesian: Bool) -> String {
+        var out = [indonesian ? "Halo Kak, mau tanya ongkir dulu sebelum pesan ya." : "Hi! Could I check the delivery fee before I order?", ""]
+        out += header(o, indonesian: indonesian)
+        out.append(indonesian ? "Total pesanan: \(Rupiah.short(o.subtotal)) (belum termasuk ongkir)"
+                              : "Order total: \(Rupiah.short(o.subtotal)) (before delivery)")
+        out.append("")
+        out.append(indonesian ? "Ongkirnya berapa ya, Kak? Pesanan lengkapnya saya kirim setelah semua bayar. Terima kasih!"
+                              : "How much is the delivery fee? I’ll send the full order once everyone has paid. Thank you!")
+        return out.joined(separator: "\n")
+    }
+
+    /// Who, where and when, in the host's own format.
+    private static func header(_ o: AtasOrder, indonesian: Bool) -> [String] {
+        var out: [String] = []
+        let phone = o.hostPhone.hasPrefix("62") ? "0" + o.hostPhone.dropFirst(2) : o.hostPhone
+        if indonesian {
+            out.append("Nama PIC : \(o.hostName)")
+            out.append("Nama Cafe : \(o.place)")
+            out.append("No. HP: \(phone)")
+            if !o.address.isEmpty { out.append("Alamat: \(o.address)") }
+            out.append("Link alamat Cafe: \(o.mapsURL.isEmpty ? "-" : o.mapsURL)")
+            out.append("Tanggal & Jam Pengiriman: \(Wita.string(o.delivery, "d MMMM yyyy", id: true)). Jam pengiriman \(Wita.string(o.delivery, "HH.mm")) WITA")
+        } else {
+            out.append("PIC name: \(o.hostName)")
+            out.append("Place: \(o.place)")
+            out.append("Phone: \(phone)")
+            if !o.address.isEmpty { out.append("Address: \(o.address)") }
+            out.append("Address link: \(o.mapsURL.isEmpty ? "-" : o.mapsURL)")
+            out.append("Delivery: \(Wita.string(o.delivery, "d MMMM yyyy")), \(Wita.string(o.delivery, "HH:mm")) WITA")
+        }
+        return out
     }
 
     /// "1000gr" -> "1kg", "Sliced 15mm" -> "slice 1.5cm", "Whole Sourdough"/"Unsliced" -> "utuh".
