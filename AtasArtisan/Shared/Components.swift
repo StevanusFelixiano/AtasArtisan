@@ -389,17 +389,36 @@ struct ProductPhoto: View {
     var size: CGFloat
     var fill: Color = Brand.choc100
     var ring = true
+    @Environment(\.displayScale) private var scale
     var body: some View {
         let pad = max(4, (size * 0.055).rounded())
         ZStack {
             if ring { Circle().strokeBorder(Brand.caramel.opacity(0.6), style: StrokeStyle(lineWidth: 1.5, dash: [4.5, 3])) }
             Circle().fill(fill).padding(pad)
-            CachedPhoto(url: url, side: size - pad * 2)
+            CachedPhoto(url: sized(url, side: size - pad * 2), side: size - pad * 2)
                 .frame(width: size - pad * 2, height: size - pad * 2).clipShape(Circle())
         }
         .frame(width: size, height: size)
         .accessibilityHidden(true)
     }
+
+    /// iSeller photos are about 900×1200 px, 400 KB. Its CDN resizes to `?size=<width px>` (the shorter side); rounding
+    /// up to a multiple of 150 keeps the set of sizes the CDN and URLCache hold small.
+    private func sized(_ url: URL?, side: CGFloat) -> URL? {
+        guard let url, url.host() == "cdn.isellercommerce.com" else { return url }
+        let px = Int((side * scale / 150).rounded(.up)) * 150
+        return url.appending(queryItems: [URLQueryItem(name: "size", value: String(px))])
+    }
+}
+
+/// At most four photo downloads at once. The menu grid starts all 33 together; the iSeller CDN sends HTTP/2 streams
+/// about one at a time, so the queued ones get no bytes for 60 s and URLSession times them out (-1001).
+private actor PhotoGate {
+    static let shared = PhotoGate()
+    private var free = 4
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+    func enter() async { if free > 0 { free -= 1 } else { await withCheckedContinuation { waiters.append($0) } } }
+    func leave() { if waiters.isEmpty { free += 1 } else { waiters.removeFirst().resume() } }
 }
 
 /// A remote photo kept in memory, decoded off the main thread so its shorter side is `side` points. A view that is
@@ -423,8 +442,15 @@ struct CachedPhoto: View {
             }
         }
         .task(id: url) {
-            guard let url, let key, Self.cache.object(forKey: key) == nil,
-                  let (data, _) = try? await URLSession.shared.data(from: url) else { return }
+            guard let url, let key, Self.cache.object(forKey: key) == nil else { return }
+            // A timed-out photo would otherwise stay blank until the view is rebuilt.
+            var response: (Data, URLResponse)?
+            for _ in 0..<3 where response == nil && !Task.isCancelled {
+                await PhotoGate.shared.enter()
+                response = try? await URLSession.shared.data(from: url)
+                await PhotoGate.shared.leave()
+            }
+            guard let (data, _) = response else { return }
             let px = side * scale
             let img = await Task.detached {
                 guard let full = UIImage(data: data), full.size.width > 0, full.size.height > 0 else { return nil as UIImage? }

@@ -7,7 +7,12 @@ struct AtasArtisanApp: App {
     @UIApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @State private var app = AppModel.shared
 
-    init() { Brand.registerFonts() }
+    init() {
+        Brand.registerFonts()
+        // The default disk cache (about 10 MB, nothing over 5% of it) can't hold the menu's photos, so every launch
+        // refetched them from the slow iSeller CDN, which marks them cacheable for a year.
+        URLCache.shared = URLCache(memoryCapacity: 16 << 20, diskCapacity: 200 << 20)
+    }
 
     var body: some Scene {
         WindowGroup {

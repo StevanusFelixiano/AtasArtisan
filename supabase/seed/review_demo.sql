@@ -27,11 +27,11 @@ begin
   insert into public.payout_accounts (user_id, label, account_name, number) values (rani, 'BCA', 'Rani Pratiwi', '5271009934') returning id into rani_acct;
   insert into public.payout_accounts (user_id, label, account_name, number) values (ids[1], 'GoPay', 'Dimas Saputra', '081200000002') returning id into dimas_acct;
 
-  -- Group 1: Rani hosts, open, the design's order.
+  -- Group 1: Rani hosts, open, the design's order. Cutoff a week out so it is still open when App Review signs in.
   insert into public.groups (host_id, name, area, address_label, address_detail, delivery_at, cutoff_at, payout_account_id)
     values (rani, 'Academy Bali Friday Treats', 'Kuta', 'Academy Bali', 'Apple Developer Academy Bali',
-            date_trunc('day', now() at time zone 'Asia/Makassar') at time zone 'Asia/Makassar' + interval '2 days 10 hours',
-            date_trunc('day', now() at time zone 'Asia/Makassar') at time zone 'Asia/Makassar' + interval '1 day 13 hours',
+            date_trunc('day', now() at time zone 'Asia/Makassar') at time zone 'Asia/Makassar' + interval '8 days 10 hours',
+            date_trunc('day', now() at time zone 'Asia/Makassar') at time zone 'Asia/Makassar' + interval '7 days 13 hours',
             rani_acct) returning id into g1;
   insert into public.members (group_id, user_id) select g1, unnest(ids);
   for p in select * from (values
