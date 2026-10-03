@@ -484,11 +484,16 @@ struct Rays: View {
     }
 }
 
-/// The group screen's Rp 200k card (3-1, 3-2, 3-8 and the host screens): the amount, a 20 pt bar and one line. Every
-/// row has a fixed height and never wraps, so the card is 144 pt for any subtotal from Rp 0 to Rp 10.000.000
-/// (Testing Fixes C): the amount scales down inside its own slot instead of pushing "/ 200.000", which keeps its
-/// natural size at the trailing edge. Only the fill and the numbers animate. At Rp 200.000 the bar turns lime and the
-/// line says the ongkir is free, with one success tap when it crosses on screen.
+/// The group screen's Rp 200k card, "the loudest element on the group screen" (3-1 / 3-3). Before the goal:
+/// white card, Roundo 38 amount, 20pt bar (striped when close), "Rp X more for free ongkir" line. At the goal (free
+/// ongkir): lime card with rays, the celebrating giraffe, Shrikhand "Free ongkir!" and the FREE ONGKIR band.
+/// Below the goal the card's size never follows the value (Testing fixes C): the amount and the line stay on one
+/// line with tabular digits and scale down rather than wrap, so only the fill and the numbers move. Only the
+/// unlock itself resizes the card.
+/// One card for both: while the screen is open the bar fills, the numbers count, and crossing the goal plays the
+/// unlock in order (fill, card, headline, message, sunburst, giraffe, band); dropping back plays it out. A card that
+/// appears already unlocked is still. Layers on their own timing sit in a `geometryGroup`, so where they are still
+/// follows the card.
 struct DiscountBar: View {
     var subtotal: Int
     /// Kept for the call sites; the copy no longer names the host.
@@ -496,86 +501,162 @@ struct DiscountBar: View {
     /// Personal order (3-8): the same card.
     var personal = false
     static let goal = UnlockMotion.threshold
-    /// The card's height follows the text size, never the value.
-    @ScaledMetric(relativeTo: .title2) private var amountRow = DiscountBarLayout.amountRow
-    @ScaledMetric(relativeTo: .body) private var lineRow = DiscountBarLayout.lineRow
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     private var unlocked: Bool { subtotal >= Self.goal }
     private var fraction: CGFloat { min(1, CGFloat(subtotal) / CGFloat(Self.goal)) }
 
+    /// The unlock's step at its delay, or `off` when it re-locks.
+    private func step(_ a: Animation, _ delay: Double, off: Animation = Motion.fadeOut) -> Animation {
+        unlocked ? a.delay(delay) : off
+    }
+    /// Rows that open or close: the unlock's `Motion.settle`, the re-lock's `Motion.leave`; Reduce Motion snaps them.
+    private func row(_ delay: Double) -> Animation? {
+        reduceMotion ? nil : step(Motion.settle, delay, off: Motion.leave)
+    }
+    /// Layers that only fade under Reduce Motion.
+    private func layer(_ a: Animation, _ delay: Double) -> Animation {
+        step(reduceMotion ? Motion.Reduced.fade : a, delay)
+    }
+
     var body: some View {
         let u = unlocked
-        let bar = DiscountBarLayout.barHeight
-        VStack(alignment: .leading, spacing: 12) {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                CountUp(amount: subtotal) { Text(Rupiah.format($0)) }
-                    .font(Brand.font(.title2, size: 38, weight: 700)).monospacedDigit()
+        let card = UnlockMotion.cardDelay
+        let shape = RoundedRectangle(cornerRadius: Brand.rHero, style: .continuous)
+        VStack(spacing: 0) {
+            VStack(alignment: .leading, spacing: 12) {
+                headline
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    CountUp(amount: subtotal) { Text(Rupiah.format($0)) }
+                        .modifier(RoundoSize(size: u ? UnlockMotion.totalSize.to : UnlockMotion.totalSize.from))
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(DiscountBarLayout.amountMinScale)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Text("/ 200.000").font(u ? Brand.font(.footnote, size: 13, weight: 600) : Brand.font(.callout, weight: 600))
+                        .foregroundStyle(u ? Brand.cocoa : Brand.ink3)
+                        .fixedSize()
+                }
+                bar
+                OneSpot(active: u ? 1 : 0) {
+                    CountUp(amount: max(0, Self.goal - subtotal)) { n in
+                        Text("\(Rupiah.format(n)) more").foregroundStyle(Brand.caramel).fontWeight(.bold)
+                            + Text(" for free ongkir")
+                    }
+                    .font(Brand.font(.body, size: 15, weight: 600)).monospacedDigit()
                     .lineLimit(1)
-                    .minimumScaleFactor(DiscountBarLayout.amountMinScale)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                Text("/ 200.000").font(Brand.font(.callout, size: 14, weight: 600)).foregroundStyle(Brand.ink3)
-                    .fixedSize()
+                    .minimumScaleFactor(DiscountBarLayout.lineMinScale)
+                    .opacity(u ? 0 : 1)
+                    .animation(u ? Motion.fadeOut.delay(card) : Motion.fade, value: u)
+                    .geometryGroup()
+                    Text("The order is over Rp 200.000, so Atas doesn’t charge ongkir.")
+                        .font(Brand.font(.callout, weight: 600))
+                        .opacity(u ? 1 : 0)
+                        .animation(step(Motion.fade, UnlockMotion.messageDelay), value: u)
+                        .geometryGroup()
+                }
             }
-            .frame(height: amountRow)
-            track.frame(height: bar)
-            line
-                .lineLimit(1)
-                .minimumScaleFactor(DiscountBarLayout.lineMinScale)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .frame(height: lineRow, alignment: .leading)
+            .foregroundStyle(Brand.cocoa)
+            // 3-3's padding when unlocked, 20 all round before.
+            .padding(u ? EdgeInsets(top: 22, leading: 20, bottom: 18, trailing: 20) : EdgeInsets(top: 20, leading: 20, bottom: 20, trailing: 20))
+            .frame(maxWidth: .infinity, alignment: .leading)
+            band
         }
-        .foregroundStyle(Brand.cocoa)
-        .padding(20)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .frame(height: 20 + amountRow + 12 + bar + 12 + lineRow + 20)
-        .background(RoundedRectangle(cornerRadius: Brand.rHero, style: .continuous).fill(Brand.card))
-        .animation(nil, value: subtotal)
-        .dynamicTypeSize(...DynamicTypeSize.xxLarge)
+        .background(alignment: .topTrailing) { celebration }
+        .background {
+            ZStack {
+                shape.fill(Brand.card)
+                shape.fill(Brand.lime).opacity(u ? 1 : 0).animation(step(Motion.fade, card), value: u).geometryGroup()
+            }
+        }
+        .clipShape(shape)
+        .overlay {
+            shape.strokeBorder(Brand.limeDeep, lineWidth: 2)
+                .opacity(u ? 1 : 0).animation(step(Motion.fade, card), value: u).geometryGroup()
+        }
+        .animation(row(card), value: u)
         .accessibilityElement(children: .combine)
         .sensoryFeedback(Haptic.done, trigger: u) { !$0 && $1 }
     }
 
-    /// Liquorice 100 track; the fill is hatched Chocolate 400 under the goal, lime with a Lime Deep ring at or over it.
-    private var track: some View {
+    /// "Free ongkir!": the column's first row, opening from 0 (its 12 pt gap opens with it) while the words
+    /// scale up from 0.6 and turn from −6° about a point 10 % across, 80 % down.
+    private var headline: some View {
         let u = unlocked
-        return Capsule().fill(Brand.liquorice100)
+        let from = UnlockMotion.headlineFrom
+        let anchor = UnitPoint(x: 0.1, y: 0.8)
+        let still = u || reduceMotion
+        return Text("Free ongkir!").font(Font(Brand.uiFont(.shrikhand, size: 36, weight: 400)))
+            .frame(maxWidth: 200, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
+            .scaleEffect(still ? 1 : from.scale, anchor: anchor)
+            .rotationEffect(still ? .zero : from.tilt, anchor: anchor)
+            .opacity(u ? 1 : 0)
+            .animation(layer(Motion.pop, from.delay), value: u)
+            .geometryGroup()
+            .frame(height: u ? nil : 0, alignment: .top)
+            .clipped()
+            .padding(.bottom, u ? 0 : -12)
+    }
+
+    private var bar: some View {
+        let u = unlocked
+        let close = fraction >= 0.75
+        return Capsule().fill(Brand.liquorice100).frame(height: 20)
             .overlay(alignment: .leading) {
                 GeometryReader { g in
-                    ZStack {
-                        Capsule().fill(Brand.choc400)
-                            .overlay(Hatching(ink: Brand.stripe, band: 10).clipShape(Capsule()))
-                        Capsule().fill(Brand.lime)
-                            .overlay(Capsule().strokeBorder(Brand.limeDeep, lineWidth: 1.5))
-                            .opacity(u ? 1 : 0)
-                            .animation(reduceMotion ? Motion.Reduced.fade : Motion.quick, value: u)
-                    }
-                    .frame(width: g.size.width * fraction)
-                    .animation(reduceMotion ? Motion.Reduced.fill : DiscountBarLayout.fill, value: fraction)
+                    Capsule()
+                        .fill(close ? AnyShapeStyle(.linearGradient(stops: [.init(color: Brand.choc400, location: 0.5), .init(color: Brand.stripe, location: 0.5)],
+                                                                   startPoint: .topLeading, endPoint: UnitPoint(x: 0.045, y: 0.045)))
+                                    : AnyShapeStyle(Brand.choc400))
+                        // At the goal a cocoa layer fades in over the full fill.
+                        .overlay(Capsule().fill(Brand.cocoa).opacity(u ? 1 : 0).animation(step(Motion.quick, UnlockMotion.cardDelay), value: u))
+                        .frame(width: g.size.width * fraction)
+                        .animation(reduceMotion ? Motion.Reduced.fill : Motion.doughTrail, value: fraction)
                 }
             }
             .clipShape(Capsule())
             .geometryGroup()
     }
 
-    /// "Rp 45.000 more for free ongkir" under the goal, "Free ongkir · the order is over Rp 200.000" from it; the
-    /// amount rolls on `Motion.digits` and the two copies crossfade at the crossing.
-    private var line: some View {
+    /// The band row under the column, full card width. The card makes room with the rest of the unlock; the band
+    /// opens into it from the top after 0.38 s. Reduce Motion: it appears without the opening.
+    private var band: some View {
         let u = unlocked
-        let left = max(0, Self.goal - subtotal)
-        return ZStack(alignment: .leading) {
+        let height = UnlockMotion.band.height
+        return ZStack(alignment: .top) {
             if u {
-                Text("Free ongkir · the order is over Rp 200.000")
-                    .transition(.opacity.animation(reduceMotion ? Motion.Reduced.fade : Motion.quick))
-            } else {
-                Text("\(Text(Rupiah.format(left)).foregroundStyle(Brand.caramel).fontWeight(.bold)) more for free ongkir")
-                    .contentTransition(reduceMotion ? .opacity : .numericText(value: Double(left)))
-                    .animation(reduceMotion ? Motion.Reduced.fade : Motion.digits, value: left)
-                    .transition(.opacity.animation(reduceMotion ? Motion.Reduced.fade : Motion.quick))
+                Marquee(text: "FREE ONGKIR • ONGKIR SORTED • KEEP ADDING • ", fill: Brand.cocoa, ink: Brand.lime, size: 13)
+                    .transition(.asymmetric(insertion: .identity, removal: .opacity))
             }
         }
-        .font(Brand.font(.body, size: 15, weight: 600))
-        .monospacedDigit()
+        .frame(height: u ? height : 0, alignment: .top)
+        .mask(alignment: .top) {
+            Rectangle().frame(height: u ? height : 0)
+                .animation(reduceMotion ? nil : step(Motion.settle, UnlockMotion.band.delay, off: Motion.leave), value: u)
+        }
+    }
+
+    /// The sunburst behind everything and the celebrating giraffe; there only once unlocked.
+    private var celebration: some View {
+        let u = unlocked
+        let sun = UnlockMotion.sunburst, giraffe = UnlockMotion.mascot
+        let still = u || reduceMotion
+        return ZStack(alignment: .topTrailing) {
+            Rays(color: .white).frame(width: 260, height: 260)
+                .rotationEffect(still ? .zero : sun.tilt)
+                .animation(reduceMotion ? nil : step(Motion.glide, sun.delay), value: u)
+                .opacity(u ? sun.opacity : 0)
+                .animation(layer(Motion.fade, sun.delay), value: u)
+                .offset(x: 60, y: -60)
+            Mascot(pose: "pose-celebrating", size: 130, fill: .clear)
+                .scaleEffect(still ? 1 : giraffe.scale)
+                .offset(y: still ? 0 : giraffe.offset)
+                .opacity(u ? 1 : 0)
+                .animation(layer(Motion.bounce, giraffe.delay), value: u)
+                .offset(x: -6, y: 10)
+        }
+        .allowsHitTesting(false)
     }
 }
 

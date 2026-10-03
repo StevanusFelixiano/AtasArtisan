@@ -4,13 +4,9 @@ import SwiftUI
 // "Testing Fixes" board, Swift part 4: the Rp 200.000 card's fixed size, the bill turning final, ongkir and
 // discount, pay first's steps, and closing once everyone has paid. Values match the board one to one.
 
-/// C · DiscountBar keeps its size from Rp 0 to Rp 10.000.000
+/// C · DiscountBar: below the goal the amount and the "more" line stay on one line and scale down
 enum DiscountBarLayout {
-    static let cardHeight: CGFloat = 144
-    static let amountRow: CGFloat = 40, barHeight: CGFloat = 20, lineRow: CGFloat = 20
     static let amountMinScale: CGFloat = 0.6, lineMinScale: CGFloat = 0.8
-    static let count = Motion.glide                       // rounded to BasketMotion.roundTo while moving
-    static let fill  = Motion.doughTrail
 }
 
 /// D · The bill turning final: card leads, amount follows. BillMotion values unchanged.
