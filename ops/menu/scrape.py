@@ -7,7 +7,7 @@ atasartisan.com is an iSeller store whose pages load the menu through form-encod
   /services/Liquid/Product      -> one product with every variant and its options (Berat, Slice, ...)
 About 40 requests a run, direct (no proxy). Photos stay on Atas's CDN; we keep only the URL, for the product
 and, when iSeller has one, for each variant (variants[].image: a flavour's own photo).
-Skips the upload when the menu is unchanged since the last run (hash in STATE).
+Skips the upload when the menu is unchanged since the last run (hash in STATE); it then only reports the check.
 
 env: ATASTE_INGEST_URL, ATASTE_SCRAPER_SECRET; STATE (default /var/lib/ataste-menu/last.sha256)
 """
@@ -120,19 +120,24 @@ def menu():
     return {"collections": collections, "products": products}
 
 
+def ingest(body):
+    req = urllib.request.Request(os.environ["ATASTE_INGEST_URL"], data=json.dumps(body).encode(), method="POST",
+                                 headers={"content-type": "application/json",
+                                          "x-scraper-secret": os.environ["ATASTE_SCRAPER_SECRET"]})
+    with urllib.request.urlopen(req, timeout=60) as r:
+        return r.read().decode()
+
+
 def main():
     m = menu()
     if not m["products"]:
         sys.exit("empty menu: refusing to upload")
     digest = hashlib.sha256(json.dumps(m, sort_keys=True).encode()).hexdigest()
     if os.path.exists(STATE) and open(STATE).read().strip() == digest and "--force" not in sys.argv:
+        ingest({"checked": True})  # the app's "menu last updated" counts checks, not just changes
         print(f"unchanged ({len(m['products'])} products)")
         return
-    req = urllib.request.Request(os.environ["ATASTE_INGEST_URL"], data=json.dumps(m).encode(), method="POST",
-                                 headers={"content-type": "application/json",
-                                          "x-scraper-secret": os.environ["ATASTE_SCRAPER_SECRET"]})
-    with urllib.request.urlopen(req, timeout=60) as r:
-        print(r.read().decode())
+    print(ingest(m))
     os.makedirs(os.path.dirname(STATE), exist_ok=True)
     open(STATE, "w").write(digest)
 

@@ -2,6 +2,8 @@
 // Vault). Body: {collections: [{id, name, sort}], products: [{id, collection_id, name, description,
 // photo_url, base_price, option_groups, variants, available, sort}]}. Upserts everything sent and
 // marks products missing from the payload unavailable, which fires the sold-out notices.
+// Body {checked: true}: the scrape found the menu unchanged; only the sync time moves, so the app's
+// "menu last updated" stays true.
 import { createClient } from "npm:@supabase/supabase-js@2";
 
 const admin = createClient(Deno.env.get("SUPABASE_URL")!, Deno.env.get("SUPABASE_SERVICE_ROLE_KEY")!);
@@ -16,7 +18,11 @@ Deno.serve(async (req) => {
   if ((await sha256(req.headers.get("x-scraper-secret") ?? "")) !== String(want ?? "").trim()) {
     return new Response("forbidden", { status: 403 });
   }
-  const { collections = [], products = [] } = await req.json();
+  const { collections = [], products = [], checked = false } = await req.json();
+  if (checked) {
+    await admin.from("menu_meta").upsert({ id: true, synced_at: new Date().toISOString() });
+    return Response.json({ checked: true });
+  }
   if (!products.length) return new Response("empty menu refused", { status: 400 }); // a broken scrape must not empty the menu
   const now = new Date().toISOString();
   let e = (await admin.from("collections").upsert(collections)).error;
