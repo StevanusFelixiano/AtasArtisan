@@ -14,17 +14,24 @@
 - Support URL: https://scgyssmzfurqjkgfomtq.supabase.co/functions/v1/legal/support
 - Copyright: 2026 Johar Kurniawan
 
-## Description (draft)
-Ordering from Atas Artisan with friends? Ataste does the busywork. Start a group order, share the link, and
-everyone adds their own items from the Atas menu: sourdough sliced or whole, the right size, a note for the
-bakery. Ataste shows how close you are to the Rp 200.000 ongkir discount, lets friends split a whole cake,
-and writes the WhatsApp order in the format Atas expects. When Atas confirms the ongkir, everyone's bill is
-worked out to the rupiah, with the host's bank or e-wallet one tap away. Snap a photo when it arrives, and done.
+## Description (as submitted for 1.0)
+Promotional text: One link for the whole office order. Everyone adds their own pastries, Ataste writes the WhatsApp
+order for Atas, and the bill splits itself to the rupiah.
+
+Ordering from Atas Artisan with friends? Ataste does the busywork.
+
+Start a group order, share the link, and everyone adds their own items from the Atas menu: sourdough sliced or whole,
+the right size, a note for the bakery. Ataste shows how close the group is to Rp 200.000, where ongkir is free, and
+lets friends split a whole cake piece by piece.
+
+When the order is ready, Ataste writes the WhatsApp message in the format Atas expects, so the host only has to press
+send. Everyone's bill is worked out to the rupiah, with the host's bank or e-wallet one tap away. Snap a photo when it
+arrives, and done.
 
 Ataste is an independent app and is not affiliated with Atas Artisan. Payments happen directly between friends;
 Ataste never handles money.
 
-Keywords: atas, artisan, bakery, bali, group order, split bill, sourdough, ongkir, patungan, pesan bareng
+Keywords: atas,artisan,bakery,bali,group order,split bill,sourdough,ongkir,patungan,pesan bareng,roti,kue
 
 ## App Privacy (must match PrivacyInfo.xcprivacy)
 Data linked to the user, used for App Functionality only, no tracking:
@@ -50,6 +57,11 @@ Not collected: location, contacts, browsing, purchases, usage data, diagnostics,
 ## Export compliance
 `ITSAppUsesNonExemptEncryption = NO` in Info.plist (HTTPS only), so no questions per build.
 
-## Screenshots (6.9", 1320 × 2868)
-From the simulator with the DEBUG hooks (see CLAUDE.md): Home, group screen, menu, product with options,
-Send to Atas message, bill.
+## Screenshots
+Claude Design board "App Store Screenshots.dc.html" (AS-01 to AS-07, 1320 × 2868, with Atas's menu photos), exported
+to the project's `export/` folder. App Store Connect asks for the 6.5" slot, so they were scaled to 1284 × 2778 JPEG
+(no alpha) and uploaded one at a time: a multi-file upload lands in completion order and breaks the seams.
+
+## Submissions
+- 1.0 (build 12) submitted for review 2026-10-03, manual release. Content Rights: yes, with rights. Age rating 4+.
+  Price free. Review demo cutoff is 2026-10-10; rerun `supabase/seed/review_demo.sql` if review runs past it.
