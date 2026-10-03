@@ -61,8 +61,14 @@ final class GroupStore {
         claims.filter { $0.item_id == item.id && $0.pieces > 0 }.sorted { $0.created_at < $1.created_at }
     }
     func claimed(_ item: Item) -> Int { claims(item).reduce(0) { $0 + $1.pieces } }
-    /// Pieces nobody has claimed: the owner's.
-    func piecesLeft(_ item: Item) -> Int { max(0, (item.share_pieces ?? 0) - claimed(item)) }
+    /// Pieces the owner keeps for themselves (`share_keep`, at least 1); nobody else can claim them.
+    func kept(_ item: Item) -> Int { item.share_pieces == nil ? 0 : max(1, item.share_keep ?? 1) }
+    /// Pieces others can claim in all: every piece but the owner's kept ones.
+    func claimable(_ item: Item) -> Int { max(0, (item.share_pieces ?? 0) - kept(item)) }
+    /// Pieces others can still claim.
+    func piecesLeft(_ item: Item) -> Int { Pieces.left(pieces: item.share_pieces ?? 0, keep: kept(item), claimed: claimed(item)) }
+    /// The owner's pieces: the kept ones and every one nobody claimed.
+    func ownerPieces(_ item: Item) -> Int { max(0, (item.share_pieces ?? 0) - claimed(item)) }
     /// The owner and everyone with a claim.
     func sharePeople(_ item: Item) -> Int { 1 + claims(item).count }
     func myClaim(_ item: Item) -> Int { claims(item).first { $0.user_id == me }?.pieces ?? 0 }
@@ -167,8 +173,9 @@ final class GroupStore {
         writing > 0 || (ownMove?.from == from && ownMove?.to == to)
     }
 
-    /// Adds an item; `share` opens it to the group in that many pieces, with an optional minimum of people.
-    func add(product: Product, options: [String: String], qty: Int, note: String, share: (pieces: Int, min: Int?)? = nil) async throws {
+    /// Adds an item; `share` opens it to the group in that many pieces, `keep` of them mine, with an optional minimum
+    /// of people.
+    func add(product: Product, options: [String: String], qty: Int, note: String, share: (pieces: Int, keep: Int, min: Int?)? = nil) async throws {
         nonisolated struct Added: Decodable { var id: UUID }
         let added: Added = try await supabase.from("items")
             .insert(NewItem(group_id: id, product_id: product.id, options: options, qty: qty, note: note))
@@ -177,15 +184,16 @@ final class GroupStore {
         epoch += 1
         if let share {
             try await rpc("share_item", ["item": .string(added.id.uuidString), "pieces": .integer(share.pieces),
-                                         "min_people": share.min.map { .integer($0) } ?? .null])
+                                         "min_people": share.min.map { .integer($0) } ?? .null, "keep": .integer(share.keep)])
         } else {
             await refresh()
         }
     }
 
-    /// Shares my item, or changes its pieces and minimum (`share_item`).
-    func share(_ item: Item, pieces: Int, min: Int?) async throws {
-        try await rpc("share_item", ["item": .string(item.id.uuidString), "pieces": .integer(pieces), "min_people": min.map { .integer($0) } ?? .null])
+    /// Shares my item, or changes its pieces, the ones I keep and the minimum (`share_item`).
+    func share(_ item: Item, pieces: Int, keep: Int, min: Int?) async throws {
+        try await rpc("share_item", ["item": .string(item.id.uuidString), "pieces": .integer(pieces), "keep": .integer(keep),
+                                     "min_people": min.map { .integer($0) } ?? .null])
     }
 
     /// Sets my claim on someone's shared item; 0 withdraws it.

@@ -18,9 +18,11 @@ struct ProductView: View {
     @State private var problem: Problem?
     /// The price on show, so a change rolls up or down.
     @State private var shownPrice = 0
-    /// A-1: share it as it is added, in `pieces`, optionally cancelled at lock below `minPeople`.
+    /// A-1: share it as it is added, in `pieces` with `keep` of them mine, optionally cancelled at lock below
+    /// `minPeople`.
     @State private var sharing = false
     @State private var pieces = PieceMotion.defaultPieces
+    @State private var keep = 1
     @State private var hasMin = false
     @State private var minPeople = PieceMotion.minPeopleDefault
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -202,7 +204,7 @@ struct ProductView: View {
             .padding(.vertical, 12)
             .frame(minHeight: 52)
             if sharing {
-                ShareRows(pieces: $pieces, hasMin: $hasMin, minPeople: $minPeople, price: price ?? product.fromPrice, minUpper: minUpper)
+                ShareRows(pieces: $pieces, keep: $keep, hasMin: $hasMin, minPeople: $minPeople, price: price ?? product.fromPrice, minUpper: minUpper)
                     .transition(.opacity)
             }
         }
@@ -324,7 +326,7 @@ struct ProductView: View {
     private func add() async {
         busy = true
         defer { busy = false }
-        let share = sharing && canShare ? (pieces: pieces, min: hasMin ? Optional(minPeople) : nil) : nil
+        let share = sharing && canShare ? (pieces: pieces, keep: keep, min: hasMin ? Optional(minPeople) : nil) : nil
         await attempt($problem, "Couldn't add it") {
             try await store.add(product: product, options: product.variants.isEmpty ? [:] : picked, qty: qty,
                                 note: note.trimmingCharacters(in: .whitespaces), share: share)

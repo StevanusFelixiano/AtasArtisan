@@ -42,21 +42,29 @@ struct ShareSheetView: View {
 
 // MARK: Rows
 
-/// A-1's pieces and minimum rows (product sheet and share settings): "Pieces · Rp 21.667 a piece" with a 2…24
-/// stepper, "Cancel if fewer people join" with its toggle, and "Fewer than 4 people, you included" when on.
-/// `floor` is what others have claimed: the stepper stops there, shakes, and says who holds them.
+/// A-1's rows (product sheet and share settings): "Pieces · Rp 21.667 a piece" with a 2…24 stepper, "Keep for me ·
+/// Others can claim the other 11" with a 1…pieces − 1 stepper, "Cancel if fewer people join" with its toggle, and
+/// "Fewer than 4 people, you included" when on. Pieces never drop to what I keep plus what others `claimed`, and I
+/// never keep the pieces they hold: a blocked stepper shakes and says why (`claimedBy`: "Kevin and Putri have 5 claimed").
 struct ShareRows: View {
     @Binding var pieces: Int
+    @Binding var keep: Int
     @Binding var hasMin: Bool
     @Binding var minPeople: Int
     var price: Int
     var minUpper: Int
     var stepper: CGFloat = 28
-    var floor = PieceMotion.range.lowerBound
-    var floorReason: String? = nil
+    var claimed = 0
+    var claimedBy: String? = nil
     @State private var stuck = 0
-    @State private var reason = false
+    @State private var keepStuck = 0
+    /// The blocked stepper's reason, under its row's title.
+    @State private var reason: (keep: Bool, text: String)?
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+
+    private var floor: Int { Pieces.floor(keep: keep, claimed: claimed) }
+    private var maxKeep: Int { Pieces.maxKeep(pieces: pieces, claimed: claimed) }
+    private var claimedText: String { claimedBy ?? "\(Pieces.label(claimed)) claimed" }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -67,17 +75,31 @@ struct ShareRows: View {
                     Text("\(Rupiah.format(Pieces.each(price: price, pieces: pieces))) a piece").ui(GFont.manrope(13), Brand.ink2)
                         .contentTransition(reduceMotion ? .opacity : .numericText())
                         .animation(reduceMotion ? Motion.Reduced.fade : Motion.digits, value: pieces)
-                    if reason, let floorReason {
-                        Text(floorReason).ui(GFont.manrope(12, 600), Brand.destructive)
-                            .transition(.opacity.combined(with: .offset(y: ButtonMotion.reasonOffset)))
-                    }
+                    reasonLine(keep: false)
                 }
             } control: {
                 PillStepper(value: "\(pieces)", fill: Brand.cream, gap: 10, pad: 3, minWidth: 20, countSize: 16, button: stepper,
-                            canMinus: pieces > max(floor, PieceMotion.range.lowerBound), canPlus: pieces < PieceMotion.range.upperBound,
+                            canMinus: pieces > floor, canPlus: pieces < PieceMotion.range.upperBound,
                             minusLabel: "One piece less", plusLabel: "One piece more",
-                            minus: { pieces -= 1 }, plus: { pieces += 1 }, blocked: { if pieces <= floor { stuck += 1 } })
+                            minus: { pieces -= 1 }, plus: { pieces += 1 }, blocked: piecesBlocked)
                     .shake(reduceMotion ? 0 : stuck)
+            }
+            divider
+            row {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Keep for me").ui(GFont.manrope(15, 700))
+                    Text(pieces - keep == 1 ? "Others can claim the other piece" : "Others can claim the other \(pieces - keep)")
+                        .ui(GFont.manrope(13), Brand.ink2)
+                        .contentTransition(reduceMotion ? .opacity : .numericText())
+                        .animation(reduceMotion ? Motion.Reduced.fade : Motion.digits, value: pieces - keep)
+                    reasonLine(keep: true)
+                }
+            } control: {
+                PillStepper(value: "\(keep)", fill: Brand.cream, gap: 10, pad: 3, minWidth: 20, countSize: 16, button: stepper,
+                            canMinus: keep > 1, canPlus: keep < maxKeep,
+                            minusLabel: "Keep one piece less", plusLabel: "Keep one piece more",
+                            minus: { keep -= 1 }, plus: { keep += 1 }, blocked: keepBlocked)
+                    .shake(reduceMotion ? 0 : keepStuck)
             }
             divider
             row {
@@ -106,13 +128,41 @@ struct ShareRows: View {
                 .transition(.opacity)
             }
         }
-        .sensoryFeedback(Haptic.blocked, trigger: stuck)
-        .task(id: stuck) {
-            guard stuck > 0, floorReason != nil else { return }
-            withAnimation(reduceMotion ? Motion.Reduced.fade : Motion.settle) { reason = true }
+        .sensoryFeedback(Haptic.blocked, trigger: stuck + keepStuck)
+        .task(id: stuck + keepStuck) {
+            guard stuck + keepStuck > 0, reason != nil else { return }
             do { try await Task.sleep(for: .seconds(ButtonMotion.reasonHold)) } catch { return }
-            withAnimation(reduceMotion ? Motion.Reduced.fade : Motion.fadeOut) { reason = false }
+            withAnimation(reduceMotion ? Motion.Reduced.fade : Motion.fadeOut) { reason = nil }
         }
+    }
+
+    @ViewBuilder private func reasonLine(keep: Bool) -> some View {
+        if let reason, reason.keep == keep {
+            Text(reason.text).ui(GFont.manrope(12, 600), Brand.destructive)
+                .transition(.opacity.combined(with: .offset(y: ButtonMotion.reasonOffset)))
+        }
+    }
+
+    /// Minus at the floor: "Kevin and Putri have 5 claimed and you keep 1", "You keep 3, so at least 4 pieces".
+    /// Plus at 24, or minus at 2 with nothing holding it there, only shakes.
+    private func piecesBlocked() {
+        guard pieces <= floor else { return }
+        stuck += 1
+        let text: String? = claimed > 0 ? "\(claimedText) and you keep \(keep)" : keep > 1 ? "You keep \(keep), so at least \(keep + 1) pieces" : nil
+        show(text.map { (false, $0) })
+    }
+
+    /// Plus at the most I can keep: "Kevin and Putri have 5 claimed, so you can keep at most 7", or one piece stays
+    /// up for sharing; minus at 1: I always keep one.
+    private func keepBlocked() {
+        keepStuck += 1
+        let text = keep < maxKeep ? "You keep at least 1 piece"
+            : claimed > 0 ? "\(claimedText), so you can keep at most \(maxKeep)" : "At least 1 piece stays up for sharing"
+        show((true, text))
+    }
+
+    private func show(_ next: (keep: Bool, text: String)?) {
+        withAnimation(reduceMotion ? Motion.Reduced.fade : Motion.settle) { reason = next }
     }
 
     private var divider: some View { Rectangle().fill(Brand.liquorice100).frame(height: 1) }
@@ -179,7 +229,7 @@ struct ClaimSheet: View {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14) {
                         itemCard(store, item, "\(owner)’s · \(store.piecesLeft(item)) of \(pieces) pieces left") {
-                            PieceBar(fills: preview(item, count: count))
+                            PieceBar(fills: store.pieceFills(item, mine: count))
                         }
                         HStack(spacing: 12) {
                             VStack(alignment: .leading, spacing: 2) {
@@ -227,14 +277,6 @@ struct ClaimSheet: View {
         }
     }
 
-    /// Others' claims as they are, then my pieces in Lime, then the rest hatched.
-    private func preview(_ item: Item, count: Int) -> [Color?] {
-        var out: [Color?] = []
-        for c in store.claims(item) where c.user_id != store.me { out += Array(repeating: store.pieceColor(c.user_id), count: c.pieces) }
-        out += Array(repeating: Brand.lime, count: count)
-        return Array((out + Array(repeating: nil, count: max(0, (item.share_pieces ?? 0) - out.count))).prefix(item.share_pieces ?? 0))
-    }
-
     private func explanation(_ item: Item, editing: Bool) -> String {
         let owner = store.name(item.owner_id)
         let until = store.group?.cutoff_at.map { " at \(Wita.string($0, "HH:mm"))" } ?? ""
@@ -268,6 +310,7 @@ struct ShareSettingsSheet: View {
     var stop: (Item) -> Void
     @Environment(\.closeSheet) private var close
     @State private var pieces = PieceMotion.defaultPieces
+    @State private var keep = 1
     @State private var hasMin = false
     @State private var minPeople = PieceMotion.minPeopleDefault
     @State private var ready = false
@@ -281,7 +324,7 @@ struct ShareSettingsSheet: View {
         if let item {
             let shared = item.share_pieces != nil
             let claims = store.claims(item)
-            let floor = store.claimed(item)
+            let claimed = store.claimed(item)
             VStack(spacing: 0) {
                 ScrollView {
                     VStack(alignment: .leading, spacing: 14) {
@@ -289,9 +332,9 @@ struct ShareSettingsSheet: View {
                         if let request {
                             explainer("\(store.name(request.requester_id)) asked for \(request.mine) of \(request.pieces) pieces. They get theirs as soon as you share it.")
                         }
-                        ShareRows(pieces: $pieces, hasMin: $hasMin, minPeople: $minPeople, price: item.unit_price, minUpper: minUpper,
-                                  stepper: 32, floor: floor,
-                                  floorReason: claims.isEmpty ? nil : "\(joinedNames(claims.map { store.name($0.user_id) })) \(claims.count == 1 ? "has" : "have") \(floor) claimed")
+                        ShareRows(pieces: $pieces, keep: $keep, hasMin: $hasMin, minPeople: $minPeople, price: item.unit_price, minUpper: minUpper,
+                                  stepper: 32, claimed: claimed,
+                                  claimedBy: claims.isEmpty ? nil : "\(joinedNames(claims.map { store.name($0.user_id) })) \(claims.count == 1 ? "has" : "have") \(claimed) claimed")
                             .padding(.horizontal, 16)
                             .background(RoundedRectangle(cornerRadius: Brand.rCard, style: .continuous).fill(.white))
                         explainer(item.qty > 1 ? "Sharing keeps 1 of your \(item.qty) on the order. Anyone in the group can claim pieces until it locks; you keep the rest."
@@ -323,6 +366,7 @@ struct ShareSettingsSheet: View {
                 guard !ready else { return }
                 ready = true
                 pieces = item.share_pieces ?? request?.pieces ?? Pieces.defaultCount(item.name)
+                keep = item.share_pieces == nil ? 1 : store.kept(item)
                 hasMin = item.share_min != nil
                 minPeople = item.share_min ?? min(PieceMotion.minPeopleDefault, minUpper)
             }
@@ -333,7 +377,7 @@ struct ShareSettingsSheet: View {
         busy = true
         defer { busy = false }
         await attempt($problem, "Couldn't share it") {
-            try await store.share(item, pieces: pieces, min: hasMin ? minPeople : nil)
+            try await store.share(item, pieces: pieces, keep: keep, min: hasMin ? minPeople : nil)
             close?()
         }
     }

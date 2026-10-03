@@ -42,7 +42,7 @@ extension GroupView {
                 let claims = store.claims(item)
                 amount = Pieces.ownerAmount(price: item.total, pieces: pieces, claims: claims.map(\.pieces))
                 let whose = user == store.me ? "your" : "\(store.name(user))’s"
-                meta = "\(whose) \(store.piecesLeft(item)) of \(pieces) pieces · shared \(claims.count + 1) ways"
+                meta = "\(whose) \(store.ownerPieces(item)) of \(pieces) pieces · shared \(claims.count + 1) ways"
             }
             lines.append(ReviewLine(id: item.id.uuidString, item: item, qty: "\(item.qty)×", name: nameWithOptions(item), meta: meta, metaInk: ink,
                                     amount: amount, flagged: item.flagged_at != nil || soldOut(item)))

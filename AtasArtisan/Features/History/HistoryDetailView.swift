@@ -170,7 +170,7 @@ struct HistoryDetailView: View {
                 if claims.isEmpty {
                     out.append(ItemLine(product: item.product_id, title: "\(item.qty)× \(item.name)", subtitle: nil, amount: item.total))
                 } else {
-                    out.append(ItemLine(product: item.product_id, title: "\(item.name) · \(store.piecesLeft(item)) of \(pieces) pieces",
+                    out.append(ItemLine(product: item.product_id, title: "\(item.name) · \(store.ownerPieces(item)) of \(pieces) pieces",
                                         subtitle: "shared \(claims.count + 1) ways",
                                         amount: Pieces.ownerAmount(price: item.total, pieces: pieces, claims: claims.map(\.pieces))))
                 }

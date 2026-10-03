@@ -2,9 +2,10 @@ import Foundation
 
 // MARK: - Shared items in pieces (A2)
 
-/// An item shared in pieces: the owner sets 2–24 pieces, anyone else in the group claims some until the order
-/// locks, and the owner keeps the rest. Amounts match `group_bill_v`: a joiner pays ⌊price × n ÷ pieces⌋ rupiah and
-/// the owner pays what is left, so the shares add up to the price.
+/// An item shared in pieces: the owner sets 2–24 pieces and keeps 1 … pieces − 1 of them (`share_keep`), anyone
+/// else in the group claims from the others until the order locks, and the owner also keeps whatever nobody claimed.
+/// Amounts match `group_bill_v`: a joiner pays ⌊price × n ÷ pieces⌋ rupiah and the owner pays what is left, so the
+/// shares add up to the price.
 nonisolated enum Pieces {
     /// What a joiner with `n` of `pieces` pays.
     static func amount(price: Int, pieces: Int, n: Int) -> Int {
@@ -21,6 +22,15 @@ nonisolated enum Pieces {
     static func each(price: Int, pieces: Int) -> Int {
         pieces > 0 ? Int((Double(price) / Double(pieces)).rounded()) : price
     }
+
+    /// Pieces others can still claim: all but the owner's `keep`, less what is claimed.
+    static func left(pieces: Int, keep: Int, claimed: Int) -> Int { max(0, pieces - keep - claimed) }
+
+    /// The fewest pieces the owner can set: their `keep` plus what is claimed, and at least one piece for others.
+    static func floor(keep: Int, claimed: Int) -> Int { max(2, keep + max(1, claimed)) }
+
+    /// The most the owner can keep: everything not claimed, less at least one piece for others.
+    static func maxKeep(pieces: Int, claimed: Int) -> Int { max(1, pieces - max(1, claimed)) }
 
     /// The piece count a product starts at. By name first (the owner's call, 2026-10-03): cheesecakes and brownies 8,
     /// banana cake and sourdough 2. Otherwise by size: 20×20 trays 16, 20 cm cakes 12, anything else 8.

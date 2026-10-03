@@ -164,6 +164,8 @@ nonisolated struct Item: Codable, Identifiable, Hashable {
     var share_pieces: Int? = nil
     /// Removed at lock unless this many people (the owner included) have joined; nil for no minimum.
     var share_min: Int? = nil
+    /// Pieces the owner keeps for themselves (1 … pieces − 1), never claimable; nil when not shared.
+    var share_keep: Int? = nil
 
     var total: Int { unit_price * qty }
 }

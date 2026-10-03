@@ -13,14 +13,17 @@ extension GroupStore {
         return PieceColors.others[(others.firstIndex(of: user) ?? 0) % PieceColors.others.count]
     }
 
-    /// One fill per piece: the claims in the order they were made, then the owner's pieces, hatched until the order
-    /// locks and in the owner's colour after.
-    func pieceFills(_ item: Item) -> [Color?] {
+    /// One fill per piece: the claims in the order they were made, the pieces still up for claiming (hatched until
+    /// the order locks, the owner's colour after), then the pieces the owner keeps, in their colour from the start.
+    /// `mine` previews my claim at that count, in Lime after the others' (the claim sheet).
+    func pieceFills(_ item: Item, mine: Int? = nil) -> [Color?] {
         let pieces = item.share_pieces ?? 0
+        let owner = pieceColor(item.owner_id)
         var out: [Color?] = []
-        for c in claims(item) { out += Array(repeating: pieceColor(c.user_id), count: c.pieces) }
-        let locked = group?.state != .open
-        out += Array(repeating: locked ? pieceColor(item.owner_id) : nil, count: max(0, pieces - out.count))
+        for c in claims(item) where mine == nil || c.user_id != me { out += Array(repeating: pieceColor(c.user_id), count: c.pieces) }
+        if let mine { out += Array(repeating: Brand.lime, count: mine) }
+        out += Array(repeating: group?.state != .open ? owner : nil, count: max(0, claimable(item) - out.count))
+        out += Array(repeating: owner, count: max(0, pieces - out.count))
         return Array(out.prefix(pieces))
     }
 
@@ -34,8 +37,8 @@ enum PieceColors {
     static let others: [Color] = [Brand.choc400, Brand.pink100, Brand.choc100, Brand.liquorice400, Brand.limeDeep]
 }
 
-/// The piece bar: one 18 pt segment per piece, 2 pt apart, 4 pt corners and capsule ends. Claimed pieces in the
-/// claimer's colour, the rest a Liquorice 100 hatch. A claimed piece grows from its leading edge on `Motion.pop`,
+/// The piece bar: one 18 pt segment per piece, 2 pt apart, 4 pt corners and capsule ends. Claimed and kept pieces in
+/// their holder's colour, the rest a Liquorice 100 hatch. A claimed piece grows from its leading edge on `Motion.pop`,
 /// each claimer's run 0.025 s per piece; a released one shrinks on `Motion.leave`. Reduce Motion fades them.
 struct PieceBar: View {
     var fills: [Color?]
@@ -313,6 +316,7 @@ private struct SharedBlock: View {
     private var pieces: Int { item.share_pieces ?? 0 }
     private var people: Int { store.sharePeople(item) }
     private var left: Int { store.piecesLeft(item) }
+    private var keeps: Int { store.ownerPieces(item) }
     private var owner: String { store.name(item.owner_id) }
 
     var body: some View {
@@ -352,15 +356,15 @@ private struct SharedBlock: View {
         return "\(owner)’s · \(pieces) pieces · \(Rupiah.format(Pieces.each(price: item.unit_price, pieces: pieces))) each"
     }
 
-    /// "2 people · min 4 · 9 left", "3 people · min 4 · you keep 7", "Only Rani so far · min 4", "All 12 claimed",
-    /// "4 people · Rani keeps 5" once locked.
+    /// "2 people · min 4 · 9 left", "3 people · min 4 · you keep 7", "Only Rani so far · min 4", "All 11 claimed"
+    /// (every piece Rani doesn't keep), "4 people · Rani keeps 5" once locked.
     private var caption: String {
         let min = item.share_min.map { " · min \($0)" } ?? ""
         let them = people == 1 ? "1 person" : "\(people) people"
-        if !open { return "\(them) · \(mine ? "you keep" : "\(owner) keeps") \(left)" }
+        if !open { return "\(them) · \(mine ? "you keep" : "\(owner) keeps") \(keeps)" }
         if people == 1 { return "Only \(mine ? "you" : owner) so far\(min)" }
-        if mine { return "\(them)\(min) · you keep \(left)" }
-        if left == 0 { return "All \(pieces) claimed" }
+        if mine { return "\(them)\(min) · you keep \(keeps)" }
+        if left == 0 { return "All \(store.claimable(item)) claimed" }
         return "\(them)\(min) · \(left) left"
     }
 

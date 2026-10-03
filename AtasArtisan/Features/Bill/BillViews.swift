@@ -336,7 +336,7 @@ struct BillView: View {
                 if claims.isEmpty {
                     out.append(BillLine(id: item.id.uuidString, label: "\(item.qty)× \(item.name)", meta: "my items", amount: item.total))
                 } else {
-                    out.append(BillLine(id: item.id.uuidString, label: "\(item.name) · \(store.piecesLeft(item)) of \(pieces) pieces",
+                    out.append(BillLine(id: item.id.uuidString, label: "\(item.name) · \(store.ownerPieces(item)) of \(pieces) pieces",
                                         meta: "shared with \(joinedNames(claims.map { store.name($0.user_id) }))",
                                         amount: Pieces.ownerAmount(price: item.total, pieces: pieces, claims: claims.map(\.pieces))))
                 }

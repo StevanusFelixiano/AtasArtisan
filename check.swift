@@ -45,6 +45,10 @@ func expect(_ ok: Bool, _ what: String, file: StaticString = #file, line: UInt =
                           ("Lemon Cake 20 cm", 12), ("Focaccia 20x20", 16), ("Butter Croissant", 8)] {
             expect(Pieces.defaultCount(name) == n, "default pieces: \(name)")
         }
+        // The owner keeps 3 of 12: others claim at most 9; Kevin 3 and Putri 3 leave 3.
+        expect(Pieces.left(pieces: 12, keep: 3, claimed: 6) == 3 && Pieces.left(pieces: 12, keep: 3, claimed: 9) == 0, "left after keep")
+        expect(Pieces.floor(keep: 1, claimed: 0) == 2 && Pieces.floor(keep: 3, claimed: 0) == 4 && Pieces.floor(keep: 3, claimed: 6) == 9, "pieces floor")
+        expect(Pieces.maxKeep(pieces: 12, claimed: 0) == 11 && Pieces.maxKeep(pieces: 12, claimed: 6) == 6 && Pieces.maxKeep(pieces: 2, claimed: 0) == 1, "max keep")
         expect(Pieces.ordinal(3) == "3rd" && Pieces.ordinal(11) == "11th" && Pieces.ordinal(22) == "22nd", "ordinal")
 
         // The Atas message, golden text in the host's own format.

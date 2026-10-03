@@ -185,7 +185,7 @@ extension GroupView {
     }
 
     private func myItemRow(_ g: OrderGroup, _ item: Item) -> some View {
-        let shared = item.share_pieces.map { "Sharing · you keep \(store.piecesLeft(item)) of \($0)" }
+        let shared = item.share_pieces.map { "Sharing · you keep \(store.ownerPieces(item)) of \($0)" }
         return HStack(spacing: 10) {
             ProductPhoto(url: store.products[item.product_id]?.photo, size: 56)
             VStack(alignment: .leading, spacing: 2) {
