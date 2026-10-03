@@ -103,7 +103,7 @@ struct BillView: View {
                         // The waiting card folds away 0.30 s into the settle.
                         BillBanner(text: store.group?.payFirst == true
                                    ? "\(hostName) is asking Atas for the ongkir. You can pay once your bill is final."
-                                   : "The order is in — pay when you can. We’ll tell you the final amount.",
+                                   : "You can pay once Atas confirms the order. We’ll tell you the final amount.",
                                    fill: Brand.liquorice100, circle: .white)
                             .transition(.asymmetric(insertion: .identity,
                                                     removal: .opacity.animation((reduceMotion ? Motion.Reduced.fade : Motion.fadeOut).delay(BillMotion.waitingDelay))))
@@ -201,7 +201,8 @@ struct BillView: View {
             .frame(maxWidth: .infinity, alignment: .bottomLeading)
             .frame(height: amountHeight, alignment: .bottomLeading)
             OneSpot(active: f ? 1 : 0) {
-                Text("Your items so far. Ongkir and any discount get added when Atas confirms.")
+                Text(store.freeOngkir ? "Your items so far. Ongkir is free: the order is over Rp 200.000."
+                                      : "Your items so far. Ongkir and any discount get added when Atas confirms.")
                     .opacity(f ? 0 : 1).animation(reduceMotion ? Motion.Reduced.fade : Motion.fadeOut, value: f)
                 Text(subtitle)
                     .opacity(f ? 1 : 0).animation(fade.delay(PaySheetMotion.tagDelay), value: f)
@@ -303,7 +304,8 @@ struct BillView: View {
                 }
                 Spacer(minLength: 0)
                 RollText(key: final ? "final" : "waiting", delay: PaySheetMotion.ongkirDelay) {
-                    Text(final ? (line?.amount == 0 && store.freeOngkir ? "Free" : Rupiah.format(line?.amount ?? 0)) : "After Atas confirms").fixedSize()
+                    Text(final ? (line?.amount == 0 && store.freeOngkir ? "Free" : Rupiah.format(line?.amount ?? 0))
+                         : store.freeOngkir ? "Free" : "After Atas confirms").fixedSize()
                 }
                 .foregroundStyle(ink).animation(inkMotion, value: final)
             }
