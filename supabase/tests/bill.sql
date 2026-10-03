@@ -124,10 +124,16 @@ select pg_temp.fails('rani', format('select public.claim_pieces(%L, 1)', pg_temp
 select pg_temp.run('kevin', format('select public.claim_pieces(%L, 5)', pg_temp.item('main', 't-cheesecake')));
 select pg_temp.run('kevin', format('select public.claim_pieces(%L, 3)', pg_temp.item('main', 't-cheesecake')));  -- edits down
 select pg_temp.run('putri', format('select public.claim_pieces(%L, 2)', pg_temp.item('main', 't-cheesecake')));
-select pg_temp.fails('dimas', format('select public.claim_pieces(%L, 8)', pg_temp.item('main', 't-cheesecake')), 'Only 7 pieces left');
+select pg_temp.fails('dimas', format('select public.claim_pieces(%L, 8)', pg_temp.item('main', 't-cheesecake')), 'Only 6 pieces left');  -- Rani keeps 1
 select pg_temp.run('dimas', format('select public.claim_pieces(%L, 1)', pg_temp.item('main', 't-cheesecake')));
 select pg_temp.run('dimas', format('select public.claim_pieces(%L, 0)', pg_temp.item('main', 't-cheesecake')));  -- withdraws
-select pg_temp.fails('rani', format('select public.share_item(%L, 4, 3)', pg_temp.item('main', 't-cheesecake')), 'Pieces can’t go below the 5 already claimed');
+-- The owner keeps 1 … pieces − 1, and claims stop at what they keep.
+select pg_temp.fails('rani', format('select public.share_item(%L, 12, 3, 12)', pg_temp.item('main', 't-cheesecake')), 'Keep between 1 and 11 pieces for yourself');
+select pg_temp.fails('rani', format('select public.share_item(%L, 12, 3, 8)', pg_temp.item('main', 't-cheesecake')), '5 pieces already claimed, so you can keep at most 7 pieces');
+select pg_temp.run('rani', format('select public.share_item(%L, 12, 3, 7)', pg_temp.item('main', 't-cheesecake')));
+select pg_temp.fails('dimas', format('select public.claim_pieces(%L, 1)', pg_temp.item('main', 't-cheesecake')), 'Only 0 pieces left');
+select pg_temp.run('rani', format('select public.share_item(%L, 12, 3, 1)', pg_temp.item('main', 't-cheesecake')));
+select pg_temp.fails('rani', format('select public.share_item(%L, 4, 3)', pg_temp.item('main', 't-cheesecake')), 'Pieces must be at least 6: 5 claimed plus 1 for you');
 
 select pg_temp.run('nadia', format('select public.share_item(%L, 8, 4)', pg_temp.item('main', 't-banana')));
 select pg_temp.run('arief', format('select public.claim_pieces(%L, 2)', pg_temp.item('main', 't-banana')));
