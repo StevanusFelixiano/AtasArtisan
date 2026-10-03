@@ -78,9 +78,15 @@ extension GroupView {
         header(g, subtitle: true)
         DiscountBar(subtotal: store.subtotal, host: hostFirst, personal: g.personal)
         if !g.personal && store.subtotal >= DiscountBar.goal { latestActivity }
+        if !g.personal {
+            askCards
+            sharedSection(g)
+        }
         if g.personal {
             personalItems(g)
         } else if store.isHost {
+            // B1: the host's own My items above Members, the same card a member sees.
+            myItemsCard(g)
             listHeader("Members", count: store.activeMembers.count) {
                 Button { openShare() } label: {
                     HStack(spacing: 4) { icon("square.and.arrow.up", 14, Brand.caramel); Text("Invite") }
@@ -88,14 +94,14 @@ extension GroupView {
                 }
                 .buttonStyle(.plain)
             }
-            memberList(g, store.activeMembers)
+            memberList(g, store.activeMembers.filter { $0.user_id == g.host_id } + store.activeMembers.filter { $0.user_id != g.host_id })
         } else {
             myItemsCard(g)
             listHeader("Everyone", count: store.activeMembers.count) {
                 HStack(spacing: 3) {
-                    Text("Tap")
+                    Text("Tap the")
                     Image(systemName: "chart.pie").font(.system(size: 11, weight: .semibold))
-                    Text("to propose a split")
+                    Text("to ask someone to share")
                 }
                 .ui(GFont.manrope(12), Brand.ink3)
                 .accessibilityElement(children: .combine)
@@ -145,18 +151,24 @@ extension GroupView {
         return m < 1 ? "now" : m < 60 ? "\(m)m" : m < 1440 ? "\(m / 60)h" : "\(m / 1440)d"
     }
 
-    /// 3-1 "My items": photo, name, price each and note, stepper; a split sits under its item.
+    /// 3-1 "My items": photo, name, price each and note, the Share pill and the stepper (a shared item has the Lime
+    /// "Shared" pill instead of both). The host has the same card (B1), with an empty row until they add something.
     private func myItemsCard(_ g: OrderGroup) -> some View {
         let mine = store.items(of: store.me ?? UUID())
+        let total = mine.reduce(0) { $0 + $1.total }
         return VStack(alignment: .leading, spacing: 0) {
             HStack {
                 Text("My items").brand(.label)
                 Spacer()
-                CountUp(amount: mine.reduce(0) { $0 + $1.total }) { Text(Rupiah.format($0)) }.ui(GFont.roundo(18))
+                CountUp(amount: total) { Text(Rupiah.format($0)) }.ui(GFont.roundo(18), total == 0 ? Brand.ink4 : Brand.cocoa)
             }
             .padding(.bottom, 10)
             if mine.isEmpty {
-                Text("Nothing in the oven…yet!").ui(GFont.manrope(13), Brand.ink4).padding(.vertical, 10)
+                if store.isHost {
+                    hostEmptyRow.padding(.bottom, 10).transition(.itemRow)
+                } else {
+                    Text("Nothing in the oven…yet!").ui(GFont.manrope(13), Brand.ink4).padding(.vertical, 10)
+                }
             }
             ForEach(Array(mine.enumerated()), id: \.element.id) { i, item in
                 VStack(spacing: 0) {
@@ -171,28 +183,23 @@ extension GroupView {
     }
 
     private func myItemRow(_ g: OrderGroup, _ item: Item) -> some View {
-        let split = store.liveSplit(item)
-        return VStack(alignment: .leading, spacing: 8) {
-            HStack(spacing: 12) {
-                ProductPhoto(url: store.products[item.product_id]?.photo, size: 56)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(nameWithOptions(item)).ui(GFont.manrope(15, 700))
-                    Text(eachLine(item)).ui(GFont.manrope(13), Brand.ink2)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                QtyStepper(qty: item.qty) { q in changeQty(item, to: q, split: split) }
+        let shared = item.share_pieces.map { "Sharing · you keep \(store.piecesLeft(item)) of \($0)" }
+        return HStack(spacing: 10) {
+            ProductPhoto(url: store.products[item.product_id]?.photo, size: 56)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(nameWithOptions(item)).ui(GFont.manrope(15, 700))
+                Text(shared ?? eachLine(item)).ui(GFont.manrope(13), Brand.ink2)
+                // The Share pill sits under the price, so the name keeps the row's width beside the stepper.
+                if g.state == .open && shared == nil { sharePill(item).padding(.top, 6) }
             }
-            .padding(.vertical, 10)
-            .contextMenu {
-                if split == nil && store.activeMembers.count > 1 {
-                    Button { sheet = .split(item) } label: { Label("Propose a split", systemImage: "chart.pie") }
-                }
-            }
-            if let split { SplitSummary(store: store, item: item, split: split).padding(.bottom, 10) }
+            .frame(maxWidth: .infinity, alignment: .leading)
+            if shared != nil { sharePill(item) } else { QtyStepper(qty: item.qty) { q in changeQty(item, to: q) } }
         }
+        .padding(.vertical, 10)
+        .frame(minHeight: 76)
     }
 
-    func changeQty(_ item: Item, to q: Int, split: Split?) {
+    func changeQty(_ item: Item, to q: Int) {
         if q == 0 {
             asking = removeItemConfirm(store, item) { try await store.remove(item) }
         } else {
@@ -212,26 +219,19 @@ extension GroupView {
         return item.note.isEmpty ? price : "\(price) · “\(item.note)”"
     }
 
-    /// "2× Butter Croissant · 1× Classic Sourdough · 1000gr · Sliced 15mm".
-    private func summary(_ items: [Item]) -> String {
-        items.map { i in
-            var s = "\(i.qty)× \(nameWithOptions(i))"
-            if let sp = store.liveSplit(i) { s += sp.state == "pending" ? " (split asked)" : " (split \(store.shares(sp).count) ways)" }
-            return s
+    /// "2× Butter Croissant · 1× Burnt Cheesecake 20 cm (shared) · Banana Cake, 3 of 12": their items, then the
+    /// pieces they claimed of others'.
+    private func summary(_ user: UUID, _ items: [Item]) -> String {
+        let own = items.map { "\($0.qty)× \(nameWithOptions($0))" + ($0.share_pieces == nil ? "" : " (shared)") }
+        let claimed = store.items.compactMap { i -> String? in
+            guard let pieces = i.share_pieces, let c = store.claims(i).first(where: { $0.user_id == user }) else { return nil }
+            return "\(i.name), \(c.pieces) of \(pieces)"
         }
-        .joined(separator: " · ")
+        return (own + claimed).joined(separator: " · ")
     }
 
-    /// A split that waits on me: the owner's yes, or my share.
-    func needsMe(_ item: Item) -> Bool {
-        guard let sp = store.liveSplit(item) else { return false }
-        if sp.state == "pending" { return item.owner_id == store.me }
-        return store.shares(sp).contains { $0.user_id == store.me && $0.accepted_at == nil }
-    }
-
-    /// 3-1 / 3-2 member rows. A row with splits opens to show them; rows waiting on me open by themselves.
-    /// Someone joining while the screen is open gets a row that opens at the end, its avatar popping in; someone
-    /// leaving folds theirs (Motion board 11).
+    /// 3-1 / 3-2 member rows. Someone joining while the screen is open gets a row that opens at the end, its avatar
+    /// popping in; someone leaving folds theirs (Motion board 11).
     private func memberList(_ g: OrderGroup, _ members: [Member]) -> some View {
         VStack(spacing: 0) {
             ForEach(Array(members.enumerated()), id: \.element.user_id) { i, m in
@@ -249,10 +249,13 @@ extension GroupView {
     private func memberRow(_ g: OrderGroup, _ m: Member) -> some View {
         let user = m.user_id
         let items = store.items(of: user)
-        let splitItems = items.filter { store.liveSplit($0) != nil }
-        let open = expanded.contains(user) || splitItems.contains { needsMe($0) }
+        let claimed = store.claims.contains { $0.user_id == user }
         let amount = store.bill.first { $0.user_id == user }?.items ?? items.reduce(0) { $0 + $1.total }
         let role = user == store.me ? "· you" : user == g.host_id ? "· host" : ""
+        // B1: the host's own row is a one-line summary pointing at My items.
+        let line = user == store.me ? (items.isEmpty ? "Nothing yet · see My items" : "\(items.count) \(items.count == 1 ? "item" : "items") · in My items")
+                 : items.isEmpty && !claimed ? "Nothing in the oven…yet!" : summary(user, items)
+        let lineInk = user == store.me ? Brand.ink3 : items.isEmpty && !claimed ? Brand.ink4 : Brand.ink2
         return VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
                 Avatar(name: store.name(user), index: store.colorIndex(user), size: 40, art: store.people[user]?.avatar, bg: store.people[user]?.avatar_bg)
@@ -266,60 +269,31 @@ extension GroupView {
                         Spacer(minLength: 8)
                         Text(Rupiah.format(amount)).ui(GFont.roundo(16))
                     }
-                    Text(items.isEmpty ? "Nothing in the oven…yet!" : summary(items))
-                        .ui(GFont.manrope(13), items.isEmpty ? Brand.ink4 : Brand.ink2)
+                    Text(line)
+                        .ui(GFont.manrope(13), lineInk)
                         .lineSpacing(3)
                         .fixedSize(horizontal: false, vertical: true)
                 }
-                rowAction(g, user, items)
-            }
-            .contentShape(Rectangle())
-            .onTapGesture {
-                guard !splitItems.isEmpty else { return }
-                withAnimation(.snappy) { if expanded.contains(user) { expanded.remove(user) } else { expanded.insert(user) } }
+                rowAction(g, user)
             }
             .accessibilityElement(children: .contain)
-            if open {
-                ForEach(splitItems) { item in
-                    VStack(alignment: .leading, spacing: 6) {
-                        Text("\(item.qty)× \(item.name)").ui(GFont.manrope(13, 600))
-                        if let sp = store.liveSplit(item) { SplitSummary(store: store, item: item, split: sp) }
-                    }
-                    .padding(.leading, 52)
-                }
-            }
         }
         .padding(.vertical, 14)
     }
 
-    /// Host: WhatsApp the member (lime). Member: propose a split on their items (pink). Hidden when it can't apply.
-    @ViewBuilder private func rowAction(_ g: OrderGroup, _ user: UUID, _ items: [Item]) -> some View {
-        let splittable = items.filter { store.liveSplit($0) == nil }
-        if store.isHost && user != store.me {
-            if let phone = store.people[user]?.phone {
-                Button { openURL(Links.whatsApp(phone)) } label: { RoundIcon(fill: Brand.lime) { WhatsAppGlyph(size: 15) } }
-                    .buttonStyle(DoughStyle())
-                    .accessibilityLabel("WhatsApp \(store.name(user))")
-            }
-        } else if !splittable.isEmpty && store.activeMembers.count > 1 {
-            Group {
-                if splittable.count == 1 {
-                    Button { sheet = .split(splittable[0]) } label: { pieIcon }.buttonStyle(DoughStyle())
-                } else {
-                    Menu {
-                        ForEach(splittable) { i in Button("\(i.qty)× \(i.name)") { sheet = .split(i) } }
-                    } label: { pieIcon }
-                    .buttonStyle(.plain)
+    /// Someone else's row: the pie (Ask to share); the host also gets WhatsApp beside it, the circles 8 pt apart. My
+    /// own row has no controls.
+    @ViewBuilder private func rowAction(_ g: OrderGroup, _ user: UUID) -> some View {
+        if user != store.me {
+            HStack(spacing: -8) {
+                askPie(g, user)
+                if store.isHost, let phone = store.people[user]?.phone {
+                    Button { openURL(Links.whatsApp(phone)) } label: { RoundIcon(fill: Brand.lime) { WhatsAppGlyph(size: 15) } }
+                        .buttonStyle(DoughStyle())
+                        .accessibilityLabel("WhatsApp \(store.name(user))")
                 }
             }
-            .accessibilityLabel(user == store.me ? "Split one of my items" : "Propose a split with \(store.name(user))")
-        } else {
-            Color.clear.frame(width: 44, height: 44)
         }
-    }
-
-    private var pieIcon: some View {
-        RoundIcon(fill: Brand.pink100) { icon("chart.pie", 14) }
     }
 
     /// 3-8: just me. Photo, name with options, price; the count opens a small menu.
@@ -340,9 +314,9 @@ extension GroupView {
                     }
                     .frame(maxWidth: .infinity, alignment: .leading)
                     Menu {
-                        Button { changeQty(item, to: item.qty + 1, split: nil) } label: { Label("One more", systemImage: "plus") }
-                        if item.qty > 1 { Button { changeQty(item, to: item.qty - 1, split: nil) } label: { Label("One less", systemImage: "minus") } }
-                        Button(role: .destructive) { changeQty(item, to: 0, split: nil) } label: { Label("Remove", systemImage: "trash") }
+                        Button { changeQty(item, to: item.qty + 1) } label: { Label("One more", systemImage: "plus") }
+                        if item.qty > 1 { Button { changeQty(item, to: item.qty - 1) } label: { Label("One less", systemImage: "minus") } }
+                        Button(role: .destructive) { changeQty(item, to: 0) } label: { Label("Remove", systemImage: "trash") }
                     } label: {
                         Text("\(item.qty)").ui(GFont.roundo(16)).frame(minWidth: 44, minHeight: 44, alignment: .trailing)
                     }
@@ -358,6 +332,7 @@ extension GroupView {
 
     @ViewBuilder func waitingSections(_ g: OrderGroup) -> some View {
         header(g)
+        shareNotices
         HStack(spacing: 14) {
             Mascot(pose: "pose-waiting", size: 72, fill: Brand.liquorice100)
             VStack(alignment: .leading, spacing: 4) {
@@ -368,6 +343,7 @@ extension GroupView {
         }
         .surface(32, padding: edges(16, 16))
         timeline(g, .stacked)
+        sharedSection(g)
         myItemsCompact
     }
 

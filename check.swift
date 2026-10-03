@@ -31,10 +31,15 @@ func expect(_ ok: Bool, _ what: String, file: StaticString = #file, line: UInt =
         expect(OptionMatch.choices("Slice", all: ["Whole Sourdough", "Sliced 15mm"], picked: ["Berat": "1000gr"], variants: v) == ["Whole Sourdough"], "sold-out combo hidden")
         expect(OptionMatch.variant(["Berat": "1000gr"], groups: ["Berat", "Slice"], variants: v) == nil, "incomplete pick")
 
-        // Splits: Burnt Cheesecake 260.000 at 50/25/25
-        expect(Shares.amounts(total: 260_000, pcts: [50, 25, 25]) == [130_000, 65_000, 65_000], "split amounts")
-        expect(Shares.amounts(total: 100_000, pcts: [33.34, 33.33, 33.33]).reduce(0, +) == 100_000, "rounding to owner")
-        expect(Shares.isValid([50, 25, 25]) && !Shares.isValid([50, 25]) && !Shares.isValid([100]), "share validity")
+        // Shared items: Burnt Cheesecake 260.000 in 12 pieces, Kevin 3 and Putri 2 (the server's example)
+        expect(Pieces.amount(price: 260_000, pieces: 12, n: 3) == 65_000, "joiner pays 3 of 12")
+        expect(Pieces.amount(price: 260_000, pieces: 12, n: 2) == 43_333, "joiner rounds down")
+        expect(Pieces.ownerAmount(price: 260_000, pieces: 12, claims: [3, 2]) == 151_667, "owner pays the rest")
+        expect(Pieces.ownerAmount(price: 260_000, pieces: 12, claims: [3, 2]) + 65_000 + 43_333 == 260_000, "shares add up")
+        expect(Pieces.each(price: 260_000, pieces: 12) == 21_667, "price a piece")
+        expect(Pieces.defaultCount("Burnt Cheesecake 20 cm") == 12 && Pieces.defaultCount("New York Cheesecakes 20 x 20 cm") == 16
+               && Pieces.defaultCount("Classic Sourdough") == 8, "default pieces")
+        expect(Pieces.ordinal(3) == "3rd" && Pieces.ordinal(11) == "11th" && Pieces.ordinal(22) == "22nd", "ordinal")
 
         // The Atas message, golden text in the host's own format.
         let order = AtasOrder(hostName: "Rani", hostPhone: "6281277882210", place: "Apple Developer Academy Bali",

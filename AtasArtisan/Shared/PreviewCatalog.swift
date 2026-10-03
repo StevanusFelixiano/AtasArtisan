@@ -72,11 +72,21 @@ enum PreviewData {
         flagged_at: nil
     )
 
-    static let split = Split(
+    /// Rani's cheesecake, shared in 12 pieces; Putri (me) has claimed 3.
+    static let sharedItem = Item(
         id: UUID(uuidString: "55555555-5555-5555-5555-555555555555")!,
-        item_id: item.id,
-        proposer_id: guestID,
-        state: "pending"
+        group_id: groupID,
+        owner_id: guestID,
+        product_id: product.id,
+        name: "Burnt Cheesecake 20 cm",
+        options: [:],
+        unit_price: 260_000,
+        qty: 1,
+        note: "",
+        flag_reason: nil,
+        flagged_at: nil,
+        share_pieces: 12,
+        share_min: 4
     )
 
     static let app: AppModel = {
@@ -98,12 +108,8 @@ enum PreviewData {
             userID: profile,
             guestID: Profile(id: guestID, phone: "6281999999999", name: "Rani", msg_lang: "en", notify_mute: [], avatar: "pose-neutral", avatar_bg: nil)
         ]
-        store.items = [item]
-        store.splits = [split]
-        store.shares = [
-            SplitShare(split_id: split.id, user_id: userID, pct: 50, accepted_at: nil),
-            SplitShare(split_id: split.id, user_id: guestID, pct: 50, accepted_at: nil)
-        ]
+        store.items = [item, sharedItem]
+        store.claims = [ItemClaim(item_id: sharedItem.id, group_id: groupID, user_id: userID, pieces: 3, created_at: .now)]
         store.products = [product.id: product]
         store.bill = [
             BillRow(group_id: groupID, user_id: userID, items: 64_000, delivery_share: 10_000, bill_total: nil, proof_at: nil, paid_at: nil),
@@ -240,22 +246,22 @@ enum PreviewData {
     MyOrderView(store: PreviewData.store)
 }
 
-#Preview("Split proposal") {
-    NavigationStack {
-        SplitProposeView(store: PreviewData.store, item: PreviewData.item)
-    }
+#Preview("Claim pieces") {
+    ClaimSheet(store: PreviewData.store, itemID: PreviewData.sharedItem.id, withdrawn: { _, _ in })
+        .padding()
+        .screen()
 }
 
-#Preview("Split review") {
-    NavigationStack {
-        SplitReviewView(store: PreviewData.store, item: PreviewData.item, split: PreviewData.split)
-    }
+#Preview("Share settings") {
+    ShareSettingsSheet(store: PreviewData.store, itemID: PreviewData.item.id, request: nil, stop: { _ in })
+        .padding()
+        .screen()
 }
 
-#Preview("Split invitation") {
-    NavigationStack {
-        SplitInviteView(store: PreviewData.store, item: PreviewData.item, split: PreviewData.split)
-    }
+#Preview("Ask to share") {
+    AskShareSheet(store: PreviewData.store, owner: PreviewData.guestID, asked: { _ in })
+        .padding()
+        .screen()
 }
 
 #Preview("Your bill") {

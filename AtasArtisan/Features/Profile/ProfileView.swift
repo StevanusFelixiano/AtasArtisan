@@ -394,10 +394,11 @@ struct NotificationSettingsView: View {
             ("Item sold out on the menu", ["sold_out"]),
             ("Order sent, confirmed, delivered, closed", ["sent", "delivered", "closed", "cancelled", "removed"]),
         ]),
-        ("Splits", [
-            ("Someone wants to split your item", ["split_proposed"]),
-            ("Invited to share an item", ["split_invited"]),
-            ("Split accepted, declined or cancelled", ["split_answered", "split_cancelled"]),
+        ("Sharing", [
+            ("Someone shares an item", ["item_shared"]),
+            ("Someone wants to share your item", ["share_asked"]),
+            ("Your shared item at lock, or 30 minutes before", ["share_min_reminder", "share_locked_in", "share_min_not_met"]),
+            ("Sharing stopped on an item you claimed", ["share_stopped"]),
         ]),
         ("Money", [
             ("Bill is final", ["bill_final"]),

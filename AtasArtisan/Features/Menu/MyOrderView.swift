@@ -30,7 +30,7 @@ struct MyOrderView: View {
         .presentationDragIndicator(.visible)
         .doughSheet(item: $removing) { item in
             ConfirmSheet(confirm: Confirm(title: "Remove \(item.name)?",
-                                          message: store.liveSplit(item) == nil ? "It comes out of your order." : "The split on it is cancelled too.",
+                                          message: store.claims(item).isEmpty ? "It comes out of your order." : "The pieces others claimed come off their bills too.",
                                           button: "Remove", keep: "Keep") {}, delay: SheetMotion.rowAfterRemove) {
                 Task { await attempt($problem, "Couldn't remove it") { try await store.remove(item) } }
             }
@@ -101,7 +101,7 @@ struct MyOrderView: View {
             .frame(maxWidth: .infinity, alignment: .leading)
             if editable {
                 PillStepper(value: "\(item.qty)", fill: Brand.cream, gap: 10, pad: 3, countSize: 15,
-                            minusSymbol: item.qty == 1 ? "trash" : "minus", canPlus: item.qty < 50,
+                            minusSymbol: item.qty == 1 ? "trash" : "minus", canPlus: item.qty < 50 && item.share_pieces == nil,
                             minusLabel: item.qty == 1 ? "Remove \(item.name)" : "One less \(item.name)",
                             plusLabel: "One more \(item.name)",
                             minus: { change(item, item.qty - 1) }, plus: { change(item, item.qty + 1) })

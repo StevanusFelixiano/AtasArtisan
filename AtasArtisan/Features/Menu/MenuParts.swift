@@ -18,6 +18,8 @@ struct PillStepper: View {
     var pad: CGFloat = 4
     var minWidth: CGFloat = 0
     var countSize: CGFloat = 17
+    /// The circles: 28 pt in rows, 32 pt in sheets (A-3).
+    var button: CGFloat = 28
     var minusSymbol = "minus"
     var canMinus = true
     var canPlus = true
@@ -33,13 +35,13 @@ struct PillStepper: View {
 
     var body: some View {
         HStack(spacing: gap) {
-            StepButton(symbol: minusSymbol, enabled: canMinus, label: minusLabel, blocked: blocked) { down = true; minus() }
+            StepButton(symbol: minusSymbol, enabled: canMinus, label: minusLabel, blocked: blocked, size: button) { down = true; minus() }
             Text(value).font(MenuFont.roundo(countSize)).foregroundStyle(Brand.cocoa)
                 .lineLimit(1).fixedSize()
                 .frame(minWidth: minWidth).monospacedDigit()
                 .contentTransition(reduceMotion ? .opacity : .numericText(countsDown: down))
                 .animation(reduceMotion ? Motion.Reduced.fade : Motion.digits, value: value)
-            StepButton(symbol: "plus", enabled: canPlus, label: plusLabel, blocked: blocked) { down = false; plus() }
+            StepButton(symbol: "plus", enabled: canPlus, label: plusLabel, blocked: blocked, size: button) { down = false; plus() }
         }
         .padding(pad)
         .background(Capsule().fill(fill))
@@ -54,6 +56,7 @@ private struct StepButton: View {
     var enabled: Bool
     var label: String
     var blocked: (() -> Void)?
+    var size: CGFloat
     var action: () -> Void
     @State private var taps = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -69,7 +72,7 @@ private struct StepButton: View {
                 .foregroundStyle(trash ? Brand.destructive : Brand.cocoa)
                 .dip(reduceMotion || trash ? 0 : taps)
         }
-        .buttonStyle(Style(trash: trash))
+        .buttonStyle(Style(trash: trash, size: size))
         .sensoryFeedback(trigger: taps) { _, _ in trash ? nil : symbol == "plus" ? Haptic.up : Haptic.down }
         .modifier(Blocked(enabled: enabled, blocked: blocked))
         .opacity(enabled ? 1 : SplitMotion.unavailableOpacity)
@@ -92,10 +95,11 @@ private struct StepButton: View {
 
     private struct Style: ButtonStyle {
         var trash: Bool
+        var size: CGFloat
         func makeBody(configuration: Configuration) -> some View {
             let p = configuration.isPressed
             configuration.label
-                .frame(width: 28, height: 28)
+                .frame(width: size, height: size)
                 .background {
                     Circle().fill(trash ? Brand.trashFill : p ? Brand.choc100Pressed : Brand.choc100)
                         .pressTone(p)
@@ -261,9 +265,26 @@ func optionLabel(_ s: String) -> String {
     s.replacingOccurrences(of: #"(\d)(gr|g|kg|ml|cm)\b"#, with: "$1 $2", options: .regularExpression)
 }
 
-/// Atas's Indonesian option-group names in English.
+/// Atas's Indonesian option-group names in English. Atas calls the cheesecakes' flavours "Variant" (I).
 func optionGroupLabel(_ s: String) -> String {
-    switch s { case "Berat": "Weight"; case "Rasa": "Flavour"; case "Ukuran": "Size"; default: s }
+    switch s { case "Berat": "Weight"; case "Rasa", "Variant": "Flavour"; case "Ukuran": "Size"; default: s }
+}
+
+extension Product {
+    /// Option groups with a real choice (the single-choice ones are fixed, so they are never shown).
+    var choiceGroups: [OptionGroup] { variants.isEmpty ? [] : option_groups.filter { $0.choices.count > 1 } }
+
+    /// The grid card's badge from the first group with a choice (I-1): "4 flavours", "2 weights", "3 sizes", "5 options".
+    var choiceBadge: String? {
+        guard let g = choiceGroups.first else { return nil }
+        let n = g.choices.count
+        return switch optionGroupLabel(g.name) {
+        case "Flavour": "\(n) flavours"
+        case "Weight": "\(n) weights"
+        case "Size": "\(n) sizes"
+        default: "\(n) options"
+        }
+    }
 }
 
 /// Wrapping row of pills.

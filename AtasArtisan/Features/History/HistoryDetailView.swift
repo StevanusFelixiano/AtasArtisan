@@ -160,25 +160,24 @@ struct HistoryDetailView: View {
 
     private struct ItemLine { var product: String; var title: String; var subtitle: String?; var amount: Int }
 
-    /// My own items (my share when split), then my shares of other people's split items.
+    /// My own items (my part when shared), then my pieces of other people's shared items.
     private var itemLines: [ItemLine] {
         var out: [ItemLine] = []
         for item in store.items.sorted(by: { $0.name < $1.name }) {
-            let split = store.liveSplit(item).flatMap { s -> (Double, Int, Int)? in
-                guard s.state == "accepted" else { return nil }
-                let shares = store.shares(s).sorted { a, _ in a.user_id == item.owner_id }
-                guard shares.allSatisfy({ $0.accepted_at != nil }), let idx = shares.firstIndex(where: { $0.user_id == store.me }) else { return nil }
-                return (shares[idx].pct, Shares.amounts(total: item.total, pcts: shares.map(\.pct))[idx], shares.count)
-            }
+            let claims = store.claims(item)
+            let pieces = item.share_pieces ?? 0
             if item.owner_id == store.me {
-                if let (pct, amount, n) = split {
-                    out.append(ItemLine(product: item.product_id, title: "\(item.name) · \(Int(pct))%", subtitle: "split \(n) ways", amount: amount))
-                } else {
+                if claims.isEmpty {
                     out.append(ItemLine(product: item.product_id, title: "\(item.qty)× \(item.name)", subtitle: nil, amount: item.total))
+                } else {
+                    out.append(ItemLine(product: item.product_id, title: "\(item.name) · \(store.piecesLeft(item)) of \(pieces) pieces",
+                                        subtitle: "shared \(claims.count + 1) ways",
+                                        amount: Pieces.ownerAmount(price: item.total, pieces: pieces, claims: claims.map(\.pieces))))
                 }
-            } else if let (pct, amount, n) = split {
-                out.append(ItemLine(product: item.product_id, title: "\(item.name) · \(Int(pct))%",
-                                    subtitle: "under \(store.name(item.owner_id)) · split \(n) ways", amount: amount))
+            } else if let mine = claims.first(where: { $0.user_id == store.me }) {
+                out.append(ItemLine(product: item.product_id, title: "\(item.name) · \(mine.pieces) of \(pieces) pieces",
+                                    subtitle: "under \(store.name(item.owner_id)) · shared \(claims.count + 1) ways",
+                                    amount: Pieces.amount(price: item.total, pieces: pieces, n: mine.pieces)))
             }
         }
         return out
@@ -215,8 +214,8 @@ struct HistoryDetailView: View {
     private var reorderNote: String {
         let mine = store.myItems
         let list = mine.map { "\($0.name) ×\($0.qty)" }.joined(separator: ", ")
-        let split = store.items.contains { store.liveSplit($0) != nil }
-        return "Adds \(list) to a new order." + (split ? " Splits aren’t copied." : "")
+        let shared = store.items.contains { $0.share_pieces != nil }
+        return "Adds \(list) to a new order." + (shared ? " Sharing isn’t copied." : "")
     }
 
     private var summary: String {

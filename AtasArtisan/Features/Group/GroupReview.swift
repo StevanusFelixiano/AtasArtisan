@@ -16,7 +16,7 @@ extension GroupView {
 
     // MARK: 4-5 Review (host, locked)
 
-    /// One line of the review list: an item of the member's own, or their share of someone else's split.
+    /// One line of the review list: an item of the member's own, or their pieces of someone else's shared item.
     struct ReviewLine: Identifiable {
         var id: String
         var item: Item
@@ -38,32 +38,28 @@ extension GroupView {
             var amount = item.total
             if let r = item.flag_reason, item.flagged_at != nil { meta = r.isEmpty ? "Change requested" : r; ink = Brand.editsInk }
             else if soldOut(item) { meta = "Sold out on the menu"; ink = Brand.editsInk }
-            else if let sp = store.liveSplit(item), sp.state == "accepted" {
-                let shares = store.shares(sp).sorted { a, _ in a.user_id == item.owner_id }
-                let amounts = Shares.amounts(total: item.total, pcts: shares.map(\.pct))
-                if let i = shares.firstIndex(where: { $0.user_id == user }) {
-                    amount = amounts[i]
-                    let whose = user == store.me ? "your" : "\(store.name(user))’s"
-                    meta = "\(whose) \(Int(shares[i].pct.rounded()))% of \(Rupiah.format(item.total)) · split \(shares.count) ways"
-                }
+            else if let pieces = item.share_pieces, !store.claims(item).isEmpty {
+                let claims = store.claims(item)
+                amount = Pieces.ownerAmount(price: item.total, pieces: pieces, claims: claims.map(\.pieces))
+                let whose = user == store.me ? "your" : "\(store.name(user))’s"
+                meta = "\(whose) \(store.piecesLeft(item)) of \(pieces) pieces · shared \(claims.count + 1) ways"
             }
             lines.append(ReviewLine(id: item.id.uuidString, item: item, qty: "\(item.qty)×", name: nameWithOptions(item), meta: meta, metaInk: ink,
                                     amount: amount, flagged: item.flagged_at != nil || soldOut(item)))
         }
-        // Shares this member holds in someone else's split.
+        // Pieces this member claimed of someone else's shared item.
         for item in store.items where item.owner_id != user {
-            guard let sp = store.liveSplit(item), sp.state == "accepted" else { continue }
-            let shares = store.shares(sp).sorted { a, _ in a.user_id == item.owner_id }
-            guard let i = shares.firstIndex(where: { $0.user_id == user }) else { continue }
-            let amounts = Shares.amounts(total: item.total, pcts: shares.map(\.pct))
-            lines.append(ReviewLine(id: "\(item.id)-\(user)", item: item, qty: shareGlyph(shares[i].pct), name: "\(item.name) share",
-                                    meta: "under \(store.name(item.owner_id))", metaInk: Brand.ink3, amount: amounts[i], flagged: false))
+            guard let pieces = item.share_pieces, let c = store.claims(item).first(where: { $0.user_id == user }) else { continue }
+            lines.append(ReviewLine(id: "\(item.id)-\(user)", item: item, qty: "\(c.pieces)/\(pieces)", name: "\(item.name) share",
+                                    meta: "under \(store.name(item.owner_id))", metaInk: Brand.ink3,
+                                    amount: Pieces.amount(price: item.total, pieces: pieces, n: c.pieces), flagged: false))
         }
         return lines
     }
 
     @ViewBuilder func reviewSections(_ g: OrderGroup) -> some View {
         let people = store.activeMembers.filter { !reviewLines($0.user_id).isEmpty }
+        shareNotices
         reviewSummary(people: people.count)
         ForEach(store.items.filter { soldOut($0) && $0.flagged_at == nil }) { item in soldOutBanner(item) }
         ForEach(people, id: \.user_id) { m in reviewCard(m.user_id) }

@@ -273,32 +273,26 @@ struct BillView: View {
         var credit = false
     }
 
-    /// My items and my shares of split items, in the amounts `group_bill_v` charges: a split item's
-    /// non-owners pay round(total × pct), the owner the rest.
+    /// My items and my pieces of shared items, in the amounts `group_bill_v` charges: a joiner pays
+    /// ⌊price × n ÷ pieces⌋, the owner the rest.
     private var itemLines: [BillLine] {
         guard let me = store.me else { return [] }
         var out: [BillLine] = [], shared: [BillLine] = []
         for item in store.items {
-            let split = store.liveSplit(item).flatMap { s -> [SplitShare]? in
-                let shares = store.shares(s)
-                return s.state == "accepted" && shares.allSatisfy({ $0.accepted_at != nil }) ? shares : nil
-            }
-            let others = (split ?? []).filter { $0.user_id != item.owner_id }
-            let amount: (SplitShare) -> Int = { Int((Double(item.total) * $0.pct / 100).rounded()) }
+            let claims = store.claims(item)
+            let pieces = item.share_pieces ?? 0
             if item.owner_id == me {
-                if others.isEmpty {
+                if claims.isEmpty {
                     out.append(BillLine(id: item.id.uuidString, label: "\(item.qty)× \(item.name)", meta: "my items", amount: item.total))
                 } else {
-                    let mine = item.total - others.reduce(0) { $0 + amount($1) }
-                    let pct = split?.first { $0.user_id == me }?.pct ?? (100 - others.reduce(0) { $0 + $1.pct })
-                    out.append(BillLine(id: item.id.uuidString, label: "\(item.qty)× \(item.name) · \(percent(pct))",
-                                        meta: "split with \(joinedNames(others.map { store.name($0.user_id) }))", amount: mine))
+                    out.append(BillLine(id: item.id.uuidString, label: "\(item.name) · \(store.piecesLeft(item)) of \(pieces) pieces",
+                                        meta: "shared with \(joinedNames(claims.map { store.name($0.user_id) }))",
+                                        amount: Pieces.ownerAmount(price: item.total, pieces: pieces, claims: claims.map(\.pieces))))
                 }
-            } else if let share = others.first(where: { $0.user_id == me }) {
-                let rest = (split ?? []).filter { $0.user_id != me }
-                let with = (rest.filter { $0.user_id == item.owner_id } + rest.filter { $0.user_id != item.owner_id }).map { store.name($0.user_id) }
-                shared.append(BillLine(id: item.id.uuidString, label: "\(item.name) · \(percent(share.pct))",
-                                       meta: "split with \(joinedNames(with)) · under \(store.name(item.owner_id))", amount: amount(share)))
+            } else if let mine = claims.first(where: { $0.user_id == me }) {
+                shared.append(BillLine(id: item.id.uuidString, label: "\(item.name) · \(mine.pieces) of \(pieces) pieces",
+                                       meta: "under \(store.name(item.owner_id))",
+                                       amount: Pieces.amount(price: item.total, pieces: pieces, n: mine.pieces)))
             }
         }
         return out + shared
@@ -318,8 +312,6 @@ struct BillView: View {
                 BillLine(id: "discount", label: "Discount share", meta: "\(Rupiah.format(discount)) ÷ \(payers)",
                          amount: ongkirShare - b.delivery_share, credit: true)]
     }
-
-    private func percent(_ p: Double) -> String { p == p.rounded() ? "\(Int(p))%" : String(format: "%g%%", p) }
 
     // MARK: Transfer
 

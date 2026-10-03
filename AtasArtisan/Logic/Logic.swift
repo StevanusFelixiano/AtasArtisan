@@ -108,22 +108,6 @@ nonisolated enum OptionMatch {
     }
 }
 
-// MARK: - Splitting one item
-
-nonisolated enum Shares {
-    /// Whole-rupiah amounts for percentage shares; the owner (index 0) absorbs rounding, as the server does.
-    static func amounts(total: Int, pcts: [Double]) -> [Int] {
-        guard !pcts.isEmpty else { return [] }
-        var out = pcts.map { Int((Double(total) * $0 / 100).rounded()) }
-        out[0] = total - out.dropFirst().reduce(0, +)
-        return out
-    }
-
-    static func isValid(_ pcts: [Double]) -> Bool {
-        pcts.count >= 2 && pcts.allSatisfy { $0 > 0 } && abs(pcts.reduce(0, +) - 100) < 0.001
-    }
-}
-
 // MARK: - The WhatsApp order to Atas
 
 nonisolated struct AtasLine: Hashable {

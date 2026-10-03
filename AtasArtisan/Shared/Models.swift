@@ -113,6 +113,8 @@ nonisolated struct Variant: Codable, Hashable {
     var options: [String: String]
     var price: Int
     var available: Bool?
+    /// The variant's own photo when iSeller has one (the scraper adds `image`); nil for every variant so far.
+    var image: String? = nil
 }
 
 nonisolated struct Product: Codable, Identifiable, Hashable {
@@ -149,6 +151,10 @@ nonisolated struct Item: Codable, Identifiable, Hashable {
     var note: String
     var flag_reason: String?
     var flagged_at: Date?
+    /// Shared in this many pieces (2…24), quantity 1; nil when not shared.
+    var share_pieces: Int? = nil
+    /// Removed at lock unless this many people (the owner included) have joined; nil for no minimum.
+    var share_min: Int? = nil
 
     var total: Int { unit_price * qty }
 }
@@ -161,18 +167,35 @@ nonisolated struct NewItem: Encodable {
     var note: String
 }
 
-nonisolated struct Split: Codable, Identifiable, Hashable {
-    var id: UUID
+/// Pieces of a shared item claimed by someone other than its owner (`item_claims`).
+nonisolated struct ItemClaim: Codable, Hashable {
     var item_id: UUID
-    var proposer_id: UUID
-    var state: String          // pending | accepted | declined | cancelled
+    var group_id: UUID
+    var user_id: UUID
+    var pieces: Int
+    var created_at: Date
 }
 
-nonisolated struct SplitShare: Codable, Hashable {
-    var split_id: UUID
-    var user_id: UUID
-    var pct: Double
-    var accepted_at: Date?
+/// "Ask to share": someone asked an item's owner to share it, with `mine` of `pieces` for them (`share_requests`).
+nonisolated struct ShareRequest: Codable, Identifiable, Hashable {
+    var id: UUID
+    var item_id: UUID
+    var group_id: UUID
+    var owner_id: UUID
+    var requester_id: UUID
+    var pieces: Int
+    var mine: Int
+    var state: String          // pending | accepted | declined
+    var created_at: Date
+}
+
+/// One of my notifications about a group (the "came off at lock" notice reads `share_min_not_met`).
+nonisolated struct GroupNotice: Codable, Hashable {
+    var id: Int
+    var kind: String
+    var title: String
+    var body: String
+    var created_at: Date
 }
 
 /// A row of `group_bill_v`: what one member owes.

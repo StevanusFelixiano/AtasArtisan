@@ -15,6 +15,13 @@ extension View {
                                                      @ViewBuilder content: @escaping (Item) -> Sheet) -> some View {
         modifier(DoughSheetHost(item: item, title: title, insets: insets, sheet: content))
     }
+
+    /// A full Ataste sheet whose title follows the item it shows ("Ask Dimas to share"). The title is read from the
+    /// item on show, so it stays put while the sheet leaves.
+    func doughSheet<Item: Identifiable, Sheet: View>(item: Binding<Item?>, titled: @escaping (Item) -> String,
+                                                     @ViewBuilder content: @escaping (Item) -> Sheet) -> some View {
+        modifier(DoughSheetHost(item: item, title: nil, titled: titled, insets: nil, sheet: content))
+    }
 }
 
 /// Closes the sheet the view sits in, with the sheet's leave motion.
@@ -37,6 +44,7 @@ private func still(_ change: () -> Void) {
 private struct DoughSheetHost<Item: Identifiable, Sheet: View>: ViewModifier {
     @Binding var item: Item?
     var title: String?
+    var titled: ((Item) -> String)? = nil
     var insets: EdgeInsets?
     var sheet: (Item) -> Sheet
     /// What the cover shows; it outlives `item` while the sheet leaves.
@@ -46,7 +54,7 @@ private struct DoughSheetHost<Item: Identifiable, Sheet: View>: ViewModifier {
     func body(content: Content) -> some View {
         content
             .fullScreenCover(item: $shown) { i in
-                SheetFrame(title: title, insets: insets, leaving: leaving, gone: finish) { sheet(i) }
+                SheetFrame(title: titled?(i) ?? title, insets: insets, leaving: leaving, gone: finish) { sheet(i) }
                     .presentationBackground(.clear)
             }
             .onChange(of: item?.id, initial: true) { _, id in

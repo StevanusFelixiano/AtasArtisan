@@ -730,6 +730,8 @@ struct Marquee: View {
 /// A new message rolls in over the old one.
 struct Toast: View {
     var text: String
+    /// A trailing action in lime ("Claim withdrawn · Undo").
+    var action: ToastNote.Action? = nil
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var body: some View {
         HStack(spacing: 8) {
@@ -738,6 +740,12 @@ struct Toast: View {
                 Text(text).font(Brand.font(.callout, weight: 600)).foregroundStyle(Brand.cream).id(text).transition(.roll(reduceMotion))
             }
             .animation(reduceMotion ? Motion.Reduced.fade : Motion.digits, value: text)
+            if let action {
+                Text("·").font(Brand.font(.callout, weight: 600)).foregroundStyle(Brand.liquorice400)
+                Button(action.title, action: action.run)
+                    .font(Brand.font(.callout, weight: 700)).foregroundStyle(Brand.lime)
+                    .buttonStyle(DoughStyle(squash: Motion.pressCompact))
+            }
         }
         .padding(.vertical, 12)
         .padding(.horizontal, 20)
@@ -750,6 +758,16 @@ struct Toast: View {
 struct ToastNote: Equatable {
     var text: String
     var id = UUID()
+    /// An undo-style action, and how long the toast holds (an action needs longer than the 1.8 s copy toast).
+    var action: Action? = nil
+    var hold = ToastMotion.hold
+
+    struct Action {
+        var title: String
+        var run: () -> Void
+    }
+
+    static func == (a: ToastNote, b: ToastNote) -> Bool { a.id == b.id && a.text == b.text }
 }
 
 extension View {
@@ -771,13 +789,13 @@ private struct ToastHost: ViewModifier {
             .overlay(alignment: .bottom) {
                 ZStack {
                     if let n = note {
-                        Toast(text: n.text)
+                        Toast(text: n.text, action: n.action.map { a in ToastNote.Action(title: a.title) { note = nil; a.run() } })
                             .kick(reduceMotion ? 0 : bumps, from: ToastMotion.repeatBump)
                             .padding(.bottom, above)
                             .transition(transition)
                             .gesture(DragGesture(minimumDistance: 8).onEnded { if $0.translation.height > 0 { note = nil } })
                             .task(id: n.id) {
-                                do { try await Task.sleep(for: .seconds(ToastMotion.hold)) } catch { return }
+                                do { try await Task.sleep(for: .seconds(n.hold)) } catch { return }
                                 note = nil
                             }
                     }

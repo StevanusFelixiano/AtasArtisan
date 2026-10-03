@@ -35,12 +35,12 @@ extension View {
 func edges(_ v: CGFloat, _ h: CGFloat) -> EdgeInsets { EdgeInsets(top: v, leading: h, bottom: v, trailing: h) }
 
 /// "2 Pain Au Chocolate", "2 Pain Au Chocolate and 1 Brioche Bun".
-/// 6-13: "Remove Burnt Cheesecake?", naming who loses a share when the item is split.
+/// 6-13: "Remove Burnt Cheesecake?", naming who loses their pieces when the item is shared.
 func removeItemConfirm(_ store: GroupStore, _ item: Item, action: @escaping () async throws -> Void) -> Confirm {
-    let others = store.liveSplit(item).map { store.shares($0).map(\.user_id).filter { $0 != item.owner_id }.map(store.name) } ?? []
-    let names = others.count > 1 ? others.dropLast().joined(separator: ", ") + " and " + others.last! : others.first ?? ""
+    let others = store.claims(item).map { store.name($0.user_id) }
     return Confirm(title: "Remove \(item.name)?",
-                   message: others.isEmpty ? "It comes out of your order." : "It’s split with \(names). Removing it cancels the split and clears their shares.",
+                   message: others.isEmpty ? "It comes out of your order."
+                                           : "\(joinedNames(others)) claimed pieces of it. Removing it takes them off their bills and they get a heads-up.",
                    button: "Remove item", keep: "Keep it", delay: SheetMotion.rowAfterRemove, action: action)
 }
 
@@ -55,19 +55,6 @@ func itemPhrase(_ items: [Item]) -> String {
 
 /// "Rp 24.000" → "24.000", the review list's bare amounts.
 func bareRupiah(_ n: Int) -> String { String(Rupiah.format(n).dropFirst(3)) }
-
-/// ¼, ½, ¾, ⅓, ⅔ for a split share, else "25%".
-func shareGlyph(_ pct: Double) -> String {
-    switch Int(pct.rounded()) {
-    case 25: "¼"
-    case 50: "½"
-    case 75: "¾"
-    case 33: "⅓"
-    case 67: "⅔"
-    case 20: "⅕"
-    default: "\(Int(pct.rounded()))%"
-    }
-}
 
 /// 28pt pastel circle holding a glyph, with a 44pt tap area (the member rows' pie and WhatsApp buttons).
 struct RoundIcon<Glyph: View>: View {

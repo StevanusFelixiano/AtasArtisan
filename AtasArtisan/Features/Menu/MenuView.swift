@@ -22,7 +22,6 @@ struct MenuView: View {
     @State private var failed: String?
     @State private var showCart = false
     @State private var width: CGFloat = 402
-    @State private var debugSplit: Item?
     /// Basket changes while the bar shows (it bumps).
     @State private var cartBumps = 0
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -59,7 +58,6 @@ struct MenuView: View {
             NavigationStack { ProductView(store: store, product: p, alternatives: alternatives(to: p)) }
         }
         .sheet(isPresented: $showCart) { MyOrderView(store: store) }
-        .sheet(item: $debugSplit) { i in NavigationStack { SplitProposeView(store: store, item: i) } }
     }
 
     // MARK: Content
@@ -282,14 +280,12 @@ struct MenuView: View {
         loaded = true
     }
 
-    /// DEBUG screenshot hooks (compiled to nil in release): ATASTE_MENU = skeleton | stale | cart | split (someone
-    /// else's item) | soldout (marks ATASTE_PRODUCT sold out locally),
+    /// DEBUG screenshot hooks (compiled to nil in release): ATASTE_MENU = skeleton | stale | cart | soldout (marks ATASTE_PRODUCT sold out locally),
     /// ATASTE_PRODUCT = part of a product name.
     private func debugHooks() {
         switch DebugScreens.value("ATASTE_MENU") {
         case "stale": synced = Wita.calendar.date(bySettingHour: 12, minute: 10, second: 0, of: Date().addingTimeInterval(-86_400))
         case "cart": showCart = true
-        case "split": debugSplit = store.items.first { $0.owner_id != store.me && store.liveSplit($0) == nil }
         default: break
         }
         if let name = DebugScreens.value("ATASTE_PRODUCT")?.lowercased(),
@@ -326,6 +322,9 @@ struct ProductCard: View {
                 .overlay(alignment: .topLeading) {
                     if soldOut { Tag(text: "Sold out", fill: Brand.liquorice100, size: .small).offset(x: -2, y: -2) }
                 }
+                .overlay(alignment: .bottomTrailing) {
+                    if let badge = product.choiceBadge { ChoiceBadge(text: badge).offset(x: 4, y: -6) }
+                }
                 .frame(maxWidth: .infinity)
             Text(product.name).font(MenuFont.manrope(15, 700)).foregroundStyle(Brand.cocoa)
                 .lineSpacing(1).lineLimit(3)
@@ -352,7 +351,7 @@ struct ProductCard: View {
         .opacity(soldOut ? 0.55 : 1)
         .contentShape(RoundedRectangle(cornerRadius: Brand.rCard, style: .continuous))
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel([product.name, priceText, soldOut ? "Sold out" : inOrder > 0 ? "In your order" : nil].compactMap { $0 }.joined(separator: ", "))
+        .accessibilityLabel([product.name, product.choiceBadge, priceText, soldOut ? "Sold out" : inOrder > 0 ? "In your order" : nil].compactMap { $0 }.joined(separator: ", "))
         .accessibilityAddTraits(.isButton)
         .onChange(of: inOrder) { old, new in if old > 0 && new > old { again += 1 } }
     }
@@ -361,6 +360,20 @@ struct ProductCard: View {
     private var priceText: String {
         let prices = Set(product.variants.map(\.price))
         return (prices.count > 1 ? "from " : "") + Rupiah.format(product.fromPrice)
+    }
+}
+
+/// I-1: "4 flavours" on a product with a choice. White pill, 1.5 pt liquorice ring, soft cocoa shadow, Manrope 600 10
+/// uppercase.
+private struct ChoiceBadge: View {
+    var text: String
+    var body: some View {
+        Text(text).font(MenuFont.manrope(10, 600)).tracking(0.3).textCase(.uppercase).foregroundStyle(Brand.cocoa)
+            .lineLimit(1).fixedSize()
+            .padding(.vertical, 3).padding(.horizontal, 10)
+            .background(Capsule().fill(.white))
+            .overlay(Capsule().strokeBorder(Brand.liquorice400, lineWidth: 1.5))
+            .shadow(color: Brand.cocoa.opacity(0.12), radius: 3, y: 2)
     }
 }
 

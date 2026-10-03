@@ -4,7 +4,7 @@ import Supabase
 /// Boards 3 to 6: the group order. One screen whose content follows the order's state and the viewer's role
 /// (host or member): open (3-1/3-2/3-3/3-8), host review and edit rounds (4-5/4-7/4-8), the member's edit
 /// request (4-9/4-10), waiting on the host (3-5), sent (5-2), confirmed (5-4), delivered (5-13), cancelled
-/// (6-10). The bottom Liquid Glass bar carries the one next step. The sheets (menu, split, send, bill...)
+/// (6-10). The bottom Liquid Glass bar carries the one next step. The sheets (menu, share, send, bill...)
 /// are other screens; this view only presents them.
 struct GroupView: View {
     let id: UUID
@@ -16,8 +16,6 @@ struct GroupView: View {
     @State var toast: ToastNote?
     @State var times: GroupTimes?
     @State var itemTimes: [UUID: Date] = [:]
-    /// Member rows opened to show their splits.
-    @State var expanded: Set<UUID> = []
     /// A flagged item being replaced from the menu: the item, my item ids before, my subtotal before.
     @State var replacing: (item: Item, before: Set<UUID>, subtotal: Int)?
     /// This session's replacements in the current edit round, keyed by the new item (4-10).
@@ -74,9 +72,8 @@ struct GroupView: View {
         .task { await store.watch() }
         .task(id: timesKey) { await loadTimes() }
         .sheet(item: Binding(get: { sheet?.ataste == false ? sheet : nil }, set: { sheet = $0 }), onDismiss: finishReplacing) { s in sheetView(s) }
-        // Propose a split and Request an edit rise in the Ataste sheet (Motion board 07), the rest are system sheets.
-        .doughSheet(item: Binding(get: { if case .split(let i) = sheet { i } else { nil } }, set: { if $0 == nil { sheet = nil } }),
-                    title: "Propose a split") { SplitProposeView(store: store, item: $0) }
+        // The share sheets and Request an edit rise in the Ataste sheet (Motion board 07), the rest are system sheets.
+        .doughSheet(item: shareSheet, titled: shareSheetTitle, content: shareSheetView)
         .doughSheet(item: Binding(get: { if case .requestEdit = sheet { sheet } else { nil } }, set: { if $0 == nil { sheet = nil } }),
                     title: "Request an edit") { s in if case .requestEdit(let seed) = s { RequestEditSheet(store: store, seed: seed) } }
         .alert(confirm?.title ?? "", isPresented: Binding(get: { confirm != nil }, set: { if !$0 { confirm = nil } })) {
@@ -326,11 +323,16 @@ struct GroupView: View {
                         Button { sheet = .share } label: { Label("Invite people", systemImage: "square.and.arrow.up") }.buttonStyle(BarPillStyle(kind: .primary))
                     }
                 }
-            } else if g.personal || store.isHost {
+            } else if (g.personal || store.isHost) && !store.items.isEmpty {
+                // B-bar: a labelled Add items beside the main action, 1 : 1.25.
                 GroupBar {
-                    addCircle
-                    lockPill(g, title: g.personal ? "Send to Atas" : "Lock order", icon: g.personal ? "paperplane" : "lock")
-                        .disabled(store.items.isEmpty, reason: "Add something from the menu first")
+                    AddLockBar {
+                        Button { sheet = .menu } label: { Label("Add items", systemImage: "plus") }
+                            .buttonStyle(BarPillStyle(kind: .secondary))
+                            .accessibilityLabel(g.personal ? "Add items" : "Add items for yourself")
+                    } lock: {
+                        lockPill(g, title: g.personal ? "Send to Atas" : "Lock order", icon: g.personal ? "paperplane" : "lock")
+                    }
                 }
             } else {
                 GroupBar { Button { sheet = .menu } label: { Label("Add items", systemImage: "plus") }.buttonStyle(.pill(.primary)) }
@@ -391,19 +393,12 @@ struct GroupView: View {
         }
     }
 
-    /// The 60pt "+" beside the main action (3-2, 3-8).
-    private var addCircle: some View {
-        Button { sheet = .menu } label: { Image(systemName: "plus").font(.system(size: 20, weight: .semibold)) }
-            .buttonStyle(BarPillStyle(kind: .secondary, width: 60))
-            .accessibilityLabel("Add items")
-    }
-
     // MARK: Actions
 
     /// Lock order, Lock again, and a personal order's Send to Atas (which locks, then opens the message).
     private func lockPill(_ g: OrderGroup, title: String, icon: String) -> some View {
         AsyncPill(title: title, icon: icon, busyTitle: "Locking…", doneTitle: "Locked", failTitle: "Couldn’t lock",
-                  holding: holding, refresh: store.refresh, reached: { store.group?.state == .locked }) {
+                  tight: true, holding: holding, refresh: store.refresh, reached: { store.group?.state == .locked }) {
             try await store.rpc("lock_group", ["g": .string(id.uuidString)])
         } then: {
             if g.personal { sheet = .send }
@@ -464,7 +459,7 @@ struct GroupView: View {
     @ViewBuilder private func sheetView(_ s: GroupSheet) -> some View {
         switch s {
         case .menu: NavigationStack { MenuView(store: store) }
-        case .share, .split, .requestEdit: EmptyView()
+        case .share, .requestEdit, .claim, .editClaim, .shareItem, .ask: EmptyView()
         case .send: NavigationStack { SendToAtasView(store: store, handedOff: handedOff) }
         case .confirmAtas: NavigationStack { ConfirmAtasView(store: store) }
         case .bill: NavigationStack { BillView(store: store) }
@@ -485,7 +480,9 @@ struct GroupView: View {
         case "board": sheet = .board
         case "delivery": sheet = .delivery
         case "share": sheet = .share
-        case "split": if let i = store.items.first(where: { $0.owner_id == store.me && store.liveSplit($0) == nil }) { sheet = .split(i) }
+        case "claim": if let i = store.sharedItems.first(where: { $0.owner_id != store.me }) { sheet = store.myClaim(i) > 0 ? .editClaim(i) : .claim(i) }
+        case "shareitem": if let i = store.myItems.first(where: { $0.share_pieces != nil }) ?? store.myItems.first { sheet = .shareItem(i, nil) }
+        case "ask": if let u = store.activeMembers.map(\.user_id).first(where: { u in u != store.me && store.items(of: u).contains { $0.share_pieces == nil } }) { sheet = .ask(u) }
         case "request": sheet = .requestEdit(RequestSeed(member: store.items.first { $0.owner_id != store.me }?.owner_id,
                                                          item: store.items.first { $0.owner_id != store.me }?.id, reason: .soldOut))
         case "delivery-details": sheet = .editDelivery
@@ -502,10 +499,14 @@ struct GroupView: View {
 }
 
 enum GroupSheet: Identifiable {
-    case menu, share, split(Item), send, confirmAtas, bill, board, delivery, requestEdit(RequestSeed), editDelivery
+    case menu, share, send, confirmAtas, bill, board, delivery, requestEdit(RequestSeed), editDelivery
+    /// A2: claim or edit my claim on a shared item, the owner's share settings (answering a request), ask to share.
+    case claim(Item), editClaim(Item), shareItem(Item, ShareRequest?), ask(UUID)
     var id: String {
         switch self {
-        case .menu: "menu"; case .share: "share"; case .split(let i): "split-\(i.id)"; case .send: "send"
+        case .menu: "menu"; case .share: "share"; case .send: "send"
+        case .claim(let i): "claim-\(i.id)"; case .editClaim(let i): "edit-claim-\(i.id)"
+        case .shareItem(let i, _): "share-item-\(i.id)"; case .ask(let u): "ask-\(u)"
         case .confirmAtas: "confirm"; case .bill: "bill"; case .board: "board"; case .delivery: "delivery"
         case .requestEdit: "request"; case .editDelivery: "edit-delivery"
         }
@@ -513,7 +514,7 @@ enum GroupSheet: Identifiable {
 
     /// Shown in the Ataste sheet rather than a system sheet.
     var ataste: Bool {
-        switch self { case .split, .requestEdit, .share: true; default: false }
+        switch self { case .requestEdit, .share, .claim, .editClaim, .shareItem, .ask: true; default: false }
     }
 }
 

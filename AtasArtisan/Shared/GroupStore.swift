@@ -10,8 +10,11 @@ final class GroupStore {
     var members: [Member] = []
     var people: [UUID: Profile] = [:]
     var items: [Item] = []
-    var splits: [Split] = []
-    var shares: [SplitShare] = []
+    /// Pieces claimed of shared items, and the ask-to-share requests I made or got.
+    var claims: [ItemClaim] = []
+    var shareRequests: [ShareRequest] = []
+    /// My notices about shared items that came off at lock (A-8); fetched once the order has left Open.
+    var shareNotices: [GroupNotice] = []
     var bill: [BillRow] = []
     var proofs: [DeliveryProof] = []
     var payout: PayoutAccount?
@@ -48,8 +51,28 @@ final class GroupStore {
     }
     func colorIndex(_ user: UUID) -> Int { activeMembers.firstIndex { $0.user_id == user } ?? 0 }
     func items(of user: UUID) -> [Item] { items.filter { $0.owner_id == user }.sorted { $0.name < $1.name } }
-    func liveSplit(_ item: Item) -> Split? { splits.first { $0.item_id == item.id && ["pending", "accepted"].contains($0.state) } }
-    func shares(_ split: Split) -> [SplitShare] { shares.filter { $0.split_id == split.id } }
+
+    // MARK: Shared items (A2)
+
+    /// Items shared in pieces, oldest first.
+    var sharedItems: [Item] { items.filter { $0.share_pieces != nil } }
+    /// Claims on `item`, first claimed first.
+    func claims(_ item: Item) -> [ItemClaim] {
+        claims.filter { $0.item_id == item.id && $0.pieces > 0 }.sorted { $0.created_at < $1.created_at }
+    }
+    func claimed(_ item: Item) -> Int { claims(item).reduce(0) { $0 + $1.pieces } }
+    /// Pieces nobody has claimed: the owner's.
+    func piecesLeft(_ item: Item) -> Int { max(0, (item.share_pieces ?? 0) - claimed(item)) }
+    /// The owner and everyone with a claim.
+    func sharePeople(_ item: Item) -> Int { 1 + claims(item).count }
+    func myClaim(_ item: Item) -> Int { claims(item).first { $0.user_id == me }?.pieces ?? 0 }
+    /// Requests waiting on my answer, as the item's owner.
+    var asksForMe: [ShareRequest] {
+        shareRequests.filter { r in r.owner_id == me && r.state == "pending" && items.contains { $0.id == r.item_id && $0.share_pieces == nil } }
+    }
+    func myAsk(_ item: Item) -> ShareRequest? {
+        shareRequests.first { $0.item_id == item.id && $0.requester_id == me && $0.state == "pending" }
+    }
 
     /// "1000gr · Sliced 15mm" in the product's option order.
     func optionText(_ item: Item) -> String {
@@ -66,11 +89,12 @@ final class GroupStore {
             async let b: [BillRow] = supabase.from("group_bill_v").select().eq("group_id", value: id).execute().value
             async let d: [DeliveryProof] = supabase.from("delivery_proofs").select().eq("group_id", value: id).execute().value
             let (members, items, bill, proofs) = try await (m, i, b, d)
-            let itemIDs = items.map(\.id)
-            let splits: [Split] = itemIDs.isEmpty ? [] :
-                try await supabase.from("splits").select().in("item_id", values: itemIDs).execute().value
-            let shares: [SplitShare] = splits.isEmpty ? [] :
-                try await supabase.from("split_shares").select().in("split_id", values: splits.map(\.id)).execute().value
+            async let c: [ItemClaim] = supabase.from("item_claims").select().eq("group_id", value: id).execute().value
+            async let r: [ShareRequest] = supabase.from("share_requests").select().eq("group_id", value: id).execute().value
+            let (claims, requests) = try await (c, r)
+            let notices: [GroupNotice] = g.state == .open ? [] :
+                try await supabase.from("notifications").select("id,kind,title,body,created_at").eq("group_id", value: id)
+                    .eq("kind", value: "share_min_not_met").order("created_at").execute().value
             let profiles: [Profile] = try await supabase.from("profiles").select()
                 .in("id", values: members.map(\.user_id)).execute().value
             let productIDs = Array(Set(items.map(\.product_id)))
@@ -86,13 +110,15 @@ final class GroupStore {
             self.items = items.map { var i = $0; i.qty = pendingQty[i.id] ?? i.qty; return i }
             self.bill = bill
             self.proofs = proofs
-            self.splits = splits
-            self.shares = shares
+            self.claims = claims
+            self.shareRequests = requests
+            self.shareNotices = notices
             self.people = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0) })
             self.products.merge(prods.map { ($0.id, $0) }) { _, new in new }
             self.payout = payout
             self.loadError = nil
             self.loadedAt = Date()
+
         } catch where isCancellation(error) {
             return
         } catch {
@@ -104,9 +130,10 @@ final class GroupStore {
     func watch() async {
         // A fresh topic per watcher: two watchers sharing one silently unsubscribe each other.
         let channel = supabase.channel("group:\(id):\(UUID().uuidString)")
-        let streams = [("groups", "id"), ("members", "group_id"), ("items", "group_id"), ("delivery_proofs", "group_id")].map {
+        let streams = [("groups", "id"), ("members", "group_id"), ("items", "group_id"), ("delivery_proofs", "group_id"),
+                       ("item_claims", "group_id"), ("share_requests", "group_id")].map {
             channel.postgresChange(AnyAction.self, table: $0.0, filter: .eq($0.1, value: id))
-        } + [channel.postgresChange(AnyAction.self, table: "splits"), channel.postgresChange(AnyAction.self, table: "split_shares")]
+        }
         defer { Task { await supabase.removeChannel(channel) } }
         try? await channel.subscribeWithError()
         await withTaskGroup(of: Void.self) { tasks in
@@ -140,11 +167,30 @@ final class GroupStore {
         writing > 0 || (ownMove?.from == from && ownMove?.to == to)
     }
 
-    func add(product: Product, options: [String: String], qty: Int, note: String) async throws {
-        try await supabase.from("items").insert(NewItem(group_id: id, product_id: product.id, options: options, qty: qty, note: note)).execute()
+    /// Adds an item; `share` opens it to the group in that many pieces, with an optional minimum of people.
+    func add(product: Product, options: [String: String], qty: Int, note: String, share: (pieces: Int, min: Int?)? = nil) async throws {
+        nonisolated struct Added: Decodable { var id: UUID }
+        let added: Added = try await supabase.from("items")
+            .insert(NewItem(group_id: id, product_id: product.id, options: options, qty: qty, note: note))
+            .select("id").single().execute().value
         products[product.id] = product
         epoch += 1
-        await refresh()
+        if let share {
+            try await rpc("share_item", ["item": .string(added.id.uuidString), "pieces": .integer(share.pieces),
+                                         "min_people": share.min.map { .integer($0) } ?? .null])
+        } else {
+            await refresh()
+        }
+    }
+
+    /// Shares my item, or changes its pieces and minimum (`share_item`).
+    func share(_ item: Item, pieces: Int, min: Int?) async throws {
+        try await rpc("share_item", ["item": .string(item.id.uuidString), "pieces": .integer(pieces), "min_people": min.map { .integer($0) } ?? .null])
+    }
+
+    /// Sets my claim on someone's shared item; 0 withdraws it.
+    func claim(_ item: Item, pieces: Int) async throws {
+        try await rpc("claim_pieces", ["item": .string(item.id.uuidString), "pieces": .integer(pieces)])
     }
 
     func update(_ item: Item, qty: Int? = nil, note: String? = nil, options: [String: String]? = nil, product: String? = nil) async throws {
