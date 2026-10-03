@@ -43,6 +43,20 @@ nonisolated enum Wita {
         return c.date(bySettingHour: 10, minute: 0, second: 0, of: day)!
     }
 
+    /// Auto-lock's default when the host turns it on: tomorrow at 13:00 WITA, two hours before Atas's 15:00
+    /// cutoff, so the host can still send the order that day.
+    static func defaultCutoff(now: Date = Date()) -> Date {
+        let c = calendar
+        let day = c.date(byAdding: .day, value: 1, to: c.startOfDay(for: now))!
+        return c.date(bySettingHour: atasCutoffHour - 2, minute: 0, second: 0, of: day)!
+    }
+
+    /// The earliest morning delivery for an order that locks at `cutoff`: the next day at 10:00 WITA when it locks
+    /// before Atas's 15:00, otherwise the day after.
+    static func firstDelivery(afterCutoff cutoff: Date) -> Date {
+        defaultDelivery(now: cutoff)
+    }
+
     /// The moment the order must reach Atas for a delivery at `delivery`: 15:00 WITA the day before.
     static func atasDeadline(for delivery: Date) -> Date {
         let c = calendar
@@ -161,13 +175,12 @@ nonisolated enum AtasMessage {
         return out.joined(separator: "\n")
     }
 
-    /// The last line (Testing Fixes F). From Rp 200.000 the order qualifies for free ongkir; under it, either the
-    /// ongkir Atas already quoted (pay first) or a request for it.
+    /// The last line (Testing Fixes F). From Rp 200.000 just the total: ongkir is free and Atas knows its own rule, so
+    /// the message doesn't spell it out. Under it, either the ongkir Atas already quoted (pay first) or a request for it.
     static func closing(_ grand: Int, agreed: (ongkir: Int, discount: Int)?, indonesian: Bool) -> String {
         let total = indonesian ? "Total semua: \(Rupiah.short(grand))" : "Grand total: \(Rupiah.short(grand))"
         if Ongkir.isFree(subtotal: grand) {
-            return indonesian ? "\(total). Pesanan sudah di atas Rp 200.000, jadi gratis ongkir ya. Terima kasih!"
-                              : "\(total). The order is over Rp 200.000, so it qualifies for free delivery. Thank you!"
+            return indonesian ? "\(total). Terima kasih!" : "\(total). Thank you!"
         }
         guard let a = agreed else {
             return indonesian ? "\(total) (belum termasuk ongkir). Mohon info ongkirnya ya. Terima kasih!"

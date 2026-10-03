@@ -18,6 +18,9 @@ func expect(_ ok: Bool, _ what: String, file: StaticString = #file, line: UInt =
         let after = c.date(from: DateComponents(year: 2026, month: 10, day: 2, hour: 15, minute: 0))!
         expect(c.component(.day, from: Wita.defaultDelivery(now: before)) == 3, "delivery tomorrow")
         expect(c.component(.day, from: Wita.defaultDelivery(now: after)) == 4, "delivery after cutoff")
+        let lock = Wita.defaultCutoff(now: after)
+        expect(c.component(.day, from: lock) == 3 && c.component(.hour, from: lock) == 13, "auto-lock tomorrow 13:00")
+        expect(c.component(.day, from: Wita.firstDelivery(afterCutoff: lock)) == 4, "delivery the day after an auto-lock")
         let fri10 = c.date(from: DateComponents(year: 2026, month: 10, day: 3, hour: 10))!
         expect(!Wita.cutoffTooLate(cutoff: c.date(from: DateComponents(year: 2026, month: 10, day: 2, hour: 13)), delivery: fri10), "13:00 ok")
         expect(Wita.cutoffTooLate(cutoff: c.date(from: DateComponents(year: 2026, month: 10, day: 2, hour: 17)), delivery: fri10), "17:00 late")
@@ -75,11 +78,11 @@ func expect(_ ok: Bool, _ what: String, file: StaticString = #file, line: UInt =
         expect(en.hasPrefix("PIC name: Rani"), "English header")
         expect(en.hasSuffix("Grand total: 73k (before delivery). Please let me know the delivery fee. Thank you!"), "English under 200k")
 
-        // Closing line by flow and subtotal (F): free at Rp 200.000, the quoted ongkir in pay first, else ask.
+        // Closing line by flow and subtotal (F): just the total at Rp 200.000, the quoted ongkir in pay first, else ask.
         expect(AtasMessage.closing(481_000, agreed: nil, indonesian: true)
-               == "Total semua: 481k. Pesanan sudah di atas Rp 200.000, jadi gratis ongkir ya. Terima kasih!", "free ID")
+               == "Total semua: 481k. Terima kasih!", "free ID")
         expect(AtasMessage.closing(200_000, agreed: (30_000, 0), indonesian: false)
-               == "Grand total: 200k. The order is over Rp 200.000, so it qualifies for free delivery. Thank you!", "free EN, quote ignored")
+               == "Grand total: 200k. Thank you!", "free EN, quote ignored")
         expect(AtasMessage.closing(155_000, agreed: (30_000, 0), indonesian: true)
                == "Total semua: 155k + ongkir 30k = 185k, sesuai info Kakak tadi. Terima kasih!", "agreed ID")
         expect(AtasMessage.closing(155_000, agreed: (30_000, 15_000), indonesian: true)

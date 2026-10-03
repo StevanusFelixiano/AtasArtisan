@@ -14,14 +14,21 @@ struct CreateGroupView: View {
     @State private var addressID: UUID?
     @State private var accountID: UUID?
     @State private var delivery = Wita.defaultDelivery()
-    @State private var useCutoff = true
-    @State private var cutoff = Wita.atasDeadline(for: Wita.defaultDelivery()).addingTimeInterval(-2 * 3600)
+    /// Auto-lock starts off; turning it on sets tomorrow 13:00 WITA (`Wita.defaultCutoff`).
+    @State private var useCutoff = false
+    @State private var cutoff = Wita.defaultCutoff()
     @State private var payFirst = false
     @State private var addingAddress = false
     @State private var addingAccount = false
     @State private var loaded = false
     @State private var busy = false
     @State private var problem: Problem?
+
+    /// "Rani’s group order"; editable before creating.
+    static func defaultName(_ host: String?) -> String {
+        let n = (host ?? "").trimmingCharacters(in: .whitespaces)
+        return n.isEmpty ? "Group order" : "\(n)’s group order"
+    }
 
     private var late: Bool { useCutoff && Wita.cutoffTooLate(cutoff: cutoff, delivery: delivery) }
     private var needsAccount: Bool { !personal && loaded && accounts.isEmpty }
@@ -53,6 +60,7 @@ struct CreateGroupView: View {
         }
         .safeAreaInset(edge: .bottom) { createBar }
         .task {
+            if name.isEmpty { name = Self.defaultName(app.profile?.name) }
             await load()
             #if DEBUG
             switch HomeDebug.screen {
@@ -71,6 +79,13 @@ struct CreateGroupView: View {
             NavigationStack {
                 PayoutEditor(account: PayoutAccount(label: "BCA", account_name: app.profile?.name ?? "")) { saved in accounts.append(saved); accountID = saved.id }
             }
+        }
+        .onChange(of: useCutoff) { _, on in
+            guard on else { return }
+            cutoff = Wita.defaultCutoff()
+            // Atas delivers the day after it gets the order, so delivery can't be earlier than that.
+            let first = Wita.firstDelivery(afterCutoff: cutoff)
+            if delivery < first { delivery = first }
         }
         .onChange(of: delivery) { _, d in
             if useCutoff && cutoff > d { cutoff = Wita.atasDeadline(for: d).addingTimeInterval(-3600) }
