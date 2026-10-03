@@ -381,8 +381,8 @@ struct JoinSheet: View {
     private func ruleText(_ rule: String, host: String) -> AttributedString {
         let bold = rule == "pay_first" ? "Pay first." : "Order first."
         let rest = rule == "pay_first"
-            ? " Everyone pays \(host) first, then \(host) sends the order to Atas."
-            : " \(host) sends the order, then everyone pays the host once Atas confirms the bill."
+            ? " Everyone pays \(host) before the order goes to Atas. Under Rp 200.000, \(host) asks Atas for the ongkir first."
+            : " \(host) sends the order, then everyone pays the host once Atas confirms the ongkir."
         var head = AttributedString(bold)
         head.font = Brand.font(.body, size: 13, weight: 700)
         head.foregroundColor = Brand.cocoa

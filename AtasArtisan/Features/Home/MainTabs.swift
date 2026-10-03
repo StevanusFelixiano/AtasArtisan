@@ -440,7 +440,7 @@ struct OrderCard: View {
                     }
                 }
                 Spacer(minLength: 0)
-                StateTag(state: group.state)
+                StateTag(group: group)
             }
             if !group.personal, group.state == .open, let total = groupSubtotal { progress(total) }
             VStack(spacing: Brand.s3) {

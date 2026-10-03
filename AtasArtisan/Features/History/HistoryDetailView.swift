@@ -62,7 +62,7 @@ struct HistoryDetailView: View {
     private func header(_ g: OrderGroup) -> some View {
         VStack(alignment: .leading, spacing: Brand.s2) {
             HStack(spacing: Brand.s2) {
-                StateTag(state: g.state)
+                StateTag(group: g)
                 if g.state != .cancelled, let b = store.myBill, b.total > 0, !isHost { PayTag(state: PayState(b)) }
             }
             Text(g.name).obText(.display, 30).lineSpacing(-2).fixedSize(horizontal: false, vertical: true)

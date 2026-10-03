@@ -4,6 +4,8 @@ import Supabase
 /// 4.12 Send to Atas (5-1, 5-1b). The message in the hosts' own format (Indonesian by default, English
 /// selectable), editable, sent from the host's own WhatsApp to Atas (0821-3145-473). Switching the language rolls the
 /// message to the other one while the card settles to its height (Motion board 17).
+/// Pay first under Rp 200.000 before the ongkir is in, the same screen asks Atas for the ongkir instead (G-2b): just
+/// the question, no item list, and coming back marks it asked.
 struct SendToAtasView: View {
     var store: GroupStore
     /// Open WhatsApp was tapped: the group screen plays 5-2 in when the app comes back.
@@ -19,13 +21,15 @@ struct SendToAtasView: View {
     @FocusState private var editing: Bool
 
     private var indonesian: Bool { language == 0 }
+    private var asking: Bool { store.group?.payPhase == .asking }
 
     var body: some View {
         ScrollView {
             VStack(spacing: 12) {
                 HStack(spacing: 12) {
                     Mascot(pose: "pose-phone", size: 64, fill: Brand.lime)
-                    Text("This is the message Atas will get. Tap to edit anything before you open WhatsApp.")
+                    Text(asking ? "Just the question, no item list. The full order goes once everyone has paid."
+                                : "This is the message Atas will get. Tap to edit anything before you open WhatsApp.")
                         .font(Type5.manrope(14)).lineSpacing(1).foregroundStyle(Brand.ink2)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
@@ -88,21 +92,27 @@ struct SendToAtasView: View {
         .screen()
         .safeAreaInset(edge: .bottom) {
             GlassBar {
-                AsyncPill(busyTitle: "Sending…", doneTitle: "Sent", failTitle: "Couldn’t mark it sent", kind: .dark,
-                          refresh: store.refresh, reached: { store.group?.state == .sent }) {
-                    handedOff()
-                    openURL(Links.whatsApp(Links.atasNumber, text: text))
-                    try await store.rpc("mark_sent", ["g": .string(store.id.uuidString)])
+                AsyncPill(busyTitle: "Sending…", doneTitle: asking ? "Asked" : "Sent", failTitle: asking ? "Couldn’t mark it asked" : "Couldn’t mark it sent",
+                          kind: .dark, refresh: store.refresh,
+                          reached: { asking ? store.group?.ongkir_asked_at != nil : store.group?.state == .sent }) {
+                    if asking {
+                        openURL(Links.whatsApp(Links.atasNumber, text: text))
+                        try await store.rpc("mark_ongkir_asked", ["g": .string(store.id.uuidString)])
+                    } else {
+                        handedOff()
+                        openURL(Links.whatsApp(Links.atasNumber, text: text))
+                        try await store.rpc("mark_sent", ["g": .string(store.id.uuidString)])
+                    }
                 } then: {
                     dismiss()
                 } idle: {
                     Label { Text("Open WhatsApp") } icon: { WhatsAppGlyph(size: 20) }
                 }
                 .disabled(text.isEmpty, reason: "The message is empty")
-                cutoff
+                if !asking { cutoff }
             }
         }
-        .navigationTitle("Send to Atas")
+        .navigationTitle(asking ? "Ask Atas for ongkir" : "Send to Atas")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) { Button(role: .close) { dismiss() } }
@@ -147,9 +157,12 @@ struct SendToAtasView: View {
             })
         }
         let host = store.people[g.host_id]
-        return AtasMessage.text(AtasOrder(hostName: host?.name ?? "", hostPhone: host?.phone ?? "",
-                                          place: g.address_label, address: g.address_detail == g.address_label ? "" : g.address_detail,
-                                          mapsURL: g.maps_url, delivery: g.delivery_at, people: people), indonesian: indonesian)
+        // Pay first with the ongkir entered: the closing line repeats what Atas quoted.
+        let agreed = g.payFirst && g.billFinal && g.ongkir_set_at != nil ? (ongkir: g.ongkir ?? 0, discount: g.discount ?? 0) : nil
+        let order = AtasOrder(hostName: host?.name ?? "", hostPhone: host?.phone ?? "",
+                              place: g.address_label, address: g.address_detail == g.address_label ? "" : g.address_detail,
+                              mapsURL: g.maps_url, delivery: g.delivery_at, people: people, agreed: agreed)
+        return asking ? AtasMessage.askOngkir(order, indonesian: indonesian) : AtasMessage.text(order, indonesian: indonesian)
     }
 
 }
@@ -188,38 +201,54 @@ private struct MessageRoll: View {
     }
 }
 
-/// 4.12 Confirm with Atas (5-3): copy the ongkir and discount from Atas's reply. Split equally between everyone
-/// who ordered; the bill freezes and everyone is told what they owe.
+/// 4.12 Confirm with Atas (5-3, Testing Fixes E). From Rp 200.000 the ongkir is free: no inputs, a Free ongkir card
+/// and Continue (E-1). Under it (E-2), copy the ongkir and discount from Atas's reply; both are optional, empty counts
+/// as Rp 0 and the button is never disabled. Every row updates on each keystroke, whichever field comes first; the
+/// net is split between the members with items (each share truncated to Rp 100, the host takes the rest); a discount
+/// bigger than the ongkir gets a gentle note. Order first: confirm_atas freezes the bill and moves the order to
+/// Confirmed. Pay first, before sending: set_bill makes the bills final and payments open (it can be reopened until
+/// the order is sent).
 struct ConfirmAtasView: View {
     var store: GroupStore
     @Environment(\.dismiss) private var dismiss
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var ongkir = ""
     @State private var discount = ""
     @State private var busy = false
+    @State private var confirms = 0
     @State private var problem: Problem?
     @FocusState private var field: Field?
 
     private enum Field { case ongkir, discount }
 
+    /// Pay first before sending: the amounts go in with set_bill and the order stays locked.
+    private var payFirst: Bool { store.group?.payFirst == true && store.group?.state == .locked }
+    private var free: Bool { Ongkir.isFree(subtotal: store.subtotal) }
     private var o: Int { Int(ongkir) ?? 0 }
-    private var d: Int { Int(discount) ?? 0 }
-    private var net: Int { max(0, o - d) }
-    /// Everyone who owes something, as `group_bill_v` counts them (split shares included).
-    private var orderers: [BillRow] {
-        store.bill.filter { $0.items > 0 }.sorted { store.colorIndex($0.user_id) < store.colorIndex($1.user_id) }
+    /// The discount as the server applies it: never more than items + ongkir.
+    private var d: Int { Ongkir.cappedDiscount(Int(discount) ?? 0, subtotal: store.subtotal, ongkir: o) }
+    private var net: Int { o - d }
+    /// Everyone with items, and the host (who takes the rounding even with none), in join order.
+    private var rows: [BillRow] {
+        store.bill.filter { $0.items > 0 || $0.user_id == store.group?.host_id }
+            .sorted { store.colorIndex($0.user_id) < store.colorIndex($1.user_id) }
     }
-    private var payers: Int { max(1, orderers.count) }
+    private var payers: Int { store.bill.filter { $0.items > 0 }.count }
+    private var shares: [Int] {
+        Ongkir.shares(net: net, bills: rows.map { ($0.items, $0.user_id == store.group?.host_id) })
+    }
+    /// The discount note: bigger than the ongkir, or a discount with no ongkir at all.
+    private var note: String? {
+        let typed = Int(discount) ?? 0
+        guard typed > o else { return nil }
+        return o == 0 ? "There’s a discount but no ongkir. Worth a second look at Atas’s reply, it usually only comes off the ongkir."
+            : "The discount (\(Rupiah.format(typed))) is bigger than the ongkir (\(Rupiah.format(o))). Worth a second look at Atas’s reply, it usually only comes off the ongkir."
+    }
 
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
-                Text("Copy the numbers from Atas’s reply. Ongkir and discount are split equally between the \(payers) members.")
-                    .font(Type5.manrope(14)).lineSpacing(1).foregroundStyle(Brand.ink2)
-                    .padding(.horizontal, 4)
-                amountField("Ongkir from Atas", prefix: "Rp", text: $ongkir, .ongkir)
-                amountField("Discount Atas applied", prefix: "− Rp", text: $discount, .discount)
-                totals
-                if !orderers.isEmpty { people }
+                if free { freeContent } else { amountsContent }
             }
             .padding(.horizontal, Brand.s4)
             .padding(.top, 10)
@@ -229,10 +258,10 @@ struct ConfirmAtasView: View {
         .screen()
         .safeAreaInset(edge: .bottom) {
             GlassBar {
-                Button("Atas confirmed", systemImage: "checkmark") { Task { await confirm() } }
+                Button(free ? "Continue" : "Atas confirmed", systemImage: "checkmark") { Task { await confirm() } }
                     .buttonStyle(.pill(.primary))
-                    .disabled(busy || ongkir.isEmpty)
-                Text("This freezes the bill and tells everyone to wait for delivery.")
+                    .disabled(busy)
+                Text(free ? "Everyone’s bill is final now." : "Empty fields count as Rp 0. This freezes the bill.")
                     .font(Type5.manrope(12)).foregroundStyle(Brand.ink2).multilineTextAlignment(.center)
                     .padding(.top, 8).padding(.bottom, 2)
             }
@@ -243,29 +272,94 @@ struct ConfirmAtasView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
             ToolbarItem(placement: .cancellationAction) { Button(role: .close) { dismiss() } }
-            ToolbarItemGroup(placement: .keyboard) { Spacer(); Button("Done") { field = nil } }
-        }
-        .problemAlert($problem)
-        #if DEBUG
-        .onAppear {
-            // Screenshot hook for 5-3: "30000,15000" fills both fields and focuses the discount.
-            if let v = DebugScreens.value("ATASTE_CONFIRM")?.split(separator: ","), v.count == 2 {
-                ongkir = String(v[0]); discount = String(v[1]); field = .discount
+            ToolbarItemGroup(placement: .keyboard) {
+                Spacer()
+                if field == .ongkir { Button("Next") { field = .discount } } else { Button("Done") { field = nil } }
             }
         }
-        #endif
+        .sensoryFeedback(Haptic.warn, trigger: note != nil) { !$0 && $1 }
+        .sensoryFeedback(Haptic.done, trigger: confirms)
+        .problemAlert($problem)
+        .onAppear {
+            // Pay first reopening the ongkir before sending: start from what was entered.
+            if let g = store.group, payFirst, g.ongkir_set_at != nil {
+                ongkir = (g.ongkir ?? 0) > 0 ? String(g.ongkir ?? 0) : ""
+                discount = (g.discount ?? 0) > 0 ? String(g.discount ?? 0) : ""
+            }
+            #if DEBUG
+            // Screenshot hook for 5-3: "30000,15000" fills both fields and focuses the discount.
+            if let v = DebugScreens.value("ATASTE_CONFIRM")?.split(separator: ",", omittingEmptySubsequences: false), v.count == 2 {
+                ongkir = String(v[0]); discount = String(v[1]); field = .discount
+            }
+            #endif
+        }
     }
 
-    /// Label above a 56 pt white field with the "Rp" prefix and the amount in Roundo; the focused one gets the
-    /// caramel edge and the choc-100 halo.
+    // MARK: E-1 · free ongkir
+
+    @ViewBuilder private var freeContent: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Free ongkir").font(GFont.shrikhand(34)).foregroundStyle(Brand.cocoa)
+            Text("\(Rupiah.format(store.subtotal)) is over Rp 200.000, so Atas doesn’t charge ongkir. There’s nothing to type.")
+                .font(Type5.manrope(14, 600)).lineSpacing(1).foregroundStyle(Brand.cocoa)
+                .frame(maxWidth: 270, alignment: .leading)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .padding(.vertical, 22).padding(.horizontal, 20)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(alignment: .topTrailing) {
+            Rays(color: .white).frame(width: 220, height: 220).opacity(0.7).offset(x: 60, y: -60)
+        }
+        .background(Brand.lime)
+        .clipShape(RoundedRectangle(cornerRadius: 32, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 32, style: .continuous).strokeBorder(Brand.limeDeep, lineWidth: 2))
+        .accessibilityElement(children: .combine)
+        VStack(alignment: .leading, spacing: 8) {
+            totalsRow("Items", Text(Rupiah.format(store.subtotal)))
+            totalsRow("Ongkir", Text("Free").foregroundStyle(Brand.lime))
+            totalLine(store.subtotal)
+            Text("Nothing is added to anyone’s bill").font(Type5.manrope(13, 600)).foregroundStyle(Brand.lime)
+        }
+        .padding(18)
+        .background(RoundedRectangle(cornerRadius: 28, style: .continuous).fill(Brand.cocoa))
+        .accessibilityElement(children: .combine)
+        if !rows.isEmpty { people(before: false) }
+    }
+
+    // MARK: E-2 · under Rp 200.000
+
+    @ViewBuilder private var amountsContent: some View {
+        Text("Copy the numbers from Atas’s reply. Leave a field empty if Atas didn’t mention it. Both are split equally between the \(payers) member\(payers == 1 ? "" : "s") with items.")
+            .font(Type5.manrope(14)).lineSpacing(1).foregroundStyle(Brand.ink2)
+            .padding(.horizontal, 4)
+        amountField("Ongkir", prefix: "Rp", text: $ongkir, .ongkir)
+        amountField("Discount", prefix: "− Rp", text: $discount, .discount)
+        if let note {
+            Label { Text(note) } icon: { icon("exclamationmark.triangle", 17) }
+                .labelStyle(IconLabel(spacing: 10, size: 17))
+                .font(Type5.manrope(13, 600)).lineSpacing(1).foregroundStyle(Brand.cocoa)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.vertical, 12).padding(.horizontal, 14)
+                .background(RoundedRectangle(cornerRadius: Brand.rSmall, style: .continuous).fill(Brand.choc100))
+                .transition(reduceMotion ? AnyTransition.opacity.animation(Motion.Reduced.fade)
+                            : .asymmetric(insertion: .opacity.animation(Motion.fade.delay(OngkirMotion.noteFadeDelay)),
+                                          removal: .opacity.animation(Motion.fadeOut)))
+        }
+        totals
+        if !rows.isEmpty { people(before: true) }
+    }
+
+    /// "ONGKIR · optional" above a 56 pt white field with the "Rp" prefix and the amount in Roundo, dots as you type,
+    /// 7 digits at most; the focused one gets the caramel edge and the choc-100 halo.
     private func amountField(_ label: String, prefix: String, text: Binding<String>, _ which: Field) -> some View {
         let on = field == which
         let shape = RoundedRectangle(cornerRadius: Brand.rField, style: .continuous)
         let shown = Binding<String>(
             get: { text.wrappedValue.isEmpty ? "" : Rupiah.bare(Int(text.wrappedValue) ?? 0) },
-            set: { text.wrappedValue = String($0.filter(\.isNumber).drop { $0 == "0" }.prefix(9)) })
+            set: { text.wrappedValue = String($0.filter(\.isNumber).drop { $0 == "0" }.prefix(OngkirMotion.maxDigits)) })
         return VStack(alignment: .leading, spacing: 8) {
-            Text(label).brand(.label).padding(.leading, 4)
+            Text("\(Text(label.uppercased()).font(Type5.manrope(12, 600)).tracking(12 * 0.03).foregroundStyle(Brand.cocoa))\(Text(" · optional").font(Type5.manrope(12)).foregroundStyle(Brand.ink3))")
+                .padding(.leading, 4)
             HStack(spacing: 8) {
                 Text(prefix).font(Type5.manrope(16, 600)).foregroundStyle(Brand.ink3)
                 TextField("0", text: shown, prompt: Text("0").foregroundStyle(Brand.ink4))
@@ -274,7 +368,7 @@ struct ConfirmAtasView: View {
                     .tint(Brand.caramel)
                     .keyboardType(.numberPad)
                     .focused($field, equals: which)
-                    .accessibilityLabel(label)
+                    .accessibilityLabel("\(label), optional")
             }
             .padding(.horizontal, 16)
             .frame(height: 56)
@@ -286,53 +380,68 @@ struct ConfirmAtasView: View {
         }
     }
 
-    /// Cocoa card: items, ongkir − discount, the total, and what each bill gains.
+    /// Cocoa card: items, ongkir, discount, the total, and what each bill gains or loses. Values roll on each keystroke.
     private var totals: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            totalsRow("Items", store.subtotal)
-            totalsRow("Ongkir − discount", net)
-            HStack(alignment: .firstTextBaseline) {
-                Text("Total").font(Type5.manrope(12, 600)).tracking(12 * 0.03).textCase(.uppercase)
-                Spacer()
-                Text(Rupiah.format(store.subtotal + net)).font(Type5.roundo(30)).lineLimit(1).minimumScaleFactor(0.7)
-            }
-            .foregroundStyle(Brand.cream)
-            .padding(.top, 8)
-            .overlay(alignment: .top) { DashedRule(color: Brand.cream.opacity(0.25)) }
-            Text("+ \(Rupiah.format(net / payers)) on each of \(payers) bills").font(Type5.manrope(13, 600)).foregroundStyle(Brand.lime)
+        let each = Ongkir.each(net: net, payers: payers)
+        return VStack(alignment: .leading, spacing: 8) {
+            totalsRow("Items", Text(Rupiah.format(store.subtotal)))
+            totalsRow("Ongkir", rolling("+ \(Rupiah.format(o))", o))
+            totalsRow("Discount", rolling("− \(Rupiah.format(d))", d))
+            totalLine(store.subtotal + net)
+            rolling(each > 0 ? "+ \(Rupiah.format(each)) on each of \(payers) bills"
+                    : each < 0 ? "− \(Rupiah.format(-each)) off each of \(payers) bills" : "Nothing added to the bills", each)
+                .font(Type5.manrope(13, 600)).foregroundStyle(Brand.lime)
         }
         .padding(18)
         .background(RoundedRectangle(cornerRadius: 28, style: .continuous).fill(Brand.cocoa))
+        .animation(reduceMotion ? nil : OngkirMotion.noteIn, value: note != nil)
         .accessibilityElement(children: .combine)
     }
 
-    private func totalsRow(_ label: String, _ n: Int) -> some View {
+    private func rolling(_ s: String, _ value: Int) -> some View {
+        Text(s)
+            .contentTransition(reduceMotion ? .opacity : .numericText(value: Double(value)))
+            .animation(reduceMotion ? Motion.Reduced.fade : Motion.digits, value: value)
+    }
+
+    private func totalsRow(_ label: String, _ value: some View) -> some View {
         HStack {
             Text(label).foregroundStyle(Brand.liquorice400)
             Spacer()
-            Text(Rupiah.format(n)).foregroundStyle(Brand.cream)
+            value.foregroundStyle(Brand.cream)
         }
         .font(Type5.manrope(14, 600))
     }
 
+    private func totalLine(_ total: Int) -> some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text("Total").font(Type5.manrope(12, 600)).tracking(12 * 0.03).textCase(.uppercase)
+            Spacer()
+            rolling(Rupiah.format(total), total).font(Type5.roundo(30)).lineLimit(1).minimumScaleFactor(0.7)
+        }
+        .foregroundStyle(Brand.cream)
+        .padding(.top, 8)
+        .overlay(alignment: .top) { DashedRule(color: Brand.cream.opacity(0.25)) }
+    }
+
     /// Each person's items and their bill once this is confirmed (the host takes the rounding, as the view does).
-    private var people: some View {
-        VStack(spacing: 0) {
-            ForEach(Array(orderers.enumerated()), id: \.element.user_id) { i, r in
-                let each = net / payers
-                let share = r.user_id == store.group?.host_id ? net - (payers - 1) * each : each
+    private func people(before: Bool) -> some View {
+        let shares = shares
+        return VStack(spacing: 0) {
+            ForEach(Array(rows.enumerated()), id: \.element.user_id) { i, r in
+                let after = r.items + (free ? 0 : shares[i])
                 HStack(spacing: 10) {
                     Avatar(name: store.name(r.user_id), index: store.colorIndex(r.user_id), size: 28, art: store.people[r.user_id]?.avatar,
                            bg: store.people[r.user_id]?.avatar_bg)
                     Text(store.name(r.user_id)).font(Type5.manrope(14, 600)).foregroundStyle(Brand.cocoa)
                         .frame(maxWidth: .infinity, alignment: .leading)
-                    Text(Rupiah.bare(r.items)).font(Type5.manrope(12)).foregroundStyle(Brand.ink3)
-                    Text(Rupiah.format(r.items + share)).font(Type5.roundo(15)).foregroundStyle(Brand.cocoa)
+                    if before { Text(Rupiah.bare(r.items)).font(Type5.manrope(12)).foregroundStyle(Brand.ink3) }
+                    rolling(Rupiah.format(after), after).font(Type5.roundo(15)).foregroundStyle(Brand.cocoa)
                         .frame(minWidth: 88, alignment: .trailing)
                 }
                 .padding(.vertical, 10)
                 .accessibilityElement(children: .combine)
-                if i < orderers.count - 1 { Rectangle().fill(Brand.liquorice100).frame(height: 1) }
+                if i < rows.count - 1 { Rectangle().fill(Brand.liquorice100).frame(height: 1) }
             }
         }
         .padding(.vertical, 4).padding(.horizontal, 16)
@@ -342,8 +451,10 @@ struct ConfirmAtasView: View {
     private func confirm() async {
         busy = true
         defer { busy = false }
+        let amounts: [String: AnyJSON] = ["g": .string(store.id.uuidString), "ongkir": .integer(free ? 0 : o), "discount": .integer(free ? 0 : d)]
         await attempt($problem, "Couldn't confirm") {
-            try await store.rpc("confirm_atas", ["g": .string(store.id.uuidString), "ongkir": .integer(o), "discount": .integer(d)])
+            try await store.rpc(payFirst ? "set_bill" : "confirm_atas", amounts)
+            confirms += 1
             dismiss()
         }
     }
