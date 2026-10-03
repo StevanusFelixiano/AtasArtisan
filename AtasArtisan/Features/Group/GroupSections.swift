@@ -64,8 +64,11 @@ extension GroupView {
 
     // MARK: Open (3-1 member, 3-2 host, 3-3 unlocked, 3-8 personal)
 
-    /// 2-4d: a group the host just created, nobody has added anything yet.
-    func isBorn(_ g: OrderGroup) -> Bool { !g.personal && store.isHost && store.items.isEmpty }
+    /// 2-4d: a group the host just created: nobody else has joined and nothing is added yet. Once someone joins, the
+    /// host sees the member list, with a "Nothing yet" row for each member who hasn't added anything.
+    func isBorn(_ g: OrderGroup) -> Bool {
+        !g.personal && store.isHost && store.items.isEmpty && store.activeMembers.allSatisfy { $0.user_id == g.host_id }
+    }
 
     @ViewBuilder func openSections(_ g: OrderGroup) -> some View {
         if isBorn(g) {
@@ -96,7 +99,7 @@ extension GroupView {
                 }
                 .buttonStyle(.plain)
             }
-            memberList(g, store.activeMembers.filter { $0.user_id == g.host_id } + store.activeMembers.filter { $0.user_id != g.host_id })
+            memberList(g, store.activeMembers.filter { $0.user_id == g.host_id } + byOrder(store.activeMembers.filter { $0.user_id != g.host_id }))
         } else {
             myItemsCard(g)
             listHeader("Everyone", count: store.activeMembers.count) {
@@ -108,7 +111,7 @@ extension GroupView {
                 .ui(GFont.manrope(12), Brand.ink3)
                 .accessibilityElement(children: .combine)
             }
-            memberList(g, store.activeMembers.filter { $0.user_id != store.me })
+            memberList(g, byOrder(store.activeMembers.filter { $0.user_id != store.me }))
             Button("Leave group") { askLeave(g) }
                 .ui(GFont.manrope(14, 600), Brand.destructive)
                 .padding(.vertical, 10)
@@ -221,15 +224,29 @@ extension GroupView {
         return item.note.isEmpty ? price : "\(price) · “\(item.note)”"
     }
 
-    /// "2× Butter Croissant · 1× Burnt Cheesecake 20 cm (shared) · Banana Cake, 3 of 12": their items, then the
-    /// pieces they claimed of others'.
+    /// "2× Butter Croissant · 1× Burnt Cheesecake 20 cm (shared) · 3 pieces of Rani’s Banana Cake": their items, then
+    /// the pieces they claimed of others'.
     private func summary(_ user: UUID, _ items: [Item]) -> String {
         let own = items.map { "\($0.qty)× \(nameWithOptions($0))" + ($0.share_pieces == nil ? "" : " (shared)") }
-        let claimed = store.items.compactMap { i -> String? in
-            guard let pieces = i.share_pieces, let c = store.claims(i).first(where: { $0.user_id == user }) else { return nil }
-            return "\(i.name), \(c.pieces) of \(pieces)"
+        return (own + claimLines(user)).joined(separator: " · ")
+    }
+
+    /// "3 pieces of Rani’s Burnt Cheesecake 20 cm", one per shared item `user` claimed from.
+    private func claimLines(_ user: UUID) -> [String] {
+        store.sharedItems.compactMap { i in
+            guard let c = store.claims(i).first(where: { $0.user_id == user }) else { return nil }
+            let whose = i.owner_id == store.me ? "your" : "\(store.name(i.owner_id))’s"
+            return "\(Pieces.label(c.pieces)) of \(whose) \(i.name)"
         }
-        return (own + claimed).joined(separator: " · ")
+    }
+
+    /// People with items of their own first, then those with only pieces of others', then those with nothing yet;
+    /// join order within each.
+    private func byOrder(_ members: [Member]) -> [Member] {
+        let rank = { (m: Member) in
+            !store.items(of: m.user_id).isEmpty ? 0 : store.claims.contains { $0.user_id == m.user_id && $0.pieces > 0 } ? 1 : 2
+        }
+        return members.enumerated().sorted { (rank($0.element), $0.offset) < (rank($1.element), $1.offset) }.map(\.element)
     }
 
     /// 3-1 / 3-2 member rows. Someone joining while the screen is open gets a row that opens at the end, its avatar
@@ -251,13 +268,15 @@ extension GroupView {
     private func memberRow(_ g: OrderGroup, _ m: Member) -> some View {
         let user = m.user_id
         let items = store.items(of: user)
-        let claimed = store.claims.contains { $0.user_id == user }
+        let claims = claimLines(user)
+        let empty = items.isEmpty && claims.isEmpty
         let amount = store.bill.first { $0.user_id == user }?.items ?? items.reduce(0) { $0 + $1.total }
         let role = user == store.me ? "· you" : user == g.host_id ? "· host" : ""
-        // B1: the host's own row is a one-line summary pointing at My items.
-        let line = user == store.me ? (items.isEmpty ? "Nothing yet · see My items" : "\(items.count) \(items.count == 1 ? "item" : "items") · in My items")
-                 : items.isEmpty && !claimed ? "Nothing in the oven…yet!" : summary(user, items)
-        let lineInk = user == store.me ? Brand.ink3 : items.isEmpty && !claimed ? Brand.ink4 : Brand.ink2
+        // B1: the host's own row is a one-line summary pointing at My items, and at the pieces they claimed.
+        let line = user == store.me ? (empty ? "Nothing yet · see My items"
+                                             : ((items.isEmpty ? [] : ["\(items.count) \(items.count == 1 ? "item" : "items") · in My items"]) + claims).joined(separator: " · "))
+                 : empty ? "Nothing in the oven…yet!" : summary(user, items)
+        let lineInk = user == store.me ? Brand.ink3 : empty ? Brand.ink4 : Brand.ink2
         return VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
                 Avatar(name: store.name(user), index: store.colorIndex(user), size: 40, art: store.people[user]?.avatar, bg: store.people[user]?.avatar_bg)
@@ -269,7 +288,7 @@ extension GroupView {
                          + Text(role.isEmpty ? "" : " \(role)").font(GFont.manrope(12)).foregroundStyle(Brand.ink3))
                             .foregroundStyle(Brand.cocoa)
                         Spacer(minLength: 8)
-                        Text(Rupiah.format(amount)).ui(GFont.roundo(16))
+                        Text(Rupiah.format(amount)).ui(GFont.roundo(16), amount == 0 ? Brand.ink4 : Brand.cocoa)
                     }
                     Text(line)
                         .ui(GFont.manrope(13), lineInk)
