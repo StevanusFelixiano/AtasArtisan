@@ -27,7 +27,7 @@ Ataste is an iPhone app that lets friends place a group order from the Atas Arti
 - Apple Push Notification service, to deliver notifications.
 - WhatsApp (Meta), when you send the verification message and when a host sends an order. WhatsApp's own privacy policy applies to those messages.
 ## How long we keep it
-Your data stays until you delete your account. Verification codes are deleted within 24 hours. Order history stays so your group can see past orders and bills.
+Your data stays until you delete your account. Verification codes are deleted within 24 hours. Transfer receipts and delivery photos are deleted 7 days after upload. Order history stays so your group can see past orders and bills.
 ## Deleting your account
 In Ataste, go to Profile, then Delete account. This permanently deletes your profile, your phone number, your items and bills, your payment methods and addresses, and the receipts and delivery photos you uploaded. Groups you host are deleted for all their members. You can also ask us to delete your account by writing to the address below.
 ## Children

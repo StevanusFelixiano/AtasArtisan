@@ -11,5 +11,7 @@ verify_jwt = false
 verify_jwt = false
 [functions.menu-ingest]
 verify_jwt = false
+[functions.sweep]
+verify_jwt = false
 [functions.account]
 verify_jwt = true
