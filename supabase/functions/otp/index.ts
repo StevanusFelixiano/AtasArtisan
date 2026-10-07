@@ -1,5 +1,5 @@
 // Reverse-OTP sign-in. The app never sees or sends a phone number:
-//   POST /otp/start          -> {code: "ATASTE 4K9X", nonce, expires_at}   (app opens wa.me with the code)
+//   POST /otp/start          -> {code: "ATASTE 4K9X", message, nonce, expires_at}   (app opens wa.me with message)
 //   GET  /otp/status?nonce=  -> {status: pending|expired|verified, phone?, push_name?, token_hash?}
 //   POST /otp/review {code}  -> {token_hash}   App Review's demo account (code in Vault as a SHA-256)
 // The VPS WhatsApp bridge marks a code verified through `wa-inbound` once the user's message
@@ -28,6 +28,11 @@ async function secret(name: string) {
 function randomCode() {
   const bytes = crypto.getRandomValues(new Uint8Array(4));
   return [...bytes].map((b) => ALPHABET[b % ALPHABET.length]).join("");
+}
+
+/// The text prefilled in WhatsApp. It explains itself; the bridge only reads the "ATASTE XXXX" in it.
+function waMessage(code: string) {
+  return `ATASTE ${code}\n\nHi Ataste! This is my sign-in code. I'm pressing send to sign in to the app.`;
 }
 
 function ipOf(req: Request) {
@@ -66,7 +71,7 @@ Deno.serve(async (req) => {
         // A code is reusable once its previous holder expired: clear stale rows first.
         await admin.from("wa_codes").delete().eq("code", code).lt("expires_at", new Date().toISOString());
         const { data, error } = await admin.from("wa_codes").insert({ code, nonce, ip }).select("expires_at").single();
-        if (!error) return json({ code: `ATASTE ${code}`, nonce, expires_at: data.expires_at });
+        if (!error) return json({ code: `ATASTE ${code}`, message: waMessage(code), nonce, expires_at: data.expires_at });
       }
       return json({ error: "Please try again." }, 503);
     }

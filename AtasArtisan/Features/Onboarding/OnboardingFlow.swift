@@ -156,7 +156,7 @@ struct VerifyStep: View {
     // `expires_at` is left out: the functions client decodes dates with Foundation's default strategy, which
     // can't read Postgres timestamps, so including it failed every start. The server enforces expiry; the
     // countdown on 1-4a runs from when this app received the code (codes last 10 minutes).
-    private struct Start: Decodable { var code: String; var nonce: String }
+    private struct Start: Decodable { var code: String; var message: String?; var nonce: String }
     private struct Status: Decodable { var status: String; var phone: String?; var push_name: String?; var token_hash: String? }
     private struct Verified { var phone: String; var name: String; var token: String }
 
@@ -587,7 +587,7 @@ struct VerifyStep: View {
         guard UIApplication.shared.canOpenURL(URL(string: "whatsapp://")!) else { wait = .noWhatsApp; return }
         // The screen changes once the app is back; if WhatsApp doesn't open, at once.
         if shown != .waiting { awayForCode = true }
-        openURL(Links.whatsApp(Links.verifyNumber, text: code)) { opened in if !opened { cameBack() } }
+        openURL(Links.whatsApp(Links.verifyNumber, text: start?.message ?? code)) { opened in if !opened { cameBack() } }
         wait = .waiting
     }
 
