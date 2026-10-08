@@ -5,6 +5,7 @@ Only the internal "Team" group gets builds by itself. Uses the App Store Connect
 (asc-token.swift). Run it in the background: processing and beta review can take a while.
 
     ops/release/testflight.py 14
+    ops/release/testflight.py 14 --no-force   # leave min_build alone: older builds keep working
 """
 import json, os, subprocess, sys, time, urllib.request
 
@@ -42,7 +43,7 @@ def step(build):
     return state
 
 
-def main(build):
+def main(build, force=True):
     for _ in range(144):  # 10-minute checks for 24 h
         state = step(build)
         print(time.strftime("%H:%M"), f"build {build}: {state}", flush=True)
@@ -53,6 +54,8 @@ def main(build):
         time.sleep(600)
     else:
         sys.exit("gave up after 24 h")
+    if not force:
+        return
     pw = subprocess.run(["security", "find-generic-password", "-s", "ataste.db-password", "-a", "ataste", "-w"],
                         capture_output=True, text=True, check=True).stdout.strip()
     subprocess.run(["/opt/homebrew/opt/libpq/bin/psql",
@@ -62,4 +65,5 @@ def main(build):
 
 
 if __name__ == "__main__":
-    main(sys.argv[1] if len(sys.argv) > 1 else sys.exit("usage: testflight.py <build number>"))
+    main(sys.argv[1] if len(sys.argv) > 1 else sys.exit("usage: testflight.py <build number> [--no-force]"),
+         force="--no-force" not in sys.argv)
