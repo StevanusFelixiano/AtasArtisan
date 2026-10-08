@@ -7,6 +7,9 @@ struct MyOrderView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var removing: Item?
     @State private var problem: Problem?
+    /// The item whose note is being edited, and the text in the alert's field.
+    @State private var noting: Item?
+    @State private var noteText = ""
 
     private var items: [Item] { store.myItems.sorted { $0.name < $1.name } }
     private var editable: Bool {
@@ -34,6 +37,11 @@ struct MyOrderView: View {
                                           button: "Remove", keep: "Keep") {}, delay: SheetMotion.rowAfterRemove) {
                 Task { await attempt($problem, "Couldn't remove it") { try await store.remove(item) } }
             }
+        }
+        .alert("Note for Atas", isPresented: Binding { noting != nil } set: { if !$0 { noting = nil } }, presenting: noting) { item in
+            TextField("Note for Atas", text: $noteText)
+            Button("Cancel", role: .cancel) {}
+            Button("Save") { saveNote(item) }
         }
         .problemAlert($problem)
     }
@@ -95,7 +103,21 @@ struct MyOrderView: View {
                 Text(item.name).font(MenuFont.manrope(15, 700)).foregroundStyle(Brand.cocoa)
                 let opts = store.optionText(item)
                 if !opts.isEmpty { Text(optionLabel(opts)).font(MenuFont.manrope(12)).foregroundStyle(Brand.ink2) }
-                if !item.note.isEmpty { Text("\u{201C}\(item.note)\u{201D}").font(MenuFont.manrope(12)).foregroundStyle(Brand.ink3) }
+                if editable {
+                    Button {
+                        noteText = item.note
+                        noting = item
+                    } label: {
+                        Text(item.note.isEmpty ? "Add a note" : "\u{201C}\(item.note)\u{201D}")
+                            .font(MenuFont.manrope(12, item.note.isEmpty ? 600 : 500))
+                            .foregroundStyle(item.note.isEmpty ? Brand.caramel : Brand.ink3)
+                            .multilineTextAlignment(.leading)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Edit the note for Atas")
+                } else if !item.note.isEmpty {
+                    Text("\u{201C}\(item.note)\u{201D}").font(MenuFont.manrope(12)).foregroundStyle(Brand.ink3)
+                }
                 Text(Rupiah.format(item.total)).font(MenuFont.roundo(15)).foregroundStyle(Brand.cocoa).padding(.top, 2)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -110,6 +132,12 @@ struct MyOrderView: View {
             }
         }
         .padding(.vertical, 12)
+    }
+
+    private func saveNote(_ item: Item) {
+        let note = String(noteText.trimmingCharacters(in: .whitespaces).prefix(140))
+        guard note != item.note else { return }
+        Task { await attempt($problem, "Couldn't save the note") { try await store.update(item, note: note) } }
     }
 
     private func change(_ item: Item, _ qty: Int) {
