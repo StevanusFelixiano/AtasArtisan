@@ -45,6 +45,8 @@ final class AppModel {
     var screenGroup: UUID?
     /// The latest order event that arrived while the app was open, for the in-app banner.
     var note: InAppNote?
+    /// Where to get a newer build when this one is below the server's minimum (`app_release`); nil = up to date.
+    var updateURL: URL?
 
     /// A push in the foreground: the in-app banner shows it, unless it is about the group on screen.
     func arrived(_ n: InAppNote) {
@@ -166,10 +168,12 @@ struct RootView: View {
     /// The splash stays up 0.25 s past launching for its ready turn, then crossfades to the next screen.
     @State private var splash = true
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.scenePhase) private var scenePhase
 
     var body: some View {
         ZStack {
             if !splash { screen.transition(.opacity) }
+            if let url = app.updateURL, !splash { UpdateView(url: url).transition(.opacity) }
             if splash { SplashView(ready: app.phase != .launching).transition(.opacity) }
         }
         .task(id: app.phase != .launching) {
@@ -178,6 +182,7 @@ struct RootView: View {
             withAnimation(reduceMotion ? Motion.Reduced.fade : Motion.fade) { splash = false }
         }
         .task { await app.watchSession() }
+        .task(id: scenePhase) { if scenePhase == .active { await app.checkUpdate() } }
         .background(KeyboardDismiss())
         .background(BannerWindowInstaller())
     }

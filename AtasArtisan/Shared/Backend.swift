@@ -22,6 +22,7 @@ enum Links {
     static let supportEmail = "bayu.johar25@gmail.com"
     /// Public TestFlight link (external group "Public"); testers can join once a build passes beta review.
     static let getTheApp = "https://testflight.apple.com/join/U65TErQM"
+    static let appStore = URL(string: "https://apps.apple.com/app/id6818088705")!
 
     /// Invite links: the web page on the VPS (repo `web/`, design 2-7) for people without the app; with the app
     /// installed the same link opens Ataste directly (universal link, `applinks:` in the entitlements).

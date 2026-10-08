@@ -1,7 +1,7 @@
 # Ataste: App Store Connect checklist
 
 ## Before release
-- [x] Public TestFlight link https://testflight.apple.com/join/U65TErQM (group "Public"; build 3 approved 2026-10-01; build 7 approved 2026-10-02; build 8 live 2026-10-02; build 9 live 2026-10-02) in `Links.getTheApp` and `web/index.html`.
+- [x] Public TestFlight link https://testflight.apple.com/join/U65TErQM (group "Public"; build 3 approved 2026-10-01; build 7 approved 2026-10-02; build 8 live 2026-10-02; build 9 live 2026-10-02; build 13 live 2026-10-08) in `Links.getTheApp` and `web/index.html`.
 - Atas Artisan permission: not needed (user's decision, 2026-10-01). Ataste only links customers to Atas's own
   WhatsApp ordering; the "not affiliated" disclaimer stays in the app, listing and terms. If App Review raises
   guideline 5.2, answer with that.
@@ -62,6 +62,19 @@ Claude Design board "App Store Screenshots.dc.html" (AS-01 to AS-07, 1320 × 286
 to the project's `export/` folder. App Store Connect asks for the 6.5" slot, so they were scaled to 1284 × 2778 JPEG
 (no alpha) and uploaded one at a time: a multi-file upload lands in completion order and breaks the seams.
 
+iPhone Duo: "App Store Screenshots Duo.dc.html" is a copy of the board plus a script; `?duo=inner|outer&as=1..7`
+widens the 440 × 956 design stage to the Duo ratio and renders one panel (inner 2007 × 2853, outer 1398 × 2034,
+JPEG, `export/duo/`). All 14 uploaded to Asset Library 2026-10-07, one at a time.
+
+## Creative assets (iOS 27 header and search results)
+OpenDesign board "App Store Creative Assets.html" (project "Ataste iOS app design"), rendered with headless Chrome
+(`?a=header` / `?a=search` shows one artboard at 0,0) into `export/creative/`. Uploaded to Asset Library 2026-10-07:
+header 3840 × 1646 as **PNG** (the same size as JPEG was rejected, "File dimensions are invalid"), search results
+3840 × 2560 JPEG. Apple's specs: https://developer.apple.com/help/app-store-connect/reference/app-information/creative-assets-specifications
+
 ## Submissions
 - 1.0 (build 12) submitted for review 2026-10-03, manual release. Content Rights: yes, with rights. Age rating 4+.
   Price free. Review demo cutoff is 2026-10-10; rerun `supabase/seed/review_demo.sql` if review runs past it.
+- Asset Library draft iOS submission (started 2026-10-07): header, search results and the 14 Duo screenshots,
+  "Ready for Review". Submit for Review is disabled ("add an app version for the selected platform") until 1.0 is
+  approved; then open Asset Library → Draft Submissions → Submit for Review.
