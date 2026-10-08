@@ -26,8 +26,7 @@ var (
 	atasteClient *whatsmeow.Client
 	atasteStore  *MessageStore
 	codeRe       = regexp.MustCompile(`\bATASTE\s+([A-Z0-9]{4})\b`) // anywhere in the message; builds before 13 send the bare code
-	replyMu      sync.Mutex // one reply at a time, spaced out: protects the number from looking like a bot
-	acked        sync.Map   // code -> time of its "got it" reply, one per code. ponytail: never pruned; a few bytes per sign-in until the restart
+	replyMu      sync.Mutex                                         // one reply at a time, spaced out: protects the number from looking like a bot
 	httpc        = &http.Client{Timeout: 15 * time.Second}
 )
 
@@ -48,29 +47,25 @@ func atasteHook(phone string, info types.MessageInfo, text string) {
 		return
 	}
 	code := strings.ToUpper(m[1])
-	// Answer at once, before the backend round trip: blue ticks, then a reply. Testers who saw
-	// nothing for several seconds re-sent the code and switched apps back and forth.
+	// Blue ticks at once, before the backend round trip: testers who saw nothing for several seconds
+	// re-sent the code. No "got it" reply: an automatic answer to every new contact gets the number flagged.
 	if err := atasteClient.MarkRead(context.Background(), []types.MessageID{info.ID}, time.Now(), info.Chat, info.Sender); err != nil {
 		fmt.Printf("ataste: mark read %s: %v\n", code, err)
 	}
 	if phone == "" {
 		// A LID sender whose number WhatsApp hasn't shared with us yet. Never verify a LID.
-		reply(info.Chat, "Sorry, we couldn't read your number from this chat. Please go back to Ataste and tap \"Send again\".", true)
+		reply(info.Chat, "Sorry, we couldn't read your number from this chat. Please go back to Ataste and tap \"Send again\".")
 		return
-	}
-	if t, seen := acked.Load(code); !seen || time.Since(t.(time.Time)) > 30*time.Minute {
-		acked.Store(code, time.Now())
-		go reply(info.Chat, "Got it 👍 Checking your code. Go back to Ataste, it signs you in in a moment.", false)
 	}
 	status, err := report(code, phone, info.ID, info.PushName)
 	if err != nil {
 		fmt.Printf("ataste: report %s: %v\n", code, err)
-		reply(info.Chat, "Something went wrong on our side. Please try again in a minute.", true)
+		reply(info.Chat, "Something went wrong on our side. Please try again in a minute.")
 		return
 	}
-	// verified: the "got it" reply already said so. duplicate: already answered once, stay quiet.
+	// verified: the app signs in, no reply. duplicate: already answered once, stay quiet.
 	if status == "expired" || status == "unknown" {
-		reply(info.Chat, "This code has expired. Go back to Ataste and tap \"Send again\" for a new one.", true)
+		reply(info.Chat, "This code has expired. Go back to Ataste and tap \"Send again\" for a new one.")
 	}
 }
 
@@ -97,13 +92,11 @@ func report(code, phone, waID, pushName string) (string, error) {
 	return r.Status, nil
 }
 
-// wait spaces a reply 2-5 s out; the instant "got it" skips it.
-func reply(chat types.JID, text string, wait bool) {
+// reply spaces each answer 2-5 s out.
+func reply(chat types.JID, text string) {
 	replyMu.Lock()
 	defer replyMu.Unlock()
-	if wait {
-		time.Sleep(time.Duration(2000+rand.Intn(3000)) * time.Millisecond)
-	}
+	time.Sleep(time.Duration(2000+rand.Intn(3000)) * time.Millisecond)
 	if ok, msg, _ := sendWhatsAppMessage(atasteClient, atasteStore, chat.String(), text, "", ""); !ok {
 		fmt.Printf("ataste: reply to %s failed: %s\n", chat, msg)
 	}

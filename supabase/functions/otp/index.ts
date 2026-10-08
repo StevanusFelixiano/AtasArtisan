@@ -60,11 +60,9 @@ Deno.serve(async (req) => {
   const path = new URL(req.url).pathname.replace(/^.*\/otp/, "");
   try {
     if (req.method === "POST" && path === "/start") {
+      // No per-IP limit: a whole campus shares one IP. Codes can't be verified without the sender's
+      // WhatsApp, so a flood only fills the 32^4 code space (~1.7k starts/s held for 10 min).
       const ip = ipOf(req);
-      const since = new Date(Date.now() - 10 * 60_000).toISOString();
-      const { count } = await admin.from("wa_codes").select("code", { count: "exact", head: true })
-        .eq("ip", ip).gte("created_at", since);
-      if ((count ?? 0) >= 6) return json({ error: "Too many attempts. Try again in a few minutes." }, 429);
       const nonce = crypto.randomUUID().replaceAll("-", "") + crypto.randomUUID().replaceAll("-", "");
       for (let i = 0; i < 5; i++) {
         const code = randomCode();
