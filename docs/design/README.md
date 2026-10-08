@@ -12,7 +12,10 @@ The source of truth for every screen, for developers without Claude Design acces
 | `boards/Ataste Tab Bar.dc.html` | The custom tab bar (direction 1a): states, live prototype, motion table. Maps to `Features/Home/AtasteTabBar.swift`. |
 | `boards/Ataste Motion.dc.html` | Every micro-interaction, ranked 1–22: live prototypes (Standard / Reduce Motion, slow motion), the motion spec table and the Swift constants. Maps to `Shared/Motion*.swift`. |
 
-Boards: 1 Onboarding · 2 Home and groups · 3 Group and menu · 4 Split and review · 5 Send, bill and after · 6 History, profile and states · Brand.
+Boards: 1 Onboarding · 2 Home and groups · 3 Group and menu · 4 Split and review · 5 Send, bill and after · 6 History, profile and states · 7 Pickup · Brand.
+
+Board 7 (Pickup, frames `7-*`) was made in OpenDesign, not Claude Design: an `update.sh` run from a Claude Design
+export deletes it. Copy `boards/Ataste Screens 7 Pickup.dc.html` aside first and put it back afterwards.
 
 ## Updating after a Claude Design change
 
