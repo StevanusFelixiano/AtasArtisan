@@ -291,10 +291,10 @@ struct ClaimSheet: View {
     private func save(_ item: Item, _ count: Int, was: Int) async {
         busy = true
         defer { busy = false }
-        let before = store.sharePeople(item)
+        let before = store.minMet(item)
         await attempt($problem, count == 0 ? "Couldn't withdraw" : "Couldn't claim") {
             try await store.claim(item, pieces: count)
-            if let min = item.share_min, before < min, store.sharePeople(item) >= min { reached += 1 }
+            if item.share_min != nil, !before, store.minMet(item) { reached += 1 }
             close?()
             if count == 0 { withdrawn(item, was) }
         }

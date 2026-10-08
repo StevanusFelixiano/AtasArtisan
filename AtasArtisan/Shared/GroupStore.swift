@@ -71,6 +71,7 @@ final class GroupStore {
     func ownerPieces(_ item: Item) -> Int { max(0, (item.share_pieces ?? 0) - claimed(item)) }
     /// The owner and everyone with a claim.
     func sharePeople(_ item: Item) -> Int { 1 + claims(item).count }
+    func minMet(_ item: Item) -> Bool { Pieces.minMet(min: item.share_min, people: sharePeople(item), left: piecesLeft(item)) }
     func myClaim(_ item: Item) -> Int { claims(item).first { $0.user_id == me }?.pieces ?? 0 }
     /// Requests waiting on my answer, as the item's owner.
     var asksForMe: [ShareRequest] {

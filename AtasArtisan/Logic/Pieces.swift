@@ -45,6 +45,13 @@ nonisolated enum Pieces {
         return 8
     }
 
+    /// A minimum of people is met once enough people joined, or once nothing is left to claim: one person may take
+    /// several pieces, and a fully claimed item costs the owner nothing extra. Same rule as `lock_now`.
+    static func minMet(min: Int?, people: Int, left: Int) -> Bool {
+        guard let min else { return true }
+        return people >= min || left == 0
+    }
+
     /// "1 piece", "3 pieces".
     static func label(_ n: Int) -> String { n == 1 ? "1 piece" : "\(n) pieces" }
 

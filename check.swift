@@ -38,6 +38,9 @@ func expect(_ ok: Bool, _ what: String, file: StaticString = #file, line: UInt =
         expect(Pieces.amount(price: 260_000, pieces: 12, n: 3) == 65_000, "joiner pays 3 of 12")
         expect(Pieces.amount(price: 260_000, pieces: 12, n: 2) == 43_333, "joiner rounds down")
         expect(Pieces.ownerAmount(price: 260_000, pieces: 12, claims: [3, 2]) == 151_667, "owner pays the rest")
+        expect(!Pieces.minMet(min: 4, people: 3, left: 1), "min 4, 3 people, a piece left: not met")
+        expect(Pieces.minMet(min: 4, people: 3, left: 0), "min 4, 3 people, all claimed: met")
+        expect(Pieces.minMet(min: nil, people: 1, left: 3), "no minimum: met")
         expect(Pieces.ownerAmount(price: 260_000, pieces: 12, claims: [3, 2]) + 65_000 + 43_333 == 260_000, "shares add up")
         expect(Pieces.each(price: 260_000, pieces: 12) == 21_667, "price a piece")
         for (name, n) in [("Burnt Cheesecake 20 cm", 8), ("New York Cheesecakes 20 x 20 cm", 8), ("Classic Brownie 20x20 cm", 8),

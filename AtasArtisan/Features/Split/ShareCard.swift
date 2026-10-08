@@ -372,7 +372,7 @@ private struct SharedBlock: View {
 
     /// Locked in; under the minimum "2 more needed"; at it "Minimum reached". No minimum, no chip.
     @ViewBuilder private var chip: some View {
-        let met = item.share_min.map { people >= $0 } ?? true
+        let met = store.minMet(item)
         ZStack {
             if !open {
                 Tag(text: "Locked in", fill: Brand.cocoa, ink: Brand.cream)
