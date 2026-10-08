@@ -65,7 +65,6 @@ struct ProductView: View {
         !soldOut && store.group?.personal == false && store.group?.state == .open && qty == 1
     }
     /// The minimum's stepper runs to the group's size (at most 24).
-    private var minUpper: Int { max(PieceMotion.minPeopleFloor, min(PieceMotion.range.upperBound, store.activeMembers.count)) }
 
     var body: some View {
         ScrollView {
@@ -98,7 +97,7 @@ struct ProductView: View {
                 withTransaction(still) {
                     picked = OptionMatch.defaultPick(variants: variants).filter { !flavourGroups.contains($0.key) }
                     pieces = Pieces.defaultCount(product.name)
-                    minPeople = min(PieceMotion.minPeopleDefault, minUpper)
+                    minPeople = PieceMotion.minPeopleDefault
                 }
             }
         }
@@ -204,7 +203,7 @@ struct ProductView: View {
             .padding(.vertical, 12)
             .frame(minHeight: 52)
             if sharing {
-                ShareRows(pieces: $pieces, keep: $keep, hasMin: $hasMin, minPeople: $minPeople, price: price ?? product.fromPrice, minUpper: minUpper)
+                ShareRows(pieces: $pieces, keep: $keep, hasMin: $hasMin, minPeople: $minPeople, price: price ?? product.fromPrice)
                     .transition(.opacity)
             }
         }

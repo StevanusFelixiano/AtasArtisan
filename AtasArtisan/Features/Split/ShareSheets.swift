@@ -44,7 +44,7 @@ struct ShareSheetView: View {
 
 /// A-1's rows (product sheet and share settings): "Pieces · Rp 21.667 a piece" with a 2…24 stepper, "Keep for me ·
 /// Others can claim the other 11" with a 1…pieces − 1 stepper, "Cancel if fewer people join" with its toggle, and
-/// "Fewer than 4 people, you included" when on. Pieces never drop to what I keep plus what others `claimed`, and I
+/// "Fewer than 4 people, you included" when on (up to me plus one per claimable piece). Pieces never drop to what I keep plus what others `claimed`, and I
 /// never keep the pieces they hold: a blocked stepper shakes and says why (`claimedBy`: "Kevin and Putri have 5 claimed").
 struct ShareRows: View {
     @Binding var pieces: Int
@@ -52,7 +52,6 @@ struct ShareRows: View {
     @Binding var hasMin: Bool
     @Binding var minPeople: Int
     var price: Int
-    var minUpper: Int
     var stepper: CGFloat = 28
     var claimed = 0
     var claimedBy: String? = nil
@@ -65,6 +64,8 @@ struct ShareRows: View {
     private var floor: Int { Pieces.floor(keep: keep, claimed: claimed) }
     private var maxKeep: Int { Pieces.maxKeep(pieces: pieces, claimed: claimed) }
     private var claimedText: String { claimedBy ?? "\(Pieces.label(claimed)) claimed" }
+    /// The most people who can share: me plus one per piece others can claim.
+    private var minUpper: Int { min(PieceMotion.range.upperBound, pieces - keep + 1) }
 
     var body: some View {
         VStack(spacing: 0) {
@@ -119,15 +120,15 @@ struct ShareRows: View {
                         .contentTransition(.numericText())
                         .animation(reduceMotion ? Motion.Reduced.fade : Motion.digits, value: minPeople)
                 } control: {
-                    let upper = max(minUpper, minPeople)
                     PillStepper(value: "\(minPeople)", fill: Brand.cream, gap: 10, pad: 3, minWidth: 20, countSize: 16, button: stepper,
-                                canMinus: minPeople > PieceMotion.minPeopleFloor, canPlus: minPeople < upper,
+                                canMinus: minPeople > PieceMotion.minPeopleFloor, canPlus: minPeople < minUpper,
                                 minusLabel: "One person fewer", plusLabel: "One person more",
                                 minus: { minPeople -= 1 }, plus: { minPeople += 1 })
                 }
                 .transition(.opacity)
             }
         }
+        .onChange(of: minPeople > minUpper, initial: true) { _, over in if over { minPeople = minUpper } }
         .sensoryFeedback(Haptic.blocked, trigger: stuck + keepStuck)
         .task(id: stuck + keepStuck) {
             guard stuck + keepStuck > 0, reason != nil else { return }
@@ -318,7 +319,6 @@ struct ShareSettingsSheet: View {
     @State private var problem: Problem?
 
     private var item: Item? { store.items.first { $0.id == itemID } }
-    private var minUpper: Int { max(PieceMotion.minPeopleFloor, min(PieceMotion.range.upperBound, store.activeMembers.count)) }
 
     var body: some View {
         if let item {
@@ -332,7 +332,7 @@ struct ShareSettingsSheet: View {
                         if let request {
                             explainer("\(store.name(request.requester_id)) asked for \(request.mine) of \(request.pieces) pieces. They get theirs as soon as you share it.")
                         }
-                        ShareRows(pieces: $pieces, keep: $keep, hasMin: $hasMin, minPeople: $minPeople, price: item.unit_price, minUpper: minUpper,
+                        ShareRows(pieces: $pieces, keep: $keep, hasMin: $hasMin, minPeople: $minPeople, price: item.unit_price,
                                   stepper: 32, claimed: claimed,
                                   claimedBy: claims.isEmpty ? nil : "\(joinedNames(claims.map { store.name($0.user_id) })) \(claims.count == 1 ? "has" : "have") \(claimed) claimed")
                             .padding(.horizontal, 16)
@@ -368,7 +368,7 @@ struct ShareSettingsSheet: View {
                 pieces = item.share_pieces ?? request?.pieces ?? Pieces.defaultCount(item.name)
                 keep = item.share_pieces == nil ? 1 : store.kept(item)
                 hasMin = item.share_min != nil
-                minPeople = item.share_min ?? min(PieceMotion.minPeopleDefault, minUpper)
+                minPeople = item.share_min ?? PieceMotion.minPeopleDefault
             }
         }
     }
