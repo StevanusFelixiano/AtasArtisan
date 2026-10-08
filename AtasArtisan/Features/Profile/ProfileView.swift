@@ -345,6 +345,7 @@ struct NotificationSettingsView: View {
             ("Host asks you to edit an item", ["edit_requested"]),
             ("Item sold out on the menu", ["sold_out"]),
             ("Order sent, confirmed, delivered, closed", ["sent", "delivered", "closed", "cancelled", "removed"]),
+            ("Pickup reminders from the host", ["pickup_nudge"]),
         ]),
         ("Sharing", [
             ("Someone shares an item", ["item_shared"]),
@@ -362,6 +363,7 @@ struct NotificationSettingsView: View {
             ("Member finished editing", ["edit_done"]),
             ("Member says they’ve paid", ["member_paid"]),
             ("Everyone has paid", ["everyone_paid"]),
+            ("Everyone has taken their food", ["fridge_clear"]),
         ]),
     ]
     

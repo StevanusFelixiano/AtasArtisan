@@ -3,7 +3,7 @@ import Supabase
 
 /// Boards 3 to 6: the group order. One screen whose content follows the order's state and the viewer's role
 /// (host or member): open (3-1/3-2/3-3/3-8), host review and edit rounds (4-5/4-7/4-8), the member's edit
-/// request (4-9/4-10), waiting on the host (3-5), sent (5-2), confirmed (5-4), delivered (5-13), cancelled
+/// request (4-9/4-10), waiting on the host (3-5), sent (5-2), confirmed (5-4), delivered (5-13, Pickup 7-1 to 7-3), cancelled
 /// (6-10). The bottom Liquid Glass bar carries the one next step. The sheets (menu, share, send, bill...)
 /// are other screens; this view only presents them.
 struct GroupView: View {
@@ -408,7 +408,7 @@ struct GroupView: View {
                     Task { await act("Couldn't close") { try await store.rpc("close_group", ["g": .string(id.uuidString)]) } }
                 }
             } else {
-                memberPayBar(g)
+                memberDeliveredBar(g)
             }
         case .waiting where g.payPhase != nil, .closed:
             memberPayBar(g)
@@ -489,6 +489,7 @@ struct GroupView: View {
         case .bill: NavigationStack { BillView(store: store) }
         case .board: NavigationStack { PaymentBoardView(store: store) { sheet = .send } }
         case .delivery: NavigationStack { DeliveryView(store: store) }
+        case .pickup: NavigationStack { PickupBoardView(store: store) }
         case .editDelivery: NavigationStack { EditDeliverySheet(store: store) }
         }
     }
@@ -503,6 +504,7 @@ struct GroupView: View {
         case "bill": sheet = .bill
         case "board": sheet = .board
         case "delivery": sheet = .delivery
+        case "pickup": sheet = .pickup
         case "share": sheet = .share
         case "claim": if let i = store.sharedItems.first(where: { $0.owner_id != store.me }) { sheet = store.myClaim(i) > 0 ? .editClaim(i) : .claim(i) }
         case "shareitem": if let i = store.myItems.first(where: { $0.share_pieces != nil }) ?? store.myItems.first { sheet = .shareItem(i, nil) }
@@ -524,6 +526,8 @@ struct GroupView: View {
 
 enum GroupSheet: Identifiable {
     case menu, share, send, confirmAtas, bill, board, delivery, requestEdit(RequestSeed), editDelivery
+    /// Pickup board (7-4).
+    case pickup
     /// A2: claim or edit my claim on a shared item, the owner's share settings (answering a request), ask to share.
     case claim(Item), editClaim(Item), shareItem(Item, ShareRequest?), ask(UUID)
     var id: String {
@@ -532,7 +536,7 @@ enum GroupSheet: Identifiable {
         case .claim(let i): "claim-\(i.id)"; case .editClaim(let i): "edit-claim-\(i.id)"
         case .shareItem(let i, _): "share-item-\(i.id)"; case .ask(let u): "ask-\(u)"
         case .confirmAtas: "confirm"; case .bill: "bill"; case .board: "board"; case .delivery: "delivery"
-        case .requestEdit: "request"; case .editDelivery: "edit-delivery"
+        case .requestEdit: "request"; case .editDelivery: "edit-delivery"; case .pickup: "pickup"
         }
     }
 

@@ -1,0 +1,289 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="stylesheet" href="https://api.fontshare.com/v2/css?f[]=roundo@1&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Manrope:wght@400..800&family=Shrikhand&display=swap">
+<script src="./image-slot.js"></script>
+<script src="./ataste-art.js"></script>
+<style>body{margin:0;background:#F2E9DF;color:#2B1A12;font-family:Manrope,sans-serif;-webkit-font-smoothing:antialiased}a{color:#9D5C1D;text-decoration:none}a:hover{color:#2B1A12}</style>
+</helmet>
+
+<section data-od-id="board-header" style="padding:56px 64px 32px;display:flex;flex-direction:column;gap:10px;border-bottom:1px solid rgba(43,26,18,.1)">
+  <span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase;color:#9D5C1D">Ataste · Screens · 7 · Pickup add-on</span>
+  <h1 style="margin:0;font:700 56px/1 Roundo,sans-serif;letter-spacing:-.02em">I’ve taken mine</h1>
+  <p style="margin:0;max-width:800px;font:500 15px/1.5 Manrope;color:#5A4237">An optional step after 4.14 Delivered. Each person says when their food is out of the office fridge, so nobody has to post it in WhatsApp. It’s a self-report: the host doesn’t confirm it, it never changes the bill and it never blocks Close order. Same Friday Treats order as board 5: Kevin confirmed delivery Fri 10:12, the Burnt Cheesecake 20 cm is cut into 12 slices (Rani 6, Putri 3, Kevin 3). All times are WITA (Bali). Boards: <a href="Ataste Screens 1 Onboarding.dc.html">1</a> · <a href="Ataste Screens 2 Home and Groups.dc.html">2</a> · <a href="Ataste Screens 3 Group and Menu.dc.html">3</a> · <a href="Ataste Screens 4 Split and Review.dc.html">4</a> · <a href="Ataste Screens 5 Send Bill and After.dc.html">5</a> · <a href="Ataste Screens 6 History Profile and States.dc.html">6</a> · <a href="Ataste Notifications.dc.html">Notifications</a> · <a href="Ataste Flow Map.dc.html">Flow map</a></p>
+  <div style="display:flex;align-items:center;gap:10px;padding-top:6px;font:500 13px Manrope;color:#5A4237">
+    <span style="display:inline-flex;align-items:center;gap:5px;white-space:nowrap;padding:4px 14px 4px 11px;border-radius:999px;background:#2B1A12;color:#E9FF83;font:600 11px/1.4 Manrope;letter-spacing:.03em;text-transform:uppercase"><at-icon name="bag" size="11" sw="2.6"></at-icon>Taken</span>
+    New member tag. Cocoa with a bag icon, so it reads apart from <at-tag kind="paid" size="s"></at-tag> at a glance. Not taken shows no tag.
+  </div>
+</section>
+
+<section data-od-id="section-member" style="padding:48px 64px 24px">
+  <h2 style="margin:0 0 28px;font:700 28px/1 Roundo,sans-serif">4.14b Pickup <span style="font:500 14px Manrope;color:#7A6257">· member</span></h2>
+  <div style="display:flex;flex-wrap:wrap;gap:56px 48px;align-items:flex-start">
+
+    <div id="7-1" data-od-id="screen-7-1" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#7-1" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">7-1</a><b style="color:#2B1A12">Delivered · not taken yet</b> · Putri, 10:28 · full scroll</div>
+      <div data-screen-label="7-1 Delivered member" style="position:relative;width:402px;height:1040px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back right="more" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:116px;left:16px;right:16px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;flex-direction:column;gap:8px;padding:0 4px"><at-tag kind="delivered"></at-tag><span style="font:700 32px/1.05 Roundo,sans-serif">Academy Bali Friday Treats</span></div>
+          <div style="position:relative;background:#E9FF83;border-radius:32px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:inset 0 0 0 2px #BCD947;overflow:hidden">
+            <div style="position:relative;height:200px;border-radius:20px;overflow:hidden;background:#EDE2E4"><div style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(43,26,18,.06) 0 8px,transparent 8px 16px)"></div><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:500 12px ui-monospace,Menlo,monospace;color:#7A6257">delivery photo</span></div>
+            <div style="display:flex;align-items:center;gap:10px"><at-avatar i="K" size="30"></at-avatar><span style="flex:1;font:600 14px Manrope">Kevin confirmed · Fri 10:12</span></div>
+            <div style="position:absolute;right:10px;top:150px;width:96px;height:96px;border-radius:50%;overflow:hidden"><image-slot id="pose-celebrating" src="uploads/art/pose-celebrating.png" fit="cover" shape="circle" placeholder="celebrating" style="width:96px;height:96px"></image-slot></div>
+          </div>
+          <div data-od-id="my-food-card" style="background:#fff;border-radius:28px;padding:18px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;justify-content:space-between;align-items:center;min-height:22px"><span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase">Yours in the fridge</span></div>
+            <div style="display:flex;gap:12px;align-items:center"><at-photo size="48" bg="#F9CFAF"></at-photo><span style="flex:1;font:600 14px Manrope">2× Pain Au Chocolate</span></div>
+            <div style="display:flex;gap:12px;align-items:center"><at-photo size="48" bg="#F9B7D2"></at-photo><div style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font:600 14px Manrope">3 slices Burnt Cheesecake</span><span style="font:500 12px Manrope;color:#7A6257">6 of 12 slices left in the fridge</span></div></div>
+          </div>
+          <div data-od-id="pickup-row-member" style="background:#fff;border-radius:24px;padding:16px;display:flex;justify-content:space-between;align-items:center"><div style="display:flex;flex-direction:column;gap:2px"><span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase">Pickup</span><span style="font:600 14px Manrope">2 of 6 taken · Rani, Dimas</span></div><at-icon name="chev-r" size="18" color="#A08A80"></at-icon></div>
+          <div style="background:#fff;border-radius:24px;padding:16px;display:flex;justify-content:space-between;align-items:center"><div style="display:flex;flex-direction:column;gap:2px"><span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase">Your bill</span><span style="font:600 14px Manrope">Rp 99.500 to Rani</span></div><at-tag kind="paid" size="s"></at-tag></div>
+        </div>
+        <at-glass radius="36" style="position:absolute;left:12px;right:12px;bottom:26px;padding:12px">
+          <span data-od-id="cta-taken" style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 0;border-radius:999px;background:#9D5C1D;border:4px solid #9D5C1D;color:#FBF3EA;font:600 17px/1.25 Manrope"><at-icon name="bag" size="18"></at-icon>I’ve taken mine</span>
+          <span style="display:block;text-align:center;padding:8px 0 2px;font:500 12px Manrope;color:#5A4237">Lets the group know your food is out of the fridge.</span>
+        </at-glass>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+    </div>
+
+    <div id="7-2" data-od-id="screen-7-2" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#7-2" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">7-2</a><b style="color:#2B1A12">Delivered · taken</b> · right after the tap, with undo</div>
+      <div data-screen-label="7-2 Delivered member taken" style="position:relative;width:402px;height:1040px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back right="more" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:116px;left:16px;right:16px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;flex-direction:column;gap:8px;padding:0 4px"><at-tag kind="delivered"></at-tag><span style="font:700 32px/1.05 Roundo,sans-serif">Academy Bali Friday Treats</span></div>
+          <div style="position:relative;background:#E9FF83;border-radius:32px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:inset 0 0 0 2px #BCD947;overflow:hidden">
+            <div style="position:relative;height:200px;border-radius:20px;overflow:hidden;background:#EDE2E4"><div style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(43,26,18,.06) 0 8px,transparent 8px 16px)"></div><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:500 12px ui-monospace,Menlo,monospace;color:#7A6257">delivery photo</span></div>
+            <div style="display:flex;align-items:center;gap:10px"><at-avatar i="K" size="30"></at-avatar><span style="flex:1;font:600 14px Manrope">Kevin confirmed · Fri 10:12</span></div>
+            <div style="position:absolute;right:10px;top:150px;width:96px;height:96px;border-radius:50%;overflow:hidden"><image-slot id="pose-celebrating" src="uploads/art/pose-celebrating.png" fit="cover" shape="circle" placeholder="celebrating" style="width:96px;height:96px"></image-slot></div>
+          </div>
+          <div data-od-id="my-food-card-taken" style="background:#fff;border-radius:28px;padding:18px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;justify-content:space-between;align-items:center;min-height:22px"><span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase">Your food</span><span style="display:inline-flex;align-items:center;gap:5px;white-space:nowrap;padding:4px 14px 4px 11px;border-radius:999px;background:#2B1A12;color:#E9FF83;font:600 11px/1.4 Manrope;letter-spacing:.03em;text-transform:uppercase"><at-icon name="bag" size="11" sw="2.6"></at-icon>Taken</span></div>
+            <div style="display:flex;gap:12px;align-items:center"><at-photo size="48" bg="#F9CFAF"></at-photo><span style="flex:1;font:600 14px Manrope">2× Pain Au Chocolate</span></div>
+            <div style="display:flex;gap:12px;align-items:center"><at-photo size="48" bg="#F9B7D2"></at-photo><div style="flex:1;display:flex;flex-direction:column;gap:1px"><span style="font:600 14px Manrope">3 slices Burnt Cheesecake</span><span style="font:500 12px Manrope;color:#7A6257">3 of 12 slices left in the fridge</span></div></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;padding-top:12px;border-top:1px dashed #D1B6BB"><span style="font:500 13px Manrope;color:#5A4237">You took yours at 10:31</span><span data-od-id="undo-taken" style="font:600 13px Manrope;color:#9D5C1D">Undo</span></div>
+          </div>
+          <div style="background:#fff;border-radius:24px;padding:16px;display:flex;justify-content:space-between;align-items:center"><div style="display:flex;flex-direction:column;gap:2px"><span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase">Pickup</span><span style="font:600 14px Manrope">3 of 6 taken · you, Rani, Dimas</span></div><at-icon name="chev-r" size="18" color="#A08A80"></at-icon></div>
+          <div style="background:#fff;border-radius:24px;padding:16px;display:flex;justify-content:space-between;align-items:center"><div style="display:flex;flex-direction:column;gap:2px"><span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase">Your bill</span><span style="font:600 14px Manrope">Rp 99.500 to Rani</span></div><at-tag kind="paid" size="s"></at-tag></div>
+        </div>
+        <span style="position:absolute;left:50%;bottom:52px;transform:translateX(-50%);display:inline-flex;align-items:center;gap:14px;padding:12px 12px 12px 20px;border-radius:999px;background:#2B1A12;color:#FBF3EA;font:600 14px Manrope;white-space:nowrap;box-shadow:0 8px 24px rgba(43,26,18,.25)"><span style="display:inline-flex;align-items:center;gap:8px"><at-icon name="check" size="16" color="#E9FF83" sw="3"></at-icon>Marked as taken</span><span style="padding:4px 12px;border-radius:999px;background:rgba(251,243,234,.14);color:#E9FF83">Undo</span></span>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+      <div style="width:402px;box-sizing:border-box;padding:16px 18px;border-radius:24px;background:#fff;display:flex;flex-direction:column;gap:8px">
+        <span style="font:600 11px/1 Manrope;letter-spacing:.03em;text-transform:uppercase;color:#7A6257">After Undo</span>
+        <span style="font:600 14px/1.45 Manrope">Back to 7-1: the tag goes, the slice count goes back up and “I’ve taken mine” returns. No one is notified.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-od-id="section-host" style="padding:48px 64px 24px">
+  <h2 style="margin:0 0 28px;font:700 28px/1 Roundo,sans-serif">4.14b Pickup <span style="font:500 14px Manrope;color:#7A6257">· host</span></h2>
+  <div style="display:flex;flex-wrap:wrap;gap:56px 48px;align-items:flex-start">
+
+    <div id="7-3" data-od-id="screen-7-3" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#7-3" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">7-3</a><b style="color:#2B1A12">Delivered · host</b> · 5-13 plus the Pickup card, 10:55</div>
+      <div data-screen-label="7-3 Delivered host" style="position:relative;width:402px;height:874px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back right="more" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:116px;left:16px;right:16px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;flex-direction:column;gap:8px;padding:0 4px"><at-tag kind="delivered"></at-tag><span style="font:700 32px/1.05 Roundo,sans-serif">Academy Bali Friday Treats</span></div>
+          <div style="position:relative;background:#E9FF83;border-radius:32px;padding:16px;display:flex;flex-direction:column;gap:12px;box-shadow:inset 0 0 0 2px #BCD947;overflow:hidden">
+            <div style="position:relative;height:200px;border-radius:20px;overflow:hidden;background:#EDE2E4"><div style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(43,26,18,.06) 0 8px,transparent 8px 16px)"></div><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:500 12px ui-monospace,Menlo,monospace;color:#7A6257">delivery photo</span></div>
+            <div style="display:flex;align-items:center;gap:10px"><at-avatar i="K" size="30"></at-avatar><span style="flex:1;font:600 14px Manrope">Kevin confirmed · Fri 10:12</span></div>
+            <div style="position:absolute;right:10px;top:150px;width:96px;height:96px;border-radius:50%;overflow:hidden"><image-slot id="pose-celebrating" src="uploads/art/pose-celebrating.png" fit="cover" shape="circle" placeholder="celebrating" style="width:96px;height:96px"></image-slot></div>
+          </div>
+          <div style="background:#fff;border-radius:24px;padding:16px;display:flex;justify-content:space-between;align-items:center"><div style="display:flex;flex-direction:column;gap:2px"><span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase">Payments</span><span style="font:600 14px Manrope">4 of 5 paid · Kevin outstanding</span></div><at-icon name="chev-r" size="18" color="#A08A80"></at-icon></div>
+          <div data-od-id="pickup-card-host" style="background:#fff;border-radius:24px;padding:16px;display:flex;justify-content:space-between;align-items:center"><div style="display:flex;flex-direction:column;gap:2px"><span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase">Pickup</span><span style="font:600 14px Manrope">4 of 6 taken · Kevin, Nadia left</span></div><at-icon name="chev-r" size="18" color="#A08A80"></at-icon></div>
+        </div>
+        <at-glass radius="36" style="position:absolute;left:12px;right:12px;bottom:26px;padding:12px">
+          <span style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 0;border-radius:999px;background:#2B1A12;border:4px solid #2B1A12;color:#FBF3EA;font:600 17px/1.25 Manrope">Close order</span>
+        </at-glass>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+      <div style="width:402px;box-sizing:border-box;padding:16px 18px;border-radius:24px;background:#fff;display:flex;flex-direction:column;gap:8px">
+        <span style="font:600 11px/1 Manrope;letter-spacing:.03em;text-transform:uppercase;color:#7A6257">Pickup card, other states</span>
+        <span style="font:600 14px/1.45 Manrope">No one yet: “0 of 6 taken”. Everyone: “Fridge is clear · all 6 taken”. Close order works in every state.</span>
+      </div>
+    </div>
+
+    <div id="7-4" data-od-id="screen-7-4" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#7-4" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">7-4</a><b style="color:#2B1A12">Pickup board</b> · host · modelled on 5-9 · full scroll</div>
+      <div data-screen-label="7-4 Pickup board" style="position:relative;width:402px;height:1330px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back title="Pickup" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:116px;left:16px;right:16px;display:flex;flex-direction:column;gap:14px">
+          <div data-od-id="pickup-summary" style="background:#fff;border-radius:32px;padding:20px;display:flex;flex-direction:column;gap:12px">
+            <div style="display:flex;justify-content:space-between;align-items:baseline"><span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase">Taken</span><span style="font:700 18px Roundo,sans-serif">4 of 6</span></div>
+            <div style="display:flex;height:16px;border-radius:999px;overflow:hidden;gap:2px"><span style="flex:4;background:#BCD947"></span><span style="flex:2;background:#EDE2E4"></span></div>
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+              <div style="display:flex;flex-direction:column;gap:2px"><span style="display:flex;align-items:center;gap:5px;font:600 11px Manrope;color:#5A4237"><span style="width:8px;height:8px;border-radius:50%;background:#BCD947"></span>Taken</span><span style="font:700 17px Roundo,sans-serif">Rani, Dimas, Putri, Arief</span></div>
+              <div style="display:flex;flex-direction:column;gap:2px"><span style="display:flex;align-items:center;gap:5px;font:600 11px Manrope;color:#5A4237"><span style="width:8px;height:8px;border-radius:50%;background:#D1B6BB"></span>Still in the fridge</span><span style="font:700 17px Roundo,sans-serif">Kevin, Nadia</span></div>
+            </div>
+          </div>
+          <div style="background:#fff;border-radius:32px;padding:4px 16px">
+            <sc-for list="{{ pickup }}" as="m" hint-placeholder-count="6">
+              <div style="display:flex;gap:12px;align-items:center;padding:14px 0;border-bottom:{{ m.sep }}">
+                <at-avatar i="{{ m.i }}" size="40"></at-avatar>
+                <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
+                  <div style="display:flex;justify-content:space-between;align-items:baseline;gap:8px"><span style="font:700 16px Manrope">{{ m.name }}</span><span style="font:500 12px Manrope;color:#7A6257;white-space:nowrap">{{ m.when }}</span></div>
+                  <span style="font:500 12px/1.4 Manrope;color:#5A4237">{{ m.items }}</span>
+                  <div style="display:flex;align-items:center;gap:8px;min-height:28px">
+                    <sc-if value="{{ m.taken }}" hint-placeholder-val="{{ true }}"><span style="display:inline-flex;align-items:center;gap:5px;white-space:nowrap;padding:2px 10px 2px 8px;border-radius:999px;background:#2B1A12;color:#E9FF83;font:600 10px/1.4 Manrope;letter-spacing:.03em;text-transform:uppercase"><at-icon name="bag" size="10" sw="2.6"></at-icon>Taken</span></sc-if>
+                    <sc-if value="{{ m.nudge }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;gap:5px;padding:5px 12px;border-radius:999px;background:#F9CFAF;font:600 12px Manrope"><at-icon name="bell" size="13"></at-icon>Nudge</span></sc-if>
+                    <sc-if value="{{ m.nudged }}" hint-placeholder-val="{{ false }}"><span style="display:inline-flex;align-items:center;gap:5px;font:600 12px Manrope;color:#5A4237"><at-icon name="check" size="12" sw="3"></at-icon>Nudged 10:40</span></sc-if>
+                    <span style="flex:1"></span>
+                    <sc-if value="{{ m.wa }}" hint-placeholder-val="{{ true }}"><span style="width:28px;height:28px;border-radius:50%;background:#E9FF83;display:flex;align-items:center;justify-content:center"><at-icon name="wa" size="14"></at-icon></span></sc-if>
+                  </div>
+                </div>
+              </div>
+            </sc-for>
+          </div>
+          <div data-od-id="fridge-shared" style="background:#fff;border-radius:32px;padding:20px;display:flex;flex-direction:column;gap:14px">
+            <span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase">Shared items in the fridge</span>
+            <div style="display:flex;gap:12px;align-items:center">
+              <at-photo size="56" bg="#F9B7D2"></at-photo>
+              <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:2px"><span style="font:700 15px Manrope">Burnt Cheesecake 20 cm</span><span style="font:700 17px Roundo,sans-serif">3 of 12 slices left</span></div>
+            </div>
+            <div style="display:grid;grid-template-columns:repeat(12,1fr);gap:3px">
+              <sc-for list="{{ slices }}" as="s" hint-placeholder-count="12"><span style="height:14px;border-radius:4px;background:{{ s.bg }};box-shadow:{{ s.ring }}"></span></sc-for>
+            </div>
+            <div style="display:flex;flex-direction:column;gap:6px">
+              <div style="display:flex;justify-content:space-between;font:500 13px Manrope;color:#5A4237"><span>Rani · 6 slices</span><span style="font-weight:600;color:#2B1A12">Taken 10:20</span></div>
+              <div style="display:flex;justify-content:space-between;font:500 13px Manrope;color:#5A4237"><span>Putri · 3 slices</span><span style="font-weight:600;color:#2B1A12">Taken 10:31</span></div>
+              <div style="display:flex;justify-content:space-between;font:500 13px Manrope;color:#5A4237"><span>Kevin · 3 slices</span><span style="font-weight:600;color:#9D5C1D">In the fridge</span></div>
+            </div>
+          </div>
+          <span style="font:500 12px/1.45 Manrope;color:#7A6257;padding:0 4px">Each person marks their own food. This doesn’t change anyone’s bill, and you can close the order at any time.</span>
+        </div>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+      <div style="width:402px;box-sizing:border-box;padding:16px 18px;border-radius:24px;background:#fff;display:flex;flex-direction:column;gap:8px">
+        <span style="font:600 11px/1 Manrope;letter-spacing:.03em;text-transform:uppercase;color:#7A6257">Member view of the same board</span>
+        <span style="font:600 14px/1.45 Manrope">Opened from the Pickup row in 7-1. Same list and fridge card, without Nudge buttons.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-od-id="section-after" style="padding:48px 64px 24px">
+  <h2 style="margin:0 0 28px;font:700 28px/1 Roundo,sans-serif">After pickup <span style="font:500 14px Manrope;color:#7A6257">· member</span></h2>
+  <div style="display:flex;flex-wrap:wrap;gap:56px 48px;align-items:flex-start">
+
+    <div id="7-5" data-od-id="screen-7-5" style="display:flex;flex-direction:column;gap:14px">
+      <div style="display:flex;align-items:baseline;gap:8px;font:400 12px Manrope;color:#7A6257"><a href="#7-5" style="font:600 10.5px ui-monospace,Menlo,monospace;padding:3px 7px;background:rgba(43,26,18,.08);color:#2B1A12;border-radius:5px">7-5</a><b style="color:#2B1A12">History detail</b> · 6-2 with one added line · full scroll</div>
+      <div data-screen-label="7-5 History detail taken" style="position:relative;width:402px;height:1080px;border-radius:56px;overflow:hidden;background:#FBF3EA;box-shadow:0 0 0 9px #1A120D,0 30px 60px rgba(43,26,18,.3)">
+        <at-status style="position:absolute;top:0;left:0;z-index:3"></at-status>
+        <at-nav back right="share" style="position:absolute;top:54px;left:0;z-index:3"></at-nav>
+        <div style="position:absolute;top:116px;left:16px;right:16px;display:flex;flex-direction:column;gap:14px">
+          <div style="display:flex;flex-direction:column;gap:8px;padding:0 4px"><div style="display:flex;gap:8px"><at-tag kind="closed"></at-tag><at-tag kind="paid"></at-tag></div><span style="font:700 30px/1.05 Roundo,sans-serif">Academy Bali Friday Treats</span><span style="font:500 13px Manrope;color:#5A4237">Fri 3 Oct 2026 · hosted by Rani · 6 people</span></div>
+          <div style="position:relative;height:180px;border-radius:28px;overflow:hidden;background:#EDE2E4"><div style="position:absolute;inset:0;background:repeating-linear-gradient(135deg,rgba(43,26,18,.06) 0 8px,transparent 8px 16px)"></div><span style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font:500 12px ui-monospace,Menlo,monospace;color:#7A6257">delivery photo</span><span style="position:absolute;left:12px;bottom:12px;padding:5px 12px;border-radius:999px;background:rgba(43,26,18,.75);color:#FBF3EA;font:600 12px Manrope">Kevin · Fri 10:12</span></div>
+          <div style="background:#fff;border-radius:28px;padding:18px;display:flex;flex-direction:column;gap:10px">
+            <div data-od-id="history-taken-line" style="display:flex;justify-content:space-between;align-items:center"><span style="font:600 12px/1 Manrope;letter-spacing:.03em;text-transform:uppercase">My items</span><span style="display:inline-flex;align-items:center;gap:8px;font:500 12px Manrope;color:#7A6257">Fri 10:31<span style="display:inline-flex;align-items:center;gap:5px;white-space:nowrap;padding:2px 10px 2px 8px;border-radius:999px;background:#2B1A12;color:#E9FF83;font:600 10px/1.4 Manrope;letter-spacing:.03em;text-transform:uppercase"><at-icon name="bag" size="10" sw="2.6"></at-icon>Taken</span></span></div>
+            <div style="display:flex;gap:12px;align-items:center"><at-photo size="48" bg="#F9CFAF"></at-photo><span style="flex:1;font:600 14px Manrope">2× Pain Au Chocolate</span><span style="font:600 14px Manrope">Rp 32.000</span></div>
+            <div style="display:flex;gap:12px;align-items:center"><at-photo size="48" bg="#F9B7D2"></at-photo><div style="flex:1;display:flex;flex-direction:column"><span style="font:600 14px Manrope">Burnt Cheesecake · 25%</span><span style="font:500 12px Manrope;color:#7A6257">under Rani · split 3 ways</span></div><span style="font:600 14px Manrope">Rp 65.000</span></div>
+            <div style="display:flex;flex-direction:column;gap:6px;padding-top:10px;border-top:1px dashed #D1B6BB">
+              <div style="display:flex;justify-content:space-between;font:500 13px Manrope;color:#5A4237"><span>Ongkir share</span><span>Rp 5.000</span></div>
+              <div style="display:flex;justify-content:space-between;font:500 13px Manrope;color:#5E7A00"><span>Discount share</span><span>− Rp 2.500</span></div>
+              <div style="display:flex;justify-content:space-between;align-items:baseline;padding-top:6px"><span style="font:700 15px Manrope">Paid to Rani</span><span style="font:700 22px Roundo,sans-serif">Rp 99.500</span></div>
+            </div>
+          </div>
+        </div>
+        <at-glass radius="36" style="position:absolute;left:12px;right:12px;bottom:26px;padding:12px">
+          <span style="display:flex;align-items:center;justify-content:center;gap:8px;padding:14px 0;border-radius:999px;background:#9D5C1D;border:4px solid #9D5C1D;color:#FBF3EA;font:600 17px/1.25 Manrope"><at-icon name="refresh" size="18"></at-icon>Reorder my items</span>
+          <span style="display:block;text-align:center;padding:8px 0 2px;font:500 12px Manrope;color:#5A4237">Adds Pain Au Chocolate ×2 to a new order. Splits aren’t copied.</span>
+        </at-glass>
+        <at-homebar style="position:absolute;bottom:0;left:0"></at-homebar>
+      </div>
+      <div style="width:402px;box-sizing:border-box;padding:16px 18px;border-radius:24px;background:#fff;display:flex;flex-direction:column;gap:8px">
+        <span style="font:600 11px/1 Manrope;letter-spacing:.03em;text-transform:uppercase;color:#7A6257">History list (6-1)</span>
+        <span style="font:600 14px/1.45 Manrope">Unchanged. The list row keeps one tag (Closed); taken only shows inside the detail.</span>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section data-od-id="section-notifications" style="padding:48px 64px 24px">
+  <h2 style="margin:0 0 8px;font:700 28px/1 Roundo,sans-serif">Notifications</h2>
+  <p style="margin:0 0 28px;font:500 14px Manrope;color:#7A6257">Numbered after the 22 events on the <a href="Ataste Notifications.dc.html">Notifications</a> board. Self-reports don’t notify anyone; only these two do.</p>
+  <div style="background:#2B1A12;border-radius:40px;padding:40px;display:grid;grid-template-columns:repeat(2,380px);gap:28px 28px;width:max-content">
+    <sc-for list="{{ notifs }}" as="n" hint-placeholder-count="2">
+      <div data-od-id="{{ n.odid }}" style="display:flex;flex-direction:column;gap:10px">
+        <div style="display:flex;align-items:center;gap:8px;color:#FBF3EA">
+          <span style="min-width:28px;height:22px;padding:0 6px;box-sizing:border-box;border-radius:999px;background:{{ n.badge }};color:#2B1A12;display:flex;align-items:center;justify-content:center;font:700 12px Roundo,sans-serif">{{ n.no }}</span>
+          <span style="flex:1;font:600 13px Manrope">{{ n.event }}</span>
+          <span style="font:600 10px/1 Manrope;letter-spacing:.04em;text-transform:uppercase;color:#D1B6BB;white-space:nowrap">{{ n.who }}</span>
+        </div>
+        <div style="display:flex;gap:10px;align-items:flex-start;padding:12px 14px;border-radius:24px;background:rgba(251,243,234,.9);box-shadow:inset 0 1px 0 rgba(255,255,255,.8)">
+          <div style="position:relative;width:38px;height:38px;border-radius:9px;background:#9D5C1D;overflow:hidden;flex:none"><image-slot id="icon-head" src="uploads/art/icon-head.png" fit="cover" shape="rect" placeholder=" " style="position:absolute;left:6px;top:3px;width:26px;height:26px"></image-slot><span style="position:absolute;left:5px;right:5px;top:27px;height:7px;border-radius:5px;background:#FBF3EA;box-shadow:0 1.5px 0 #2B1A12"></span></div>
+          <div style="flex:1;min-width:0;display:flex;flex-direction:column;gap:1px">
+            <div style="display:flex;justify-content:space-between;gap:8px"><span style="font:600 15px/1.3 -apple-system,system-ui,sans-serif;color:#000">{{ n.title }}</span><span style="font:400 13px/1.3 -apple-system,system-ui,sans-serif;color:rgba(0,0,0,.5)">{{ n.t }}</span></div>
+            <span style="font:400 15px/1.3 -apple-system,system-ui,sans-serif;color:#000">{{ n.body }}</span>
+          </div>
+        </div>
+      </div>
+    </sc-for>
+  </div>
+</section>
+
+<section data-od-id="open-questions" style="padding:48px 64px 64px">
+  <h2 style="margin:0 0 8px;font:700 28px/1 Roundo,sans-serif">Open questions</h2>
+  <p style="margin:0 0 28px;font:500 14px Manrope;color:#7A6257">Choices made on this board that the product owner should confirm.</p>
+  <ol style="margin:0;padding:28px 32px 28px 52px;max-width:860px;box-sizing:border-box;background:#fff;border-radius:32px;display:flex;flex-direction:column;gap:12px;font:500 15px/1.5 Manrope;color:#2B1A12">
+    <sc-for list="{{ questions }}" as="q" hint-placeholder-count="10"><li style="padding-left:4px"><b>{{ q.k }}</b> {{ q.v }}</li></sc-for>
+  </ol>
+</section>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  renderVals() {
+    const P = [
+      ['R','Rani · you','2× Butter Croissant · Classic Sourdough 1000 gr · 6\u00a0slices Burnt\u00a0Cheesecake','Taken 10:20',true,false,false,false],
+      ['D','Dimas','Pain Au Chocolate · 2× Cinnamon Roll 60 gr','Taken 10:25',true,false,false,true],
+      ['P','Putri','2× Pain Au Chocolate · 3\u00a0slices Burnt\u00a0Cheesecake','Taken 10:31',true,false,false,true],
+      ['A','Arief','2× Cookies 100 gr','Taken 10:48',true,false,false,true],
+      ['K','Kevin','Brioche Bun · English Muffin · Pretzel 120 gr · 3\u00a0slices Burnt\u00a0Cheesecake','',false,false,true,true],
+      ['N','Nadia','Banana Cake','',false,true,false,true]
+    ];
+    const pickup = P.map(([i,name,items,when,taken,nudge,nudged,wa],k) => ({ i, name, items, when, taken, nudge, nudged, wa, sep: k<P.length-1 ? '1px solid #EDE2E4' : 'none' }));
+    const slices = Array.from({ length: 12 }, (_, k) => k < 9
+      ? { bg: '#EDE2E4', ring: 'none' }
+      : { bg: '#F39E60', ring: 'inset 0 0 0 1.5px #9D5C1D' });
+    const notifs = [
+      { no:'#23', event:'Everyone has taken their food', who:'Host', badge:'#F39E60', odid:'notif-fridge-clear', title:'Fridge is clear', body:'Everyone has taken their Friday Treats food. Close the order when you’re ready.', t:'11:05' },
+      { no:'#24', event:'Pickup reminder (nudge)', who:'That member', badge:'#F9CFAF', odid:'notif-pickup-nudge', title:'Reminder from Rani: your food’s in the fridge', body:'Brioche Bun, English Muffin, Pretzel and 3 slices of Burnt Cheesecake. Tap I’ve taken mine once you have it.', t:'10:40' }
+    ];
+    const questions = [
+      { k:'Not-taken state:', v:'no tag at all (the brief allowed no tag or a quiet NOT TAKEN). Who is left shows in the Pickup card copy, the board summary and the Nudge buttons.' },
+      { k:'TAKEN tag style:', v:'cocoa pill, Sour lime text, bag icon, drawn inline on this board. It isn’t in ataste-art.js yet; adding a “taken” kind there is a follow-up so the boards stay untouched.' },
+      { k:'Who counts:', v:'everyone with food in the order, host included, so the count is “of 6” (the brief’s example said “3 of 5”). Otherwise “Fridge is clear” could fire with Rani’s 6 slices still inside.' },
+      { k:'Sample data:', v:'the brief’s Banana bread / 8 pieces example was replaced with the real Friday Treats split, Burnt Cheesecake 20 cm in 12 slices, so the board matches boards 4 and 5. The unit word follows the item (“slices”).' },
+      { k:'Whole items:', v:'the fridge section lists shared items only. Whole items still in the fridge show in each member’s row.' },
+      { k:'Where the button sits:', v:'“I’ve taken mine” is the member’s primary action on the Delivered screen. Members whose food is all taken see no bar, just the Undo link and a toast.' },
+      { k:'Undo:', v:'allowed until the host closes the order, with no time limit and no notification. Undo after closing isn’t designed.' },
+      { k:'Host’s own food:', v:'the host marks it the same way, from their own row on the board (not shown, because Rani has already taken hers).' },
+      { k:'Nudge:', v:'one nudge per member, then the button becomes “Nudged 10:40”, the same as the payment nudge. Whether it can be resent isn’t decided.' },
+      { k:'History:', v:'only the detail screen gets the TAKEN tag and time. The History list row is unchanged.' },
+      { k:'Notification settings:', v:'the two new pushes would sit under “Your orders” (#24) and “When you host” (#23) in 6-7. The toggles aren’t drawn.' },
+      { k:'Members who don’t use it:', v:'if nobody taps, the Pickup card just reads “0 of 6 taken” and no push is sent. Hiding the card in that case would be an alternative.' }
+    ];
+    return { pickup, slices, notifs, questions };
+  }
+}
+</script>
+</body>
+</html>

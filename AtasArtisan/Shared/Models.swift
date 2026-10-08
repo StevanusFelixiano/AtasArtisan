@@ -111,6 +111,10 @@ nonisolated struct Member: Codable, Hashable {
     /// The frozen items part of `bill_total`, and what the host has confirmed so far.
     var bill_items: Int?
     var paid_total: Int?
+    /// Pickup (board 7): when they said their food is out of the fridge (nil: still in it), and the host's one
+    /// pickup reminder. Nil on a server without the columns.
+    var taken_at: Date? = nil
+    var pickup_nudged_at: Date? = nil
 }
 
 nonisolated struct OptionGroup: Codable, Hashable {

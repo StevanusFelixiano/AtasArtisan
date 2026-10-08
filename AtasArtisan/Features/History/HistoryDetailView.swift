@@ -1,7 +1,8 @@
 import SwiftUI
 import Supabase
 
-/// 6-2 History detail: state and payment tags, the delivery photo, my items with my ongkir and discount share,
+/// 6-2 History detail: state and payment tags, the delivery photo, my items (TAKEN and the time once I took them,
+/// 7-5) with my ongkir and discount share,
 /// what I paid, and "Reorder my items" (a new order for myself with my own items; splits aren't copied).
 struct HistoryDetailView: View {
     let id: UUID
@@ -91,7 +92,16 @@ struct HistoryDetailView: View {
 
     private func bill(_ g: OrderGroup) -> some View {
         VStack(alignment: .leading, spacing: 10) {
-            Text("My items").brand(.label)
+            HStack(spacing: Brand.s2) {
+                Text("My items").brand(.label)
+                Spacer()
+                // 7-5: when I took my food out of the fridge (Pickup).
+                if let me = store.me, let at = store.takenAt(me) {
+                    Text(Wita.string(at, "EEE HH:mm")).obText(.footnote, 12, Brand.ink3)
+                    TakenTag(size: .small)
+                }
+            }
+            .accessibilityElement(children: .combine)
             let lines = itemLines
             if lines.isEmpty {
                 Text("You didn't order anything in this group.").obText(.callout, 14, Brand.ink2)

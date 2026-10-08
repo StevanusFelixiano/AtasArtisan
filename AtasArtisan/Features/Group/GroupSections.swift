@@ -2,7 +2,7 @@ import SwiftUI
 import Supabase
 
 // The group screen's content per state: open (3-1/3-2/3-3/3-8), waiting on the host (3-5), sent (5-2),
-// confirmed (5-4), delivered and closed (5-13), cancelled (6-10).
+// confirmed (5-4), delivered and closed (5-13, with Pickup 7-1/7-3), cancelled (6-10).
 
 extension GroupView {
 
@@ -538,7 +538,9 @@ extension GroupView {
         if let proof = store.proofs.filter({ !$0.hidden }).max(by: { $0.created_at < $1.created_at }) { deliveredCard(proof) }
         if g.state == .delivered && store.isHost && !g.personal {
             StillOwesCard(store: store)
+            pickupCard
         } else {
+            if !store.isHost { memberPickupSections() }
             if g.state == .delivered, unpaid != nil {
                 BillBanner(text: "The treats have arrived. \(hostFirst) can close the order once you’ve paid.", fill: Brand.choc100, circle: Brand.cream)
             }

@@ -161,7 +161,7 @@ struct WhatsAppShape: Shape {
 enum TagSize { case regular, small, large }
 
 /// `<at-tag>`: uppercase Manrope 600 with 0.03em tracking on a pastel capsule. Regular 11pt (cards, rows),
-/// small 10pt, large 12pt (product tags). Optional leading dot (order state) or check (paid, accepted).
+/// small 10pt, large 12pt (product tags). Optional leading dot (order state), check (paid, accepted) or symbol (taken).
 /// A tag whose text changes on screen (order or payment state) moves to the new one: the width grows from the leading
 /// edge, the colours change, the old label rolls up and out as the new one rolls in, then the tag bumps. Reduce
 /// Motion crossfades. Appearing, it is still.
@@ -172,6 +172,8 @@ struct Tag: View {
     var dot: Color? = nil
     var border: Color? = nil
     var check = false
+    /// A leading SF Symbol in the ink colour ("bag" on Taken).
+    var symbol: String? = nil
     var size: TagSize = .regular
     @State private var labelWidth: CGFloat?
     @State private var changes = 0
@@ -184,6 +186,7 @@ struct Tag: View {
         HStack(spacing: 6) {
             if let dot { Circle().fill(dot).frame(width: 7, height: 7) }
             if check { Image(systemName: "checkmark").font(.system(size: fs - 1, weight: .heavy)) }
+            if let symbol { Image(systemName: symbol).font(.system(size: fs - 1, weight: .bold)) }
             ZStack(alignment: .leading) {
                 label(text).fixedSize().id(text).transition(AnyTransition.roll(reduceMotion).animation(reduceMotion ? Motion.Reduced.fade : Motion.digits))
             }
@@ -197,7 +200,7 @@ struct Tag: View {
         }
         .lineLimit(1)
         .padding(.vertical, size == .small ? 2 : 4)
-        .padding(.leading, dot != nil || check ? (size == .small ? 8 : 10) : side)
+        .padding(.leading, dot != nil || check || symbol != nil ? (size == .small ? 8 : 10) : side)
         .padding(.trailing, side)
         .foregroundStyle(ink)
         .background(Capsule().fill(fill))
@@ -267,6 +270,15 @@ struct PayTag: View {
         case .says: Tag(text: "Says paid", fill: Brand.choc100, size: size)
         case .paid: Tag(text: "Paid", fill: Brand.lime, border: Brand.limeDeep, check: true, size: size)
         }
+    }
+}
+
+/// Pickup (board 7): the member's food is out of the fridge. Cocoa with Sour lime ink and a bag, so it reads apart from
+/// Paid at a glance. Not taken shows no tag.
+struct TakenTag: View {
+    var size: TagSize = .regular
+    var body: some View {
+        Tag(text: "Taken", fill: Brand.cocoa, ink: Brand.lime, symbol: "bag", size: size)
     }
 }
 

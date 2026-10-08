@@ -118,6 +118,17 @@ func expect(_ ok: Bool, _ what: String, file: StaticString = #file, line: UInt =
         expect(Ongkir.cappedDiscount(50_000, subtotal: 20_000, ongkir: 10_000) == 30_000, "discount cap")
         expect(Ongkir.isFree(subtotal: 200_000) && !Ongkir.isFree(subtotal: 199_999), "free from 200k")
 
+        // Pickup (board 7): the Friday Treats cheesecake in 12 slices, Rani 6, Putri 3, Kevin 3.
+        expect(Pickup.count(3, of: "Burnt Cheesecake 20 cm") == "3 slices" && Pickup.count(1, of: "Pretzel 120 gr") == "1 piece", "unit word")
+        expect(Pickup.whole("Pain Au Chocolate", qty: 2) == "2× Pain Au Chocolate" && Pickup.whole("Brioche Bun", qty: 1) == "Brioche Bun", "whole items")
+        expect(Pickup.left([(6, true), (3, false), (3, false)]) == 6, "7-1: 6 of 12 left")
+        expect(Pickup.left([(6, true), (3, true), (3, false)]) == 3, "7-2: 3 of 12 left")
+        expect(Pickup.line(taken: [], left: ["Rani", "Kevin"], host: true) == "0 of 2 taken", "nobody yet")
+        expect(Pickup.line(taken: ["Rani", "Dimas", "Putri", "Arief"], left: ["Kevin", "Nadia"], host: true) == "4 of 6 taken · Kevin, Nadia left", "7-3")
+        expect(Pickup.line(taken: ["you", "Rani", "Dimas"], left: ["Arief", "Kevin", "Nadia"], host: false) == "3 of 6 taken · you, Rani, Dimas", "7-2")
+        expect(Pickup.line(taken: ["Rani", "Kevin"], left: [], host: true) == "Fridge is clear · all 2 taken", "all taken")
+        expect(Pickup.names(["A", "B", "C", "D"]) == "A, B and 2 more", "long name list")
+
         print("check.swift: all passed")
     }
 }

@@ -272,6 +272,10 @@ enum PreviewData {
     NavigationStack { PaymentBoardView(store: PreviewData.store) }
 }
 
+#Preview("Pickup board") {
+    NavigationStack { PickupBoardView(store: PreviewData.store) }
+}
+
 #Preview("Receipt") {
     NavigationStack {
         ReceiptView(store: PreviewData.store, user: PreviewData.guestID)
