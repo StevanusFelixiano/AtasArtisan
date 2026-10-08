@@ -370,7 +370,7 @@ private struct SharedBlock: View {
         return "\(them)\(min) · \(left) left"
     }
 
-    /// Locked in; under the minimum "2 more needed"; at it "Minimum reached". No minimum, no chip.
+    /// Locked in; under the minimum "2 more people"; at it "Minimum reached". No minimum, no chip.
     @ViewBuilder private var chip: some View {
         let met = store.minMet(item)
         ZStack {
@@ -379,7 +379,7 @@ private struct SharedBlock: View {
             } else if let min = item.share_min {
                 Group {
                     if met { Tag(text: "Minimum reached", fill: Brand.lime, border: Brand.limeDeep, check: true) }
-                    else { Tag(text: "\(min - people) more needed", fill: Brand.choc100) }
+                    else { Tag(text: min - people == 1 ? "1 more person" : "\(min - people) more people", fill: Brand.choc100) }
                 }
                 .id(met)
                 .transition(reduceMotion ? AnyTransition.opacity.animation(Motion.Reduced.fade)
