@@ -325,6 +325,8 @@ private struct SharedBlock: View {
                 ProductPhoto(url: store.products[item.product_id]?.photo, size: 56)
                 VStack(alignment: .leading, spacing: 2) {
                     Text(mine ? "Your \(item.name)" : item.name).ui(GFont.manrope(16, 700))
+                    let options = store.optionText(item)
+                    if !options.isEmpty { Text(options).ui(GFont.manrope(13, 600), Brand.ink2) }
                     Text(subtitle).ui(GFont.manrope(13), Brand.ink2)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
