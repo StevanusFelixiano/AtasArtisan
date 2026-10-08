@@ -193,7 +193,22 @@ extension GroupView {
             ProductPhoto(url: store.products[item.product_id]?.photo, size: 56)
             VStack(alignment: .leading, spacing: 2) {
                 Text(nameWithOptions(item)).ui(GFont.manrope(15, 700))
-                Text(shared ?? eachLine(item)).ui(GFont.manrope(13), Brand.ink2)
+                if let shared {
+                    Text(shared).ui(GFont.manrope(13), Brand.ink2)
+                } else if g.state == .open || (g.state == .edits && store.hasFlagsForMe) {
+                    Button {
+                        noteText = item.note
+                        noting = item
+                    } label: {
+                        Text(item.note.isEmpty ? "\(eachLine(item)) · \(Text("Add a note").font(GFont.manrope(13, 600)).foregroundStyle(Brand.caramel))"
+                                               : "\(eachLine(item))")
+                            .ui(GFont.manrope(13), Brand.ink2).multilineTextAlignment(.leading)
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Edit the note for Atas")
+                } else {
+                    Text(eachLine(item)).ui(GFont.manrope(13), Brand.ink2)
+                }
                 // The Share pill sits under the price, so the name keeps the row's width beside the stepper.
                 if g.state == .open && shared == nil { sharePill(item).padding(.top, 6) }
             }

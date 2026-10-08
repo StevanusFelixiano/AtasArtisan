@@ -39,6 +39,9 @@ struct GroupView: View {
     @State var sentIn = true
     /// Taps that open the share sheet without a pill of their own (the toolbar, Invite, the menus) give a light tap.
     @State var shareTaps = 0
+    /// My item whose note is being edited, and the text in the alert's field.
+    @State var noting: Item?
+    @State var noteText = ""
 
     init(id: UUID, path: Binding<NavigationPath>) {
         self.id = id
@@ -99,6 +102,7 @@ struct GroupView: View {
             awaitingReturn = false
             sentIn = true
         }
+        .noteEditor($noting, text: $noteText, store: store, problem: $problem)
         .problemAlert($problem)
         .toast($toast)
         // Someone else moved the order on: Confirmed, Delivered, Edits requested, Cancelled. Not on the first load,

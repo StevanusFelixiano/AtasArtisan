@@ -38,11 +38,7 @@ struct MyOrderView: View {
                 Task { await attempt($problem, "Couldn't remove it") { try await store.remove(item) } }
             }
         }
-        .alert("Note for Atas", isPresented: Binding { noting != nil } set: { if !$0 { noting = nil } }, presenting: noting) { item in
-            TextField("Note for Atas", text: $noteText)
-            Button("Cancel", role: .cancel) {}
-            Button("Save") { saveNote(item) }
-        }
+        .noteEditor($noting, text: $noteText, store: store, problem: $problem)
         .problemAlert($problem)
     }
 
@@ -134,14 +130,25 @@ struct MyOrderView: View {
         .padding(.vertical, 12)
     }
 
-    private func saveNote(_ item: Item) {
-        let note = String(noteText.trimmingCharacters(in: .whitespaces).prefix(140))
-        guard note != item.note else { return }
-        Task { await attempt($problem, "Couldn't save the note") { try await store.update(item, note: note) } }
-    }
-
     private func change(_ item: Item, _ qty: Int) {
         if qty < 1 { removing = item; return }
         Task { await attempt($problem, "Couldn't change the quantity") { try await store.setQty(item, qty) } }
+    }
+}
+
+extension View {
+    /// The "Note for Atas" alert for an item already in the order (the cart and the group's My items). Set `text` to
+    /// the item's note, then `item`, to open it.
+    func noteEditor(_ item: Binding<Item?>, text: Binding<String>, store: GroupStore, problem: Binding<Problem?>) -> some View {
+        alert("Note for Atas", isPresented: Binding { item.wrappedValue != nil } set: { if !$0 { item.wrappedValue = nil } },
+              presenting: item.wrappedValue) { i in
+            TextField("Note for Atas", text: text)
+            Button("Cancel", role: .cancel) {}
+            Button("Save") {
+                let note = String(text.wrappedValue.trimmingCharacters(in: .whitespaces).prefix(140))
+                guard note != i.note else { return }
+                Task { await attempt(problem, "Couldn't save the note") { try await store.update(i, note: note) } }
+            }
+        }
     }
 }
