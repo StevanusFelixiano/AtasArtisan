@@ -52,6 +52,18 @@ final class GroupStore {
     func colorIndex(_ user: UUID) -> Int { activeMembers.firstIndex { $0.user_id == user } ?? 0 }
     func items(of user: UUID) -> [Item] { items.filter { $0.owner_id == user }.sorted { $0.name < $1.name } }
 
+    // MARK: Ready (open orders)
+
+    /// An item of their own or claimed pieces (the server's `has_stake`; split shares aren't loaded here).
+    func hasStake(_ user: UUID) -> Bool {
+        items.contains { $0.owner_id == user } || claims.contains { $0.user_id == user && $0.pieces > 0 }
+    }
+    func isReady(_ user: UUID) -> Bool { activeMembers.first { $0.user_id == user }?.ready_at != nil }
+    var readyPeople: [Ready.Person] {
+        activeMembers.map { Ready.Person(id: $0.user_id, stake: hasStake($0.user_id), ready: $0.ready_at != nil) }
+    }
+    var readyCount: (ready: Int, of: Int) { Ready.count(readyPeople, host: group?.host_id ?? UUID()) }
+
     // MARK: Shared items (A2)
 
     /// Items shared in pieces, oldest first.

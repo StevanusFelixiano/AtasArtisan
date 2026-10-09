@@ -132,6 +132,18 @@ func expect(_ ok: Bool, _ what: String, file: StaticString = #file, line: UInt =
         expect(Pickup.line(taken: ["Rani", "Kevin"], left: [], host: true) == "Fridge is clear · all 2 taken", "all taken")
         expect(Pickup.names(["A", "B", "C", "D"]) == "A, B and 2 more", "long name list")
 
+        // Ready: host Rani (not counted), Dimas ready, Putri not, Arief ready on a claim only, Nadia with nothing.
+        let host = UUID(), dimas = UUID(), putri = UUID(), arief = UUID(), nadia = UUID()
+        let people = [Ready.Person(id: host, stake: true, ready: false), Ready.Person(id: dimas, stake: true, ready: true),
+                      Ready.Person(id: putri, stake: true, ready: false), Ready.Person(id: arief, stake: true, ready: true),
+                      Ready.Person(id: nadia, stake: false, ready: false)]
+        let rc = Ready.count(people, host: host)
+        expect(rc.ready == 2 && rc.of == 3, "2 of 3 ready, host and Nadia not counted")
+        expect(Ready.empty(people, host: host) == 1, "Nadia removed at lock")
+        expect(Ready.line(rc) == "2 of 3 ready" && Ready.line((3, 3)) == "All 3 ready" && Ready.line((0, 0)) == nil, "ready line")
+        expect(Ready.lockWarning(rc, empty: 1) == "1 person isn’t ready yet. 1 person has nothing in the order and will be taken off the list.", "lock warning")
+        expect(Ready.lockWarning((2, 2), empty: 0).isEmpty, "nothing to warn")
+
         print("check.swift: all passed")
     }
 }

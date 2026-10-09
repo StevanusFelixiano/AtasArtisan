@@ -253,10 +253,10 @@ select pg_temp.run('rani', format('select public.set_bill(%L, 25000, null)', pg_
 do $$ begin
   assert (select ongkir_asked_at is not null and ongkir_set_at is not null and bill_final_at is not null
           from public.groups where id = pg_temp.gid('small')), 'collecting';
-  -- 25.000 among the 3 who ordered: 8.300 each, the host 8.400; Nadia ordered nothing and pays nothing.
+  -- 25.000 among the 3 who ordered: 8.300 each, the host 8.400. Nadia ordered nothing, so the lock took her off the list.
   assert pg_temp.share('small', 'putri') = 8300 and pg_temp.share('small', 'kevin') = 8300, 'shares round down to Rp 100';
   assert pg_temp.share('small', 'rani') = 8400, 'host takes the remainder';
-  assert pg_temp.share('small', 'nadia') = 0 and pg_temp.bill('small', 'nadia') = 0, 'no items, no ongkir';
+  assert pg_temp.bill('small', 'nadia') is null and pg_temp.notes('small', 'nadia', 'removed') = 1, 'no items: removed at lock';
   assert pg_temp.bill('small', 'putri') = 40300 and pg_temp.bill('small', 'kevin') = 16300 and pg_temp.bill('small', 'rani') = 32400, 'bills';
   assert (select sum(bill_total) from public.group_bill_v where group_id = pg_temp.gid('small')) = 64000 + 25000, 'adds up';
   assert pg_temp.notes('small', 'putri', 'bill_final') = 1 and pg_temp.notes('small', 'nadia', 'bill_final') = 0, 'bill ready notices';

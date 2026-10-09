@@ -41,7 +41,6 @@ struct MenuView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { width = $0 }
         .background(Brand.cream.ignoresSafeArea())
-        .toolbarBackground(Brand.cream, for: .navigationBar)
         .navigationTitle("Atas Artisan menu")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {

@@ -360,6 +360,7 @@ struct NotificationSettingsView: View {
         ]),
         ("When you host", [
             ("Someone joined", ["joined"]),
+            ("Everyone is ready to lock", ["all_ready"]),
             ("Member finished editing", ["edit_done"]),
             ("Member says they’ve paid", ["member_paid"]),
             ("Everyone has paid", ["everyone_paid"]),

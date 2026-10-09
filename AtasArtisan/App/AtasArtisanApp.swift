@@ -36,7 +36,9 @@ final class AppModel {
     var userID: UUID?
     var profile: Profile?
     /// A join code from a link, held until the user is signed in.
-    var pendingJoin: String?
+    var pendingJoin: String? { didSet { if pendingJoin == nil { joinFromList = false } } }
+    /// The join came from Home's public list, not an invite link: the sheet doesn't say "invited you".
+    var joinFromList = false
     /// A group a tapped notification points at.
     var openGroup: UUID?
     /// Bumped when anything the Home list shows may have changed.

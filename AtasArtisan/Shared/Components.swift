@@ -291,11 +291,11 @@ extension View {
     }
 
     /// A full screen on cream. The frame comes first: a narrow view (a spinner while loading) must still paint
-    /// the whole screen, or the black window shows on both sides.
+    /// the whole screen, or the black window shows on both sides. The navigation bar keeps the system's Liquid Glass
+    /// (no bar background): content scrolls under it with the scroll-edge effect.
     func screen() -> some View {
         self.frame(maxWidth: .infinity, maxHeight: .infinity)
             .background(Brand.cream.ignoresSafeArea())
-            .toolbarBackground(Brand.cream, for: .navigationBar)
     }
 }
 

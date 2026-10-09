@@ -78,6 +78,8 @@ nonisolated struct OrderGroup: Codable, Identifiable, Hashable {
     var ongkir_asked_at: Date?
     /// When the host entered Atas's ongkir; nil while not entered, and when ongkir is free from Rp 200.000.
     var ongkir_set_at: Date?
+    /// Listed in "Open orders you can join" for anyone signed in; nil on a server without the column.
+    var is_public: Bool? = nil
 
     var payFirst: Bool { pay_rule == "pay_first" }
 }
@@ -95,6 +97,7 @@ nonisolated struct NewGroup: Encodable {
     var pay_rule: String
     var msg_lang: String
     var payout_account_id: UUID?
+    var is_public: Bool = false
 }
 
 nonisolated struct Member: Codable, Hashable {
@@ -115,6 +118,8 @@ nonisolated struct Member: Codable, Hashable {
     /// pickup reminder. Nil on a server without the columns.
     var taken_at: Date? = nil
     var pickup_nudged_at: Date? = nil
+    /// Tapped Ready while the group is open; any change they make to their order clears it on the server.
+    var ready_at: Date? = nil
 }
 
 nonisolated struct OptionGroup: Codable, Hashable {
@@ -250,4 +255,18 @@ nonisolated struct GroupPreview: Codable, Hashable {
     var state: GroupState
     var members: Int
     var already_member: Bool
+}
+
+/// A row of `public_groups()`: an open public group the user isn't in yet.
+nonisolated struct PublicGroup: Codable, Identifiable, Hashable {
+    var id: UUID
+    var code: String
+    var name: String
+    var host_name: String
+    var host_avatar: String?
+    var host_avatar_bg: String?
+    var area: String
+    var cutoff_at: Date?
+    var delivery_at: Date
+    var members: Int
 }

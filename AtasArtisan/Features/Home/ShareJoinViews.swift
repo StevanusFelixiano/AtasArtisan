@@ -279,6 +279,7 @@ nonisolated struct WebInvite: Decodable, Hashable {
 
 struct JoinSheet: View {
     var code: String
+    var invited = true
     var joined: (UUID) -> Void
     var startOwn: () -> Void = {}
     @Environment(\.dismiss) private var dismiss
@@ -324,10 +325,10 @@ struct JoinSheet: View {
     private func invite(_ p: JoinPreview) -> some View {
         ScrollView {
             ZStack(alignment: .top) {
-                band(pose: "pose-waving", marquee: "YOU’RE INVITED • \(p.name.uppercased()) • FRESH FROM ATAS • ")
+                band(pose: "pose-waving", marquee: "\(invited ? "YOU’RE INVITED" : "OPEN ORDER") • \(p.name.uppercased()) • FRESH FROM ATAS • ")
                 VStack(alignment: .leading, spacing: Brand.s4) {
                     VStack(alignment: .leading, spacing: 6) {
-                        Text("\(p.host_name) invited you").brand(.label, Brand.caramel)
+                        Text(invited ? "\(p.host_name) invited you" : "Hosted by \(p.host_name)").brand(.label, Brand.caramel)
                         Text(p.name).styled(.title1, 28)
                     }
                     HStack(alignment: .top, spacing: 10) {

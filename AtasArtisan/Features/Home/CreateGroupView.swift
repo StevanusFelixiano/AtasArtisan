@@ -18,6 +18,7 @@ struct CreateGroupView: View {
     @State private var useCutoff = false
     @State private var cutoff = Wita.defaultCutoff()
     @State private var payFirst = false
+    @State private var isPublic = false
     @State private var addingAddress = false
     @State private var addingAccount = false
     @State private var loaded = false
@@ -43,6 +44,7 @@ struct CreateGroupView: View {
                 deliverySection
                 if !personal {
                     cutoffCard
+                    visibilityCard
                     payRule
                     payYouAt
                 }
@@ -193,6 +195,19 @@ struct CreateGroupView: View {
         .background(RoundedRectangle(cornerRadius: Brand.rCard, style: .continuous).fill(Brand.card))
     }
 
+    /// Private (invite link only) or public: listed under "Open orders you can join" for anyone on Ataste.
+    private var visibilityCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Toggle(isOn: $isPublic) { Text("Public order").styled(.headline, 16) }
+                .tint(Brand.caramel)
+            Text(isPublic ? "Anyone on Ataste can find and join a public order."
+                          : "Private: only people with your invite link can join. Anyone on Ataste can find and join a public order.")
+                .styled(.body, 13, Brand.ink2)
+        }
+        .padding(Brand.s4)
+        .background(RoundedRectangle(cornerRadius: Brand.rCard, style: .continuous).fill(Brand.card))
+    }
+
     private func partOfDay(_ d: Date) -> String {
         let h = Wita.calendar.component(.hour, from: d)
         return h < 12 ? "morning" : h < 17 ? "afternoon" : "evening"
@@ -289,7 +304,8 @@ struct CreateGroupView: View {
             let new = NewGroup(name: personal ? "My order" : name.trimmingCharacters(in: .whitespaces), personal: personal, area: a.area,
                                address_label: a.label, address_detail: a.detail, maps_url: a.maps_url, delivery_at: delivery,
                                cutoff_at: personal || !useCutoff ? nil : cutoff, pay_rule: payFirst ? "pay_first" : "order_first",
-                               msg_lang: app.profile?.msg_lang ?? "id", payout_account_id: personal ? nil : accountID)
+                               msg_lang: app.profile?.msg_lang ?? "id", payout_account_id: personal ? nil : accountID,
+                               is_public: !personal && isPublic)
             let g: OrderGroup = try await supabase.from("groups").insert(new).select().single().execute().value
             app.homeVersion += 1
             created(g.id)

@@ -60,7 +60,7 @@ struct MainTabs: View {
                          onDismiss: {
                              if createAfterJoin { createAfterJoin = false; tab = 0; creating = true }
                          }) { join in
-            JoinSheet(code: join.code) { id in
+            JoinSheet(code: join.code, invited: !app.joinFromList) { id in
                 tab = 0
                 homePath.append(id)
             } startOwn: {
@@ -143,6 +143,8 @@ struct HomeView: View {
     @State private var hosts: [UUID: Profile] = [:]
     /// "Brioche Toast · Classic Sourdough" for a personal order's card.
     @State private var summaries: [UUID: String] = [:]
+    /// Open public groups I'm not in (`public_groups()`), for "Open orders you can join".
+    @State private var publicGroups: [PublicGroup] = []
     @State private var loaded = false
     @State private var pasting = false
     @State private var pastedCode: String?
@@ -161,7 +163,13 @@ struct HomeView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 0) {
                 header
-                if empty { emptyState } else { list }
+                if empty {
+                    emptyState
+                    publicSection.padding(.horizontal, Brand.s4).padding(.top, 28)
+                } else {
+                    list
+                    publicSection.padding(.horizontal, Brand.s4).padding(.top, 26)
+                }
             }
             // Room under the last card. The empty state needs none: its buttons sit in their own bottom inset.
             .padding(.bottom, empty ? 0 : Brand.s5)
@@ -277,6 +285,49 @@ struct HomeView: View {
         .padding(.horizontal, Brand.s4)
     }
 
+    // MARK: Open orders you can join
+
+    /// Public groups still taking orders. A row opens the join sheet for its code, as an invite link would.
+    @ViewBuilder private var publicSection: some View {
+        if !publicGroups.isEmpty {
+            VStack(alignment: .leading, spacing: Brand.s3) {
+                HStack(alignment: .firstTextBaseline) {
+                    Text("Open orders you can join").brand(.label)
+                    Spacer()
+                    Text("\(publicGroups.count)").styled(.callout, 13, weight: 600, Brand.caramel)
+                }
+                .padding(.horizontal, Brand.s1)
+                VStack(spacing: 0) {
+                    ForEach(Array(publicGroups.enumerated()), id: \.element.id) { i, g in
+                        if i > 0 { Rectangle().fill(Brand.liquorice100).frame(height: 1) }
+                        Button { app.joinFromList = true; app.pendingJoin = g.code } label: { publicRow(g, index: i) }
+                            .buttonStyle(.plain)
+                            .accessibilityHint("Opens the group so you can join")
+                    }
+                }
+                .padding(.vertical, Brand.s1)
+                .padding(.horizontal, 18)
+                .background(RoundedRectangle(cornerRadius: Brand.rCard, style: .continuous).fill(Brand.card))
+            }
+        }
+    }
+
+    private func publicRow(_ g: PublicGroup, index: Int) -> some View {
+        let lock = g.cutoff_at.map { "locks \(Wita.string($0, Wita.calendar.isDateInToday($0) ? "HH:mm" : "EEE HH:mm"))" }
+        let line = ["\(g.host_name) · \(g.members) \(g.members == 1 ? "person" : "people")", lock, g.area].compactMap { $0 }.joined(separator: " · ")
+        return HStack(spacing: Brand.s3) {
+            Avatar(name: g.host_name, index: index, size: 40, art: g.host_avatar, bg: g.host_avatar_bg)
+            VStack(alignment: .leading, spacing: 2) {
+                Text(g.name).styled(.headline, 15)
+                Text(line).brand(.footnote, Brand.ink3)
+            }
+            Spacer()
+            Image(systemName: "chevron.right").font(.system(size: 14, weight: .semibold)).foregroundStyle(Brand.ink4)
+        }
+        .padding(.vertical, 14)
+        .contentShape(Rectangle())
+    }
+
     // MARK: Empty (2-2)
 
     /// 2-2's first view this session plays the empty-state entrance (Motion board 22); later views are still.
@@ -313,6 +364,8 @@ struct HomeView: View {
     /// Loads the active orders; says whether it worked (a failure also raises the problem alert).
     @discardableResult
     private func load() async -> Bool {
+        // Optional: a server without `public_groups` leaves the section hidden instead of failing Home.
+        if let rows: [PublicGroup] = try? await supabase.rpc("public_groups").execute().value { publicGroups = rows }
         do {
             var all: [OrderGroup] = try await supabase.from("groups").select().order("delivery_at").execute().value
             #if DEBUG

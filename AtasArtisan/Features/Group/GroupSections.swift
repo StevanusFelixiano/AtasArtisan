@@ -87,36 +87,100 @@ extension GroupView {
             askCards
             sharedSection(g)
         }
+        // Erased per role for the same stack-depth reason as `sections`.
         if g.personal {
             personalItems(g)
         } else if store.isHost {
-            // B1: the host's own My items above Members, the same card a member sees.
-            myItemsCard(g)
-            listHeader("Members", count: store.activeMembers.count) {
-                Button { openShare() } label: {
-                    HStack(spacing: 4) { icon("square.and.arrow.up", 14, Brand.caramel); Text("Invite") }
-                        .ui(GFont.manrope(13, 600), Brand.caramel)
-                }
-                .buttonStyle(.plain)
-            }
-            memberList(g, store.activeMembers.filter { $0.user_id == g.host_id } + byOrder(store.activeMembers.filter { $0.user_id != g.host_id }))
+            AnyView(hostOpenList(g))
         } else {
-            myItemsCard(g)
-            listHeader("Everyone", count: store.activeMembers.count) {
-                HStack(spacing: 3) {
-                    Text("Tap the")
-                    Image(systemName: "chart.pie").font(.system(size: 11, weight: .semibold))
-                    Text("to ask someone to share")
-                }
-                .ui(GFont.manrope(12), Brand.ink3)
-                .accessibilityElement(children: .combine)
-            }
-            memberList(g, byOrder(store.activeMembers.filter { $0.user_id != store.me }))
-            Button("Leave group") { askLeave(g) }
-                .ui(GFont.manrope(14, 600), Brand.destructive)
-                .padding(.vertical, 10)
-                .frame(maxWidth: .infinity)
+            AnyView(memberOpenList(g))
         }
+    }
+
+    @ViewBuilder private func hostOpenList(_ g: OrderGroup) -> some View {
+        // B1: the host's own My items above Members, the same card a member sees.
+        myItemsCard(g)
+        listHeader("Members", count: store.activeMembers.count) {
+            if let line = Ready.line(store.readyCount) {
+                Text(line + " ·").ui(GFont.manrope(13, 600), Brand.ink2)
+                    .contentTransition(reduceMotion ? .opacity : .numericText())
+                    .animation(reduceMotion ? Motion.Reduced.fade : Motion.digits, value: line)
+            }
+            Button { openShare() } label: {
+                HStack(spacing: 4) { icon("square.and.arrow.up", 14, Brand.caramel); Text("Invite") }
+                    .ui(GFont.manrope(13, 600), Brand.caramel)
+            }
+            .buttonStyle(.plain)
+        }
+        memberList(g, store.activeMembers.filter { $0.user_id == g.host_id } + byOrder(store.activeMembers.filter { $0.user_id != g.host_id }))
+    }
+
+    @ViewBuilder private func memberOpenList(_ g: OrderGroup) -> some View {
+        myItemsCard(g)
+        whatsNext(g)
+        listHeader("Everyone", count: store.activeMembers.count) {
+            HStack(spacing: 3) {
+                Text("Tap the")
+                Image(systemName: "chart.pie").font(.system(size: 11, weight: .semibold))
+                Text("to ask someone to share")
+            }
+            .ui(GFont.manrope(12), Brand.ink3)
+            .accessibilityElement(children: .combine)
+        }
+        memberList(g, byOrder(store.activeMembers.filter { $0.user_id != store.me }))
+        Button("Leave group") { askLeave(g) }
+            .ui(GFont.manrope(14, 600), Brand.destructive)
+            .padding(.vertical, 10)
+            .frame(maxWidth: .infinity)
+    }
+
+    /// The member's "What's next" card while the order is open: add items, tap Ready, the host locks, then pay the host
+    /// here. Ready reads the member row the server returns (any change to their order clears it there).
+    @ViewBuilder private func whatsNext(_ g: OrderGroup) -> some View {
+        let me = store.me ?? UUID()
+        let stake = store.hasStake(me)
+        let ready = store.isReady(me)
+        let host = hostFirst
+        let by = g.cutoff_at.map { " by \(Wita.string($0, Calendar.current.isDateInToday($0) ? "HH:mm" : "EEE HH:mm"))" } ?? ""
+        let when = g.payFirst ? "before \(host) sends the order to Atas" : "once Atas confirms the ongkir"
+        let items = store.myBill?.items ?? 0
+        let amount = items == 0 ? "" : store.subtotal >= DiscountBar.goal ? " \(Rupiah.format(items)) (ongkir is free)"
+                                                                      : " \(Rupiah.format(items)) plus your share of the ongkir"
+        VStack(alignment: .leading, spacing: 12) {
+            Text(ready ? "You’re ready" : "What’s next").brand(.label)
+            if ready {
+                Text("Waiting for \(host) to lock the order. Then you’ll pay \(host)\(amount) here, \(when). Changing your items takes your Ready back.")
+                    .ui(GFont.manrope(14), Brand.cocoa).lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if !stake {
+                Text("Add what you want from the menu, then tap Ready so \(host) knows you’re done.")
+                    .ui(GFont.manrope(14), Brand.cocoa).lineSpacing(3)
+                    .fixedSize(horizontal: false, vertical: true)
+            } else {
+                step(1, "Add your items", done: true)
+                step(2, "Tap I’m ready when your order is complete", done: false)
+                step(3, "\(host) locks the order\(by)", done: false)
+                step(4, "You pay \(host) here, \(when): you’ll get a notification with your total and where to send it", done: false)
+            }
+        }
+        .surface(28, padding: edges(18, 18))
+        .animation(reduceMotion ? Motion.Reduced.fade : Motion.settle, value: ready)
+        .accessibilityElement(children: .combine)
+    }
+
+    private func step(_ n: Int, _ text: String, done: Bool) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: 10) {
+            ZStack {
+                Circle().fill(done ? Brand.lime : Brand.choc100).frame(width: 24, height: 24)
+                if done { icon("checkmark", 14, Brand.cocoa, weight: .heavy) } else { Text("\(n)").ui(GFont.manrope(12, 700)) }
+            }
+            .alignmentGuide(.firstTextBaseline) { $0[VerticalAlignment.center] + 5 }
+            Text(text).ui(GFont.manrope(14, done ? 500 : 600), done ? Brand.ink3 : Brand.cocoa)
+                .strikethrough(done, color: Brand.ink4)
+                .lineSpacing(3)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+        .accessibilityLabel(done ? "Done: \(text)" : "Step \(n): \(text)")
     }
 
     /// "MEMBERS · 4": the count rolls when someone joins or leaves (Motion board 11).
@@ -304,11 +368,18 @@ extension GroupView {
                             .foregroundStyle(Brand.cocoa)
                         Spacer(minLength: 8)
                         Text(Rupiah.format(amount)).ui(GFont.roundo(16), amount == 0 ? Brand.ink4 : Brand.cocoa)
+                            .fixedSize()  // stays on one line beside a Ready tag
                     }
                     Text(line)
                         .ui(GFont.manrope(13), lineInk)
                         .lineSpacing(3)
                         .fixedSize(horizontal: false, vertical: true)
+                    // The host sees who has tapped Ready (open orders).
+                    if g.state == .open && store.isHost && user != g.host_id && m.ready_at != nil {
+                        Tag(text: "Ready", fill: Brand.lime, border: Brand.limeDeep, check: true, size: .small)
+                            .padding(.top, 2)
+                            .transition(.scale(scale: 0.6, anchor: .leading).combined(with: .opacity))
+                    }
                 }
                 rowAction(g, user)
             }
@@ -392,7 +463,8 @@ extension GroupView {
             return doneThisRound ? "Thanks, your changes are in. \(hostFirst) locks the order again once everyone is done."
                                  : "Your items are fine. \(hostFirst) locks the order again once the edits are done."
         }
-        return "You can’t change items now. If something needs fixing, they’ll ask you."
+        return "You can’t change items now. If something needs fixing, they’ll ask you. "
+            + "Once Atas confirms the ongkir your bill is final: you pay \(hostFirst) here, and the bill shows where to send it."
     }
 
     func timeline(_ g: OrderGroup, _ layout: Timeline.Layout) -> some View {

@@ -213,17 +213,19 @@ struct GroupView: View {
         }
     }
 
-    @ViewBuilder private func sections(_ g: OrderGroup, _ m: Mode) -> some View {
+    /// Each mode is erased to `AnyView`. One opaque type nesting every mode's tree grew deep enough that resolving its
+    /// metadata at runtime overflowed the main-thread stack on device (Debug build, adding an item to an open group).
+    private func sections(_ g: OrderGroup, _ m: Mode) -> AnyView {
         switch m {
-        case .open: openSections(g)
-        case .review: if g.payPhase != nil { payFirstHostSections(g) } else { reviewSections(g) }
-        case .editsHost: editsHostSections(g)
-        case .fixing: fixingSections(g)
-        case .waiting: if g.payPhase != nil { payFirstMemberSections(g) } else { waitingSections(g) }
-        case .sent: sentSections(g)
-        case .confirmed: confirmedSections(g)
-        case .delivered, .closed: deliveredSections(g)
-        case .cancelled: EmptyView()
+        case .open: AnyView(openSections(g))
+        case .review: g.payPhase != nil ? AnyView(payFirstHostSections(g)) : AnyView(reviewSections(g))
+        case .editsHost: AnyView(editsHostSections(g))
+        case .fixing: AnyView(fixingSections(g))
+        case .waiting: g.payPhase != nil ? AnyView(payFirstMemberSections(g)) : AnyView(waitingSections(g))
+        case .sent: AnyView(sentSections(g))
+        case .confirmed: AnyView(confirmedSections(g))
+        case .delivered, .closed: AnyView(deliveredSections(g))
+        case .cancelled: AnyView(EmptyView())
         }
     }
 
@@ -341,7 +343,35 @@ struct GroupView: View {
                             .buttonStyle(BarPillStyle(kind: .secondary))
                             .accessibilityLabel(g.personal ? "Add items" : "Add items for yourself")
                     } lock: {
-                        lockPill(g, title: g.personal ? "Send to Atas" : "Lock order", icon: g.personal ? "paperplane" : "lock")
+                        if !g.personal && !lockWarning(g).isEmpty {
+                            // Someone isn't ready, or has nothing and will be removed: ask first (`askLock`).
+                            Button { askLock(g) } label: { Label("Lock order", systemImage: "lock") }
+                                .buttonStyle(BarPillStyle(kind: .primary))
+                        } else {
+                            lockPill(g, title: g.personal ? "Send to Atas" : "Lock order", icon: g.personal ? "paperplane" : "lock")
+                        }
+                    }
+                }
+            } else if !g.personal && !store.isHost, let me = store.me, store.hasStake(me) {
+                // A member with something in the order: Add items beside Ready, the bar's one next step.
+                GroupBar {
+                    AddLockBar {
+                        Button { sheet = .menu } label: { Label("Add items", systemImage: "plus") }
+                            .buttonStyle(BarPillStyle(kind: .secondary))
+                    } lock: {
+                        if store.isReady(me) {
+                            // The lime face AsyncPill lands on; static, since changing items is the way back.
+                            Button {} label: { Label("Ready", systemImage: "checkmark") }
+                                .buttonStyle(BarPillStyle(kind: .success))
+                                .allowsHitTesting(false)
+                                .accessibilityLabel("You’re ready")
+                                .accessibilityHint("Changing your items takes it back")
+                        } else {
+                            AsyncPill(title: "I’m ready", icon: "checkmark", busyTitle: "Saving…", doneTitle: "Ready", failTitle: "Couldn’t save",
+                                      tight: true, refresh: store.refresh, reached: { store.isReady(me) }) {
+                                try await store.rpc("set_ready", ["g": .string(id.uuidString)])
+                            } then: {}
+                        }
                     }
                 }
             } else {
@@ -429,7 +459,20 @@ struct GroupView: View {
         }
     }
 
+    /// What the lock question warns about: people not ready yet, and people with nothing who the lock removes.
+    func lockWarning(_ g: OrderGroup) -> String {
+        Ready.lockWarning(store.readyCount, empty: Ready.empty(store.readyPeople, host: g.host_id))
+    }
+
+    /// Lock order when someone isn't ready or has nothing in the order.
+    func askLock(_ g: OrderGroup) {
+        confirm = Confirm(title: "Lock \(g.name)?",
+                          message: lockWarning(g) + " Nobody can change their items once it’s locked.",
+                          button: "Lock order", keep: "Not yet") { try await store.rpc("lock_group", ["g": .string(id.uuidString)]) }
+    }
+
     func lock(_ g: OrderGroup) {
+        if !g.personal && !lockWarning(g).isEmpty { askLock(g); return }
         Task { await act("Couldn't lock") {
             try await store.rpc("lock_group", ["g": .string(id.uuidString)])
             if g.personal { sheet = .send }
