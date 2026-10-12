@@ -171,6 +171,8 @@ end $$;
 create trigger limit_changed after update of people_limit on public.groups
   for each row when (old.people_limit is distinct from new.people_limit) execute function public.limit_changed();
 
+revoke execute on function public.take_seat(), public.limit_changed() from public, anon, authenticated;
+
 -- #1, with the limit: past it, people join share-only.
 create or replace function public.join_group(code text) returns uuid language plpgsql security definer set search_path = '' as $$
 declare g public.groups; me uuid := (select auth.uid()); seatless boolean;

@@ -87,13 +87,6 @@ insert into public.products (id, name, base_price, option_groups, variants) valu
   ('t-brioche', 'Brioche Bun', 8000, '[]', '[]');
 
 
-insert into auth.users (id, email, aud, role) select v, k || '@test.invalid', 'authenticated', 'authenticated' from t_ids;
-insert into public.profiles (id, phone, name) select v, '62813000000' || row_number() over (), initcap(k) from t_ids;
-insert into public.products (id, name, base_price, option_groups, variants) values
-  ('t-cheesecake', 'Burnt Cheesecake 20 cm', 260000, '[]', '[]'),
-  ('t-pain', 'Pain Au Chocolate', 16000, '[]', '[]'),
-  ('t-brioche', 'Brioche Bun', 8000, '[]', '[]');
-
 -- ---------------------------------------------------------------- per-item pickup
 
 select pg_temp.mk('p', 'rani', array['putri']);
