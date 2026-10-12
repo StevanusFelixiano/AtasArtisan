@@ -13,6 +13,8 @@ final class GroupStore {
     /// Pieces claimed of shared items, and the ask-to-share requests I made or got.
     var claims: [ItemClaim] = []
     var shareRequests: [ShareRequest] = []
+    /// Lines of food people have taken out of the fridge (Pickup, per item); fetched once the order is Delivered.
+    var pickups: [ItemPickup] = []
     /// My notices about shared items that came off at lock (A-8); fetched once the order has left Open.
     var shareNotices: [GroupNotice] = []
     var bill: [BillRow] = []
@@ -64,6 +66,20 @@ final class GroupStore {
     }
     var readyCount: (ready: Int, of: Int) { Ready.count(readyPeople, host: group?.host_id ?? UUID()) }
 
+    // MARK: People limit
+
+    /// Joined past the people limit: shared items only until a spot frees up and they add an item of their own.
+    func isShareOnly(_ user: UUID) -> Bool { activeMembers.first { $0.user_id == user }?.share_only == true }
+    /// People who can add items of their own, the host included.
+    var fullCount: Int { activeMembers.filter { $0.share_only != true }.count }
+    /// Spots still free under the limit; nil when there's no limit.
+    var spotsFree: Int? { PeopleLimit.free(limit: group?.people_limit, full: fullCount) }
+    /// I can add items of my own: I'm a full member, or a spot is free for me to take.
+    var canAddOwn: Bool {
+        guard let me, isShareOnly(me) else { return true }
+        return (spotsFree ?? 1) > 0
+    }
+
     // MARK: Shared items (A2)
 
     /// Items shared in pieces, oldest first.
@@ -111,6 +127,9 @@ final class GroupStore {
             async let c: [ItemClaim] = supabase.from("item_claims").select().eq("group_id", value: id).execute().value
             async let r: [ShareRequest] = supabase.from("share_requests").select().eq("group_id", value: id).execute().value
             let (claims, requests) = try await (c, r)
+            // Optional: a server without per-item pickup has no table, and Pickup falls back to members.taken_at.
+            let pickups: [ItemPickup] = [.delivered, .closed].contains(g.state)
+                ? ((try? await supabase.from("item_pickups").select().eq("group_id", value: id).execute().value) ?? []) : []
             let notices: [GroupNotice] = g.state == .open ? [] :
                 try await supabase.from("notifications").select("id,kind,title,body,created_at").eq("group_id", value: id)
                     .eq("kind", value: "share_min_not_met").order("created_at").execute().value
@@ -131,6 +150,7 @@ final class GroupStore {
             self.proofs = proofs
             self.claims = claims
             self.shareRequests = requests
+            self.pickups = pickups
             self.shareNotices = notices
             self.people = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0) })
             self.products.merge(prods.map { ($0.id, $0) }) { _, new in new }
@@ -150,7 +170,8 @@ final class GroupStore {
         // A fresh topic per watcher: two watchers sharing one silently unsubscribe each other.
         let channel = supabase.channel("group:\(id):\(UUID().uuidString)")
         let streams = [("groups", "id"), ("members", "group_id"), ("items", "group_id"), ("delivery_proofs", "group_id"),
-                       ("item_claims", "group_id"), ("share_requests", "group_id")].map {
+                       ("item_claims", "group_id"), ("share_requests", "group_id"),
+                       ("item_pickups", "group_id")].map {
             channel.postgresChange(AnyAction.self, table: $0.0, filter: .eq($0.1, value: id))
         }
         defer { Task { await supabase.removeChannel(channel) } }

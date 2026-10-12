@@ -144,6 +144,11 @@ func expect(_ ok: Bool, _ what: String, file: StaticString = #file, line: UInt =
         expect(Ready.lockWarning(rc, empty: 1) == "1 person isn’t ready yet. 1 person has nothing in the order and will be taken off the list.", "lock warning")
         expect(Ready.lockWarning((2, 2), empty: 0).isEmpty, "nothing to warn")
 
+        // People limit: the host counts; past it, shared items only.
+        expect(PeopleLimit.free(limit: 5, full: 3) == 2 && PeopleLimit.free(limit: 5, full: 6) == 0 && PeopleLimit.free(limit: nil, full: 9) == nil, "spots free")
+        expect(PeopleLimit.line(limit: 6, full: 4) == "4 of 6 adding items" && PeopleLimit.line(limit: 6, full: 6) == "Full · 6 of 6 adding items", "limit line")
+        expect(PeopleLimit.line(limit: nil, full: 3) == nil, "no limit line")
+
         print("check.swift: all passed")
     }
 }

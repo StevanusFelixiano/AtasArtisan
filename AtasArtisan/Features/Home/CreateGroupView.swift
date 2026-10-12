@@ -19,6 +19,8 @@ struct CreateGroupView: View {
     @State private var cutoff = Wita.defaultCutoff()
     @State private var payFirst = false
     @State private var isPublic = false
+    @State private var useLimit = false
+    @State private var peopleLimit = 6
     @State private var addingAddress = false
     @State private var addingAccount = false
     @State private var loaded = false
@@ -45,6 +47,7 @@ struct CreateGroupView: View {
                 if !personal {
                     cutoffCard
                     visibilityCard
+                    limitCard
                     payRule
                     payYouAt
                 }
@@ -208,6 +211,28 @@ struct CreateGroupView: View {
         .background(RoundedRectangle(cornerRadius: Brand.rCard, style: .continuous).fill(Brand.card))
     }
 
+    /// How many people can add items of their own, the host included. Past it, people join to share items only.
+    private var limitCard: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Toggle(isOn: $useLimit) { Text("People limit").styled(.headline, 16) }
+                .tint(Brand.caramel)
+            if useLimit {
+                HStack {
+                    Text("\(peopleLimit) people").styled(.callout, 15, weight: 600)
+                    Spacer()
+                    PillStepper(value: "\(peopleLimit)", fill: Brand.cream, gap: 10, pad: 3, minWidth: 20, countSize: 16,
+                                canMinus: peopleLimit > PeopleLimit.range.lowerBound, canPlus: peopleLimit < PeopleLimit.range.upperBound,
+                                minusLabel: "One person less", plusLabel: "One person more",
+                                minus: { peopleLimit -= 1 }, plus: { peopleLimit += 1 })
+                }
+            }
+            Text(useLimit ? PeopleLimit.note : "Anyone who joins can add their own items.")
+                .styled(.body, 13, Brand.ink2)
+        }
+        .padding(Brand.s4)
+        .background(RoundedRectangle(cornerRadius: Brand.rCard, style: .continuous).fill(Brand.card))
+    }
+
     private func partOfDay(_ d: Date) -> String {
         let h = Wita.calendar.component(.hour, from: d)
         return h < 12 ? "morning" : h < 17 ? "afternoon" : "evening"
@@ -305,7 +330,7 @@ struct CreateGroupView: View {
                                address_label: a.label, address_detail: a.detail, maps_url: a.maps_url, delivery_at: delivery,
                                cutoff_at: personal || !useCutoff ? nil : cutoff, pay_rule: payFirst ? "pay_first" : "order_first",
                                msg_lang: app.profile?.msg_lang ?? "id", payout_account_id: personal ? nil : accountID,
-                               is_public: !personal && isPublic)
+                               is_public: !personal && isPublic, people_limit: !personal && useLimit ? peopleLimit : nil)
             let g: OrderGroup = try await supabase.from("groups").insert(new).select().single().execute().value
             app.homeVersion += 1
             created(g.id)
