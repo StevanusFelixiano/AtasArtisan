@@ -251,6 +251,10 @@ nonisolated struct JoinPreview: Decodable, Hashable {
     var host_phone: String?
     var host_avatar: String?
     var host_avatar_bg: String?
+    /// The people limit (host included), how many can add items now, and whether I'm (or would join) share-only.
+    var people_limit: Int?
+    var full_members: Int?
+    var share_only: Bool?
 
     /// "Rani · 4 members · locks Thu 13:00"
     var summary: String {
@@ -353,6 +357,16 @@ struct JoinSheet: View {
                         Spacer(minLength: 0)
                         if let s = p.subtotal { Text("\(Rupiah.format(s)) so far").styled(.callout, 13, weight: 600, Brand.ink2) }
                     }
+                    if p.share_only == true, let limit = p.people_limit {
+                        HStack(alignment: .top, spacing: 10) {
+                            Image(systemName: "chart.pie").font(.system(size: 16, weight: .semibold)).foregroundStyle(Brand.cocoa)
+                            Text("This group is full: \(limit) people, \(p.host_name) included, are adding their own items. You can still join to share items, and add your own if a spot frees up.")
+                                .styled(.body, 13, Brand.cocoa).lineSpacing(3)
+                        }
+                        .padding(Brand.s3)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .background(RoundedRectangle(cornerRadius: Brand.rSmall, style: .continuous).fill(Brand.choc100))
+                    }
                     if let rule = p.pay_rule {
                         HStack(alignment: .top, spacing: 10) {
                             Image(systemName: "list.bullet.rectangle.portrait").font(.system(size: 16, weight: .semibold)).foregroundStyle(Brand.cocoa)
@@ -373,7 +387,7 @@ struct JoinSheet: View {
         .scrollBounceBehavior(.basedOnSize)
         .overlay(alignment: .topLeading) { closeButton(dark: true) }
         .safeAreaInset(edge: .bottom) {
-            Button("Join") { Task { await join() } }
+            Button(p.share_only == true ? "Join to share items" : "Join") { Task { await join() } }
                 .buttonStyle(.pill(.primary)).disabled(busy)
                 .padding(.horizontal, Brand.s4).padding(.bottom, Brand.s4)
         }

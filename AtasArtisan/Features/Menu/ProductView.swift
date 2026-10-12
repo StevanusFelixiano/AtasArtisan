@@ -320,6 +320,7 @@ struct ProductView: View {
         }
         .buttonStyle(.pill(.primary))
         .disabled(price == nil || busy)
+        .disabled(!store.canAddOwn, reason: "The group is full. You can join shared items instead.")
     }
 
     private func add() async {

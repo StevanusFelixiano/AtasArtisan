@@ -37,6 +37,8 @@ struct GroupView: View {
     /// send sheet has gone and the order is Sent (Motion board 17).
     @State var awaitingReturn = false
     @State var sentIn = true
+    /// Bumps the host's Atas confirmed / Atas replied pill when they come back from WhatsApp, so the next step is seen.
+    @State var nextBumps = 0
     /// Taps that open the share sheet without a pill of their own (the toolbar, Invite, the menus) give a light tap.
     @State var shareTaps = 0
     /// My item whose note is being edited, and the text in the alert's field.
@@ -101,6 +103,9 @@ struct GroupView: View {
             guard back else { return }
             awaitingReturn = false
             sentIn = true
+            guard store.isHost, let g = store.group else { return }
+            nextBumps += 1
+            toast = ToastNote(text: "Next: tap \(atasReplyTitle(g)) once Atas replies on WhatsApp", hold: 5)
         }
         .noteEditor($noting, text: $noteText, store: store, problem: $problem)
         .problemAlert($problem)
@@ -411,12 +416,15 @@ struct GroupView: View {
                             Button { sheet = .requestEdit(RequestSeed()) } label: { Label("Request edits", systemImage: "pencil") }
                                 .buttonStyle(BarPillStyle(kind: .secondary))
                         }
-                        if g.payFirst && g.billFinal {
-                            confirmSentPill()
-                        } else {
-                            Button { sheet = .confirmAtas } label: { Label("Atas replied", systemImage: "checkmark") }
-                                .buttonStyle(BarPillStyle(kind: .primary))
+                        Group {
+                            if g.payFirst && g.billFinal {
+                                confirmSentPill()
+                            } else {
+                                Button { sheet = .confirmAtas } label: { Label("Atas replied", systemImage: "checkmark") }
+                                    .buttonStyle(BarPillStyle(kind: .primary))
+                            }
                         }
+                        .kick(reduceMotion ? 0 : nextBumps, from: BoardMotion.nudgeBump, delay: 0.4)
                     }
                     .entrance(sentIn, offset: HandOffMotion.buttonOffset, Motion.arrive, fade: nil, delay: HandOffMotion.buttonDelay)
                 }

@@ -80,6 +80,9 @@ nonisolated struct OrderGroup: Codable, Identifiable, Hashable {
     var ongkir_set_at: Date?
     /// Listed in "Open orders you can join" for anyone signed in; nil on a server without the column.
     var is_public: Bool? = nil
+    /// How many people (the host included) can add items of their own; past it people join share-only. Nil: no limit,
+    /// or a server without the column.
+    var people_limit: Int? = nil
 
     var payFirst: Bool { pay_rule == "pay_first" }
 }
@@ -98,6 +101,7 @@ nonisolated struct NewGroup: Encodable {
     var msg_lang: String
     var payout_account_id: UUID?
     var is_public: Bool = false
+    var people_limit: Int? = nil
 }
 
 nonisolated struct Member: Codable, Hashable {
@@ -120,6 +124,9 @@ nonisolated struct Member: Codable, Hashable {
     var pickup_nudged_at: Date? = nil
     /// Tapped Ready while the group is open; any change they make to their order clears it on the server.
     var ready_at: Date? = nil
+    /// Joined past the people limit: they can claim shared pieces, join splits and ask to share, but not add items of
+    /// their own until a spot frees up. Nil on a server without the column.
+    var share_only: Bool? = nil
 }
 
 nonisolated struct OptionGroup: Codable, Hashable {
@@ -194,6 +201,14 @@ nonisolated struct ItemClaim: Codable, Hashable {
     var user_id: UUID
     var pieces: Int
     var created_at: Date
+}
+
+/// One line of someone's food they've taken out of the fridge (`item_pickups`): an item of theirs or their pieces of one.
+nonisolated struct ItemPickup: Codable, Hashable {
+    var item_id: UUID
+    var group_id: UUID
+    var user_id: UUID
+    var taken_at: Date
 }
 
 /// "Ask to share": someone asked an item's owner to share it, with `mine` of `pieces` for them (`share_requests`).

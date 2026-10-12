@@ -14,6 +14,8 @@ struct EditDeliverySheet: View {
     @State private var useCutoff = false
     @State private var cutoff = Date()
     @State private var payFirst = false
+    @State private var useLimit = false
+    @State private var peopleLimit = 6
     @State private var busy = false
     @State private var problem: Problem?
 
@@ -74,6 +76,15 @@ struct EditDeliverySheet: View {
                         .buttonStyle(.plain)
                     }
                 } header: { Text("How does everyone pay?") } footer: { Text(PayRuleCopy.footnote) }
+
+                Section {
+                    Toggle("People limit", isOn: $useLimit)
+                    if useLimit {
+                        Stepper("\(peopleLimit) people", value: $peopleLimit, in: PeopleLimit.range)
+                    }
+                } footer: {
+                    Text(useLimit ? PeopleLimit.note + " \(store.fullCount) can add items now." : "Anyone who joins can add their own items.")
+                }
             }
         }
         .scrollContentBackground(.hidden)
@@ -93,6 +104,8 @@ struct EditDeliverySheet: View {
         delivery = g.delivery_at
         useCutoff = g.cutoff_at != nil
         payFirst = g.payFirst
+        useLimit = g.people_limit != nil
+        peopleLimit = g.people_limit ?? max(PeopleLimit.range.lowerBound, store.fullCount)
         cutoff = g.cutoff_at ?? Wita.atasDeadline(for: g.delivery_at).addingTimeInterval(-3600)
         addresses = (try? await supabase.from("addresses").select().order("created_at").execute().value) ?? []
         addressID = addresses.first { $0.label == g.address_label && $0.area == g.area }?.id
@@ -108,12 +121,14 @@ struct EditDeliverySheet: View {
             var delivery_at: Date
             var cutoff_at: Nullable<Date>?
             var pay_rule: String?
+            var people_limit: Nullable<Int>?
         }
         let a = addresses.first { $0.id == addressID }
         let patch = Patch(area: a?.area ?? g.area, address_label: a?.label ?? g.address_label, address_detail: a?.detail ?? g.address_detail,
                           maps_url: a?.maps_url ?? g.maps_url, delivery_at: delivery,
                           cutoff_at: open && !g.personal ? Nullable(useCutoff ? cutoff : nil) : nil,
-                          pay_rule: open && !g.personal ? (payFirst ? "pay_first" : "order_first") : nil)
+                          pay_rule: open && !g.personal ? (payFirst ? "pay_first" : "order_first") : nil,
+                          people_limit: open && !g.personal && (useLimit || g.people_limit != nil) ? Nullable(useLimit ? peopleLimit : nil) : nil)
         busy = true
         defer { busy = false }
         await attempt($problem, "Couldn't save") {
