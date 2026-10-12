@@ -416,7 +416,9 @@ private struct PickupPersonRow: View {
                         .font(Type5.manrope(13)).foregroundStyle(Brand.ink2).fixedSize(horizontal: false, vertical: true)
                 }
                 if at == nil, let part = store.partlyTaken(user) {
-                    Text(part).font(Type5.manrope(12, 600)).foregroundStyle(Brand.limeDeep)
+                    Label { Text(part).foregroundStyle(Brand.cocoa) } icon: { Image(systemName: "checkmark.circle.fill").foregroundStyle(Brand.limeDeep) }
+                        .labelStyle(IconLabel(spacing: 5, size: 12))
+                        .font(Type5.manrope(12, 600))
                 }
                 HStack(spacing: 8) {
                     if at != nil { TakenTag(size: .small) }
