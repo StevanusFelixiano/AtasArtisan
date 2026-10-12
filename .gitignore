@@ -3,7 +3,7 @@ xcuserdata/
 .DS_Store
 build/
 DerivedData/
-CLAUDE.md
+CLAUDE.local.md
 .claude/
 legal/build/
 supabase/.temp/
