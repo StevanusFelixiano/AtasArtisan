@@ -60,9 +60,9 @@ struct ProductView: View {
         return (Set(product.variants.map(\.price)).count > 1 ? "from " : "") + Rupiah.format(product.fromPrice)
     }
     private var totalText: String { price.map { Rupiah.format($0 * qty) } ?? "\u{2014}" }
-    /// A-1: an open group order, one of it.
+    /// A-1: an open group order, one of it, and I can add items of my own (not share-only in a full group).
     private var canShare: Bool {
-        !soldOut && store.group?.personal == false && store.group?.state == .open && qty == 1
+        !soldOut && store.group?.personal == false && store.group?.state == .open && qty == 1 && store.canAddOwn
     }
     /// The minimum's stepper runs to the group's size (at most 24).
 
@@ -320,6 +320,7 @@ struct ProductView: View {
         }
         .buttonStyle(.pill(.primary))
         .disabled(price == nil || busy)
+        .disabled(!store.canAddOwn, reason: "The group is full. You can join shared items instead.")
     }
 
     private func add() async {

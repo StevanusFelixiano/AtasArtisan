@@ -84,6 +84,7 @@ extension GroupView {
         DiscountBar(subtotal: store.subtotal, host: hostFirst, personal: g.personal)
         if !g.personal && store.subtotal >= DiscountBar.goal { latestActivity }
         if !g.personal {
+            shareOnlyNotice(g)
             askCards
             sharedSection(g)
         }
@@ -97,11 +98,24 @@ extension GroupView {
         }
     }
 
+    /// Joined past the people limit: shared items only, until a spot frees up.
+    @ViewBuilder private func shareOnlyNotice(_ g: OrderGroup) -> some View {
+        if let me = store.me, store.isShareOnly(me) {
+            NoticeBanner(icon: "chart.pie",
+                         text: store.canAddOwn
+                            ? "A spot is free: add an item of your own to take it. Until then you can join shared items."
+                            : "This group is full (\(g.people_limit ?? 0) people, \(hostFirst) included), so you can join shared items only. You’ll get a notification if a spot frees up.",
+                         fill: store.canAddOwn ? Brand.lime : Brand.choc100)
+        }
+    }
+
     @ViewBuilder private func hostOpenList(_ g: OrderGroup) -> some View {
         // B1: the host's own My items above Members, the same card a member sees.
         myItemsCard(g)
         listHeader("Members", count: store.activeMembers.count) {
-            if let line = Ready.line(store.readyCount) {
+            if let limit = PeopleLimit.line(limit: g.people_limit, full: store.fullCount) {
+                Text(limit + " ·").ui(GFont.manrope(13, 600), Brand.ink2)
+            } else if let line = Ready.line(store.readyCount) {
                 Text(line + " ·").ui(GFont.manrope(13, 600), Brand.ink2)
                     .contentTransition(reduceMotion ? .opacity : .numericText())
                     .animation(reduceMotion ? Motion.Reduced.fade : Motion.digits, value: line)
@@ -508,6 +522,9 @@ extension GroupView {
         }
         .surface(32, padding: edges(20, 20), fill: Brand.choc100)
         .entrance(sentIn, offset: HandOffMotion.cardOffset, Motion.settle, delay: HandOffMotion.cardDelay)
+        if store.isHost {
+            atasNextSteps(g).entrance(sentIn, offset: HandOffMotion.cardOffset, Motion.settle, delay: HandOffMotion.cardDelay)
+        }
         VStack(spacing: 10) {
             HStack {
                 Text("Items").ui(GFont.manrope(14, 600), Brand.ink2)
@@ -540,6 +557,42 @@ extension GroupView {
         } else {
             myItemsCompact
         }
+    }
+
+    /// The host's pill once Atas answers: one tap when the bills are already final, else the ongkir to enter.
+    func atasReplyTitle(_ g: OrderGroup) -> String { g.payFirst && g.billFinal ? "Atas confirmed" : "Atas replied" }
+
+    /// The host's next steps while the order is with Atas: the order only moves on when they tap the pill below.
+    private func atasNextSteps(_ g: OrderGroup) -> some View {
+        let pill = atasReplyTitle(g)
+        let steps: [(done: Bool, text: String)] = [
+            (true, "Order sent to Atas on WhatsApp"),
+            (false, "Wait for Atas to reply in the chat"),
+            (false, g.payFirst && g.billFinal ? "Tap \(pill) below, so everyone knows it’s on"
+                                              : "Tap \(pill) below and enter their ongkir, so everyone’s bill is final"),
+        ]
+        return VStack(alignment: .leading, spacing: 10) {
+            Text("Next steps").brand(.label)
+            ForEach(Array(steps.enumerated()), id: \.offset) { i, s in
+                HStack(alignment: .top, spacing: 10) {
+                    ZStack {
+                        Circle().fill(s.done ? Brand.limeDeep : i == steps.count - 1 ? Brand.caramel : Brand.liquorice100)
+                        if s.done {
+                            Image(systemName: "checkmark").font(.system(size: 11, weight: .bold)).foregroundStyle(Brand.cocoa)
+                        } else {
+                            Text("\(i + 1)").ui(GFont.manrope(12, 700), i == steps.count - 1 ? .white : Brand.cocoa)
+                        }
+                    }
+                    .frame(width: 22, height: 22)
+                    Text(s.text).ui(GFont.manrope(14, i == steps.count - 1 ? 700 : 500), s.done ? Brand.ink3 : Brand.cocoa)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel((s.done ? "Done: " : "Step \(i + 1): ") + s.text)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .surface(24, padding: edges(16, 16))
     }
 
     private func sentBody(_ g: OrderGroup) -> String {

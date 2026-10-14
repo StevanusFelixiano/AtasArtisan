@@ -97,7 +97,8 @@ insert into t_bills select user_id, bill_total from public.group_bill_v where gr
 
 -- Who may mark: members with food only; no session, no stranger, not Nadia.
 select pg_temp.fails('stranger', format('select public.mark_taken(%L, true)', pg_temp.gid('p')), 'not a member');
-select pg_temp.fails('nadia', format('select public.mark_taken(%L, true)', pg_temp.gid('p')), 'You have no food in this order');
+-- Nadia had nothing at lock, so lock took her off the list (20261009090000_ready_public_kick).
+select pg_temp.fails('nadia', format('select public.mark_taken(%L, true)', pg_temp.gid('p')), 'not a member');
 do $$ declare got text; begin
   perform set_config('request.jwt.claims', '{"role":"anon"}', true);
   begin

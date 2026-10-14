@@ -304,6 +304,7 @@ struct NotificationSettingsView: View {
             ("Item sold out on the menu", ["sold_out"]),
             ("Order sent, confirmed, delivered, closed", ["sent", "delivered", "closed", "cancelled", "removed"]),
             ("Pickup reminders from the host", ["pickup_nudge"]),
+            ("A spot opened in a full group", ["spot_open"]),
         ]),
         ("Sharing", [
             ("Someone shares an item", ["item_shared"]),
@@ -319,6 +320,7 @@ struct NotificationSettingsView: View {
         ("When you host", [
             ("Someone joined", ["joined"]),
             ("Everyone is ready to lock", ["all_ready"]),
+            ("Reminder to tap Atas confirmed", ["atas_reply"]),
             ("Member finished editing", ["edit_done"]),
             ("Member says they’ve paid", ["member_paid"]),
             ("Everyone has paid", ["everyone_paid"]),
