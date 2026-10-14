@@ -77,7 +77,13 @@ header 3840 × 1646 as **PNG** (the same size as JPEG was rejected, "File dimens
 
 ## Submissions
 - 1.0 (build 12) submitted for review 2026-10-03, manual release. Content Rights: yes, with rights. Age rating 4+.
-  Price free. Review demo cutoff is 2026-10-10; rerun `supabase/seed/review_demo.sql` if review runs past it.
+  Price free.
+  - Rejected 2026-10-12, guideline 4.8 (Login Services): "Continue with WhatsApp" read as a third-party login.
+  - Resubmitted 2026-10-14 with build 24 (Sign in with Apple as the only sign-in; WhatsApp only verifies a
+    number) and a reply in the submission's messages. Review demo cutoff is 2026-10-21; rerun
+    `supabase/seed/review_demo.sql` if review runs past it.
+  - The resubmit button stays disabled until the rejected item is marked resolved: API `PATCH
+    reviewSubmissionItems/{id}` `resolved: true`, then `PATCH reviewSubmissions/{id}` `submitted: true`.
 - Asset Library draft iOS submission (started 2026-10-07): header, search results and the 14 Duo screenshots,
   "Ready for Review". Submit for Review is disabled ("add an app version for the selected platform") until 1.0 is
   approved; then open Asset Library → Draft Submissions → Submit for Review.
