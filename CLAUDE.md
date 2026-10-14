@@ -52,7 +52,8 @@ Personal, machine-specific notes go in `CLAUDE.local.md` (gitignored).
   - Security-definer functions pin `search_path = ''`, use `coalesce(<cond>, false)` on `auth.uid()` checks, and revoke EXECUTE from both `public` and `anon`.
 - **The bill** is `group_bill_v` (equal ongkir − discount among payers; split shares; rounding to the owner and the host). It freezes into `members.bill_total` at `confirm_atas`.
 - **Notifications:** every row of `notifications` goes through the trigger, `pg_net`, then the `push` function (APNs). Muted kinds are in `profiles.notify_mute`.
-- **Timer:** `pg_cron` `ataste-tick` runs every minute: the 30-minute cutoff reminder, auto-lock, and code cleanup.
+- **Timer:** `pg_cron` `ataste-tick` runs every minute: the 30-minute cutoff reminder, auto-lock, auto-close
+  (3 days after delivery, once everyone has paid), and code cleanup.
 - **Functions** (`supabase/functions`, `verify_jwt` in `supabase/config.toml`): otp, wa-inbound, push, join (302 → the invite page `/j/CODE`), legal (302 → the legal pages), account (delete), menu-ingest.
 - **Realtime** events mean "refetch"; a 30 s poll stays behind each channel, and each watcher has its own topic.
 - **Tests:** `supabase/tests/bill.sql` runs the design's sample order end to end as the real roles and rolls back.
