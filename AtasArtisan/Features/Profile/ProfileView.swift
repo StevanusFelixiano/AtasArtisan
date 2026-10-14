@@ -17,7 +17,6 @@ struct ProfileView: View {
     @FocusState private var editingName: Bool
     /// DEBUG `ATASTE_PROFILE` = notifications (6-7) | payout (6-6, the first payment method).
     @State private var debugNotifications = false
-    @State private var showMessageLanguage = false
     
     var body: some View {
         ScrollView {
@@ -145,11 +144,18 @@ struct ProfileView: View {
                 }
             }
             .buttonStyle(.plain)
-            Button {
-                showMessageLanguage = true
+            // The system pull-down menu, with the up/down arrows of the Area picker in Saved places.
+            Menu {
+                Picker("Atas message language", selection: Binding(
+                    get: { app.profile?.msg_lang ?? "id" },
+                    set: { lang in Task { try? await app.saveProfile(msgLang: lang) } })) {
+                    Text("Bahasa Indonesia").tag("id")
+                    Text("English").tag("en")
+                }
             } label: {
                 ProfileRow(divider: true, vertical: 13) {
-                    ObWhatsAppGlyph(size: 19)
+                    // A Menu label takes the caramel tint and centres wrapped text; the other rows don't.
+                    ObWhatsAppGlyph(size: 19).foregroundStyle(Color.primary)
 
                     VStack(alignment: .leading, spacing: 1) {
                         Text("Atas message language")
@@ -158,6 +164,7 @@ struct ProfileView: View {
                         Text("Used when you send a group order")
                             .obText(.footnote, 12, Brand.ink3)
                     }
+                    .multilineTextAlignment(.leading)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
                     Text(
@@ -169,30 +176,10 @@ struct ProfileView: View {
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
 
-                    Chevron()
+                    Image(systemName: "chevron.up.chevron.down").font(.system(size: 13, weight: .semibold)).foregroundStyle(Brand.ink4)
                 }
             }
-            .buttonStyle(.plain)
-            .popover(
-                isPresented: $showMessageLanguage,
-                attachmentAnchor: .point(.topTrailing),
-                arrowEdge: .top
-            ) {
-                VStack(spacing: 0) {
-                    languageOption(
-                        title: "Bahasa Indonesia",
-                        value: "id"
-                    )
-
-                    languageOption(
-                        title: "English",
-                        value: "en"
-                    )
-                }
-                .padding(.vertical, 6)
-                .frame(width: 220)
-                .presentationCompactAdaptation(.popover)
-            }
+            .accessibilityLabel("Atas message language, \(app.profile?.msg_lang == "en" ? "English" : "Bahasa Indonesia")")
             NavigationLink { SavedPlacesView() } label: {
                 ProfileRow(divider: true, vertical: 13) {
                     Image(systemName: "mappin.and.ellipse").rowIcon()
@@ -213,35 +200,6 @@ struct ProfileView: View {
         }
         .padding(.horizontal, Brand.s4).padding(.vertical, Brand.s1)
         .background(RoundedRectangle(cornerRadius: Brand.rCard, style: .continuous).fill(Brand.card))
-    }
-    
-    @ViewBuilder
-    private func languageOption(
-        title: String,
-        value: String
-    ) -> some View {
-        Button {
-            showMessageLanguage = false
-
-            Task {
-                try? await app.saveProfile(msgLang: value)
-            }
-        } label: {
-            HStack(spacing: 12) {
-                Text(title)
-                    .obText(.body, 15)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                if app.profile?.msg_lang == value {
-                    Image(systemName: "checkmark")
-                        .font(.system(size: 14, weight: .semibold))
-                }
-            }
-            .padding(.horizontal, 14)
-            .padding(.vertical, 10)
-            .contentShape(Rectangle())
-        }
-        .buttonStyle(.plain)
     }
     
     private var aboutCard: some View {
