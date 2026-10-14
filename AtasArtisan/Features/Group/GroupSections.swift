@@ -53,11 +53,18 @@ extension GroupView {
             let place = g.address_label.localizedCaseInsensitiveContains(g.area) ? g.address_label : "\(g.address_label), \(g.area)"
             Text("\(when) · \(place)").ui(GFont.manrope(13), Brand.ink2)
         } else {
-            HStack(spacing: 8) {
-                Avatar(name: hostName, index: store.colorIndex(g.host_id), size: 24, art: store.people[g.host_id]?.avatar, bg: store.people[g.host_id]?.avatar_bg)
-                Text(store.isHost ? "You’re hosting · \(when) WITA · \(g.payFirst ? "Pay first" : "Order first")"
-                                  : "Hosted by \(hostName) · \(when) WITA · \(g.address_label)")
+            // 9-10c/d: the host line carries the badge; when and where move to a line of their own under it.
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 8) {
+                    Avatar(name: hostName, index: store.colorIndex(g.host_id), size: 24, art: store.people[g.host_id]?.avatar, bg: store.people[g.host_id]?.avatar_bg)
+                    Text(store.isHost ? "You’re hosting" : "Hosted by \(hostName)").ui(GFont.manrope(13), Brand.ink2)
+                    if let host = store.people[g.host_id], host.verified {
+                        VerifiedBadge(person: VerifiedPerson(host, index: store.colorIndex(g.host_id)))
+                    }
+                }
+                Text(store.isHost ? "\(when) WITA · \(g.payFirst ? "Pay first" : "Order first")" : "\(when) WITA · \(g.address_label)")
                     .ui(GFont.manrope(13), Brand.ink2)
+                    .padding(.leading, 32)
             }
         }
     }
@@ -377,9 +384,7 @@ extension GroupView {
                     .frame(maxHeight: .infinity, alignment: .top)
                 VStack(alignment: .leading, spacing: 4) {
                     HStack(alignment: .firstTextBaseline) {
-                        (Text(store.name(user)).font(GFont.manrope(16, 700))
-                         + Text(role.isEmpty ? "" : " \(role)").font(GFont.manrope(12)).foregroundStyle(Brand.ink3))
-                            .foregroundStyle(Brand.cocoa)
+                        nameLine(user, role: role)
                         Spacer(minLength: 8)
                         Text(Rupiah.format(amount)).ui(GFont.roundo(16), amount == 0 ? Brand.ink4 : Brand.cocoa)
                             .fixedSize()  // stays on one line beside a Ready tag
@@ -400,6 +405,16 @@ extension GroupView {
             .accessibilityElement(children: .contain)
         }
         .padding(.vertical, 14)
+    }
+
+    /// Name, then the Verified badge (6 pt after it, before the role), or for the host a quiet "· not verified": that's
+    /// the row where their WhatsApp button is missing. Members see nothing for an unverified person.
+    private func nameLine(_ user: UUID, role: String) -> some View {
+        let person = store.people[user].flatMap { $0.verified ? VerifiedPerson($0, index: store.colorIndex(user)) : nil }
+        return BadgedName(name: store.name(user), font: GFont.manrope(16, 700), person: person) {
+            if person == nil && store.isHost && user != store.me { NotVerifiedNote() }
+            if !role.isEmpty { Text(role).font(GFont.manrope(12)).foregroundStyle(Brand.ink3).fixedSize() }
+        }
     }
 
     /// Someone else's row: the pie (Ask to share); the host also gets WhatsApp beside it, the circles 8 pt apart. My
@@ -724,8 +739,11 @@ extension GroupView {
         .safeAreaInset(edge: .bottom) {
             VStack(spacing: 10) {
                 if !mine.isEmpty {
-                    Button("Start an order with my items") { Task { await startOrder(from: g, items: mine) } }
-                        .buttonStyle(.pill(.primary))
+                    Button("Start an order with my items") {
+                        if AppModel.shared.profile?.verified == false { orderGate = GateRequest(group: false) }
+                        else { Task { await startOrder(from: g, items: mine) } }
+                    }
+                    .buttonStyle(.pill(.primary))
                 }
                 Button("Back to Home") { path.removeLast(path.count) }
                     .ui(GFont.manrope(16, 600), Brand.ink2)
@@ -734,5 +752,6 @@ extension GroupView {
             .padding(.horizontal, 16)
             .padding(.bottom, 8)
         }
+        .hostingGate($orderGate) { _ in Task { await startOrder(from: g, items: mine) } }
     }
 }

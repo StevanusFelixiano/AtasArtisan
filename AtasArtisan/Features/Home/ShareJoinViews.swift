@@ -298,7 +298,8 @@ struct JoinSheet: View {
     var body: some View {
         Group {
             if let p = preview {
-                if p.already_member { member(p) } else if p.state != .open { closed(p) } else { invite(p) }
+                if p.already_member && DebugScreens.value("ATASTE_JOIN_INVITE") == nil { member(p) }
+                else if p.state != .open { closed(p) } else { invite(p) }
             } else if loaded {
                 VStack {
                     Spacer()
@@ -335,6 +336,7 @@ struct JoinSheet: View {
                         Text(invited ? "\(p.host_name) invited you" : "Hosted by \(p.host_name)").brand(.label, Brand.caramel)
                         Text(p.name).styled(.title1, 28)
                     }
+                    hostRow(p)
                     HStack(alignment: .top, spacing: 10) {
                         tile("Delivery", "\(Wita.string(p.delivery_at, "EEE d MMM, HH:mm")) WITA", p.address_label ?? web?.place ?? p.area, Brand.ink2, Brand.cream)
                         if let c = p.cutoff_at {
@@ -391,6 +393,30 @@ struct JoinSheet: View {
                 .buttonStyle(.pill(.primary)).disabled(busy)
                 .padding(.horizontal, Brand.s4).padding(.bottom, Brand.s4)
         }
+    }
+
+    /// 9-10a: who hosts, with the badge when their number is verified (`group_preview` gives the number only then).
+    /// The most important badge: a member deciding whether to trust a host they haven't met.
+    private func hostRow(_ p: JoinPreview) -> some View {
+        HStack(spacing: 12) {
+            Avatar(name: p.host_name, index: 0, size: 40, art: p.host_avatar, bg: p.host_avatar_bg)
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(spacing: 6) {
+                    Text(p.host_name).styled(.headline, 16).lineLimit(1)
+                    if p.host_phone != nil {
+                        VerifiedBadge(person: VerifiedPerson(name: p.host_name, avatar: p.host_avatar, bg: p.host_avatar_bg))
+                    }
+                    Text("· host").styled(.footnote, 12, Brand.ink3).fixedSize()
+                }
+                if p.host_phone != nil {
+                    Text("WhatsApp number verified. Tap the badge for what that means.").styled(.footnote, 12, Brand.ink2)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+            Spacer(minLength: 0)
+        }
+        .padding(Brand.s3)
+        .background(RoundedRectangle(cornerRadius: 20, style: .continuous).fill(Brand.cream))
     }
 
     private func ruleText(_ rule: String, host: String) -> AttributedString {
@@ -543,29 +569,37 @@ struct JoinSheet: View {
 // MARK: Join while signed out (2-6b)
 
 /// Shown over the invite when a join link arrives before sign-in. `app.pendingJoin` already survives sign-in,
-/// so the join screen opens by itself once the user is in. Wire it from the signed-out flow (see the report).
+/// so the join screen opens by itself once the user is in. Signs in with Apple, like 9-1.
 struct JoinLoginPrompt: View {
     var code: String
-    var action: () -> Void
     @State private var hostName: String?
+    @State private var busy = false
+    @State private var problem: Problem?
 
     var body: some View {
         VStack(spacing: 14) {
             Mascot(pose: "pose-phone", size: 96, fill: Brand.lime)
-            Text(hostName.map { "Log in to join \($0)’s group" } ?? "Log in to join the group")
+            Text(hostName.map { "Sign in to join \($0)’s group" } ?? "Sign in to join the group")
                 .styled(.title2, 24).multilineTextAlignment(.center)
-            Text("One WhatsApp message and you’re in. We’ll bring you straight back to this invite.")
+            Text("Sign in with Apple and we’ll bring you straight back to this invite.")
                 .styled(.body, 15, Brand.ink2).lineSpacing(4).multilineTextAlignment(.center).frame(maxWidth: 310)
-            Button(action: action) {
-                HStack(spacing: 10) { WAGlyph(size: 20); Text("Continue with WhatsApp") }
+            AppleButton(mode: .signIn, busy: $busy) { reason in
+                problem = Problem(title: "Couldn’t sign in. Try again.", message: reason)
             }
-            .buttonStyle(.pill(.dark))
+            if busy {
+                HStack(spacing: Brand.s2) {
+                    ProgressView().tint(Brand.caramel)
+                    Text("Signing in…").styled(.callout, 14, weight: 600, Brand.ink2)
+                }
+                .accessibilityElement(children: .combine)
+            }
         }
         .padding(.horizontal, 20)
         .padding(.top, Brand.s5)
         .padding(.bottom, Brand.s4)
         .presentationDetents([.height(400)])
         .presentationDragIndicator(.visible)
+        .problemAlert($problem)
         .task { hostName = await WebInvite.load(code)?.host_name }
     }
 }

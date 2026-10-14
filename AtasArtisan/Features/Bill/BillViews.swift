@@ -380,6 +380,7 @@ struct BillView: View {
                         .padding(.vertical, 3).padding(.horizontal, 12).background(Capsule().fill(Brand.choc400))
                 }
             }
+            hostLine
             copyRow("Account name", p.account_name, font: Type5.manrope(17, 700), toastText: "Account name copied")
             copyRow("Account number", p.number, display: grouped(p.number), font: Type5.roundo(26), tracking: 26 * 0.04,
                     toastText: "Account number copied")
@@ -392,6 +393,21 @@ struct BillView: View {
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 32, style: .continuous).fill(Brand.cocoa))
+    }
+
+    /// 9-10f: who the money goes to, with the badge on the host, not on the account: Ataste never checks the account,
+    /// and the badge's explainer says so.
+    @ViewBuilder private var hostLine: some View {
+        if let id = store.group?.host_id, let host = store.people[id] {
+            HStack(spacing: 10) {
+                Avatar(name: hostName, index: store.colorIndex(id), size: 32, art: host.avatar, bg: host.avatar_bg)
+                Text(hostName).font(Type5.manrope(17, 700)).foregroundStyle(Brand.cream).lineLimit(1)
+                if host.verified { VerifiedBadge(dark: true, person: VerifiedPerson(host, index: store.colorIndex(id))) }
+                Text("· your host").font(Type5.manrope(12)).foregroundStyle(Brand.liquorice400).fixedSize()
+            }
+            .padding(.bottom, 14)
+            .overlay(alignment: .bottom) { DashedRule(color: Brand.cream.opacity(0.2)) }
+        }
     }
 
     private func copyRow(_ caption: String, _ value: String, display: String? = nil, font: Font, tracking: CGFloat = 0, toastText: String) -> some View {

@@ -48,7 +48,7 @@ struct ObRing: View {
     }
 }
 
-/// "Continue with WhatsApp": a pill label with the WhatsApp glyph as its icon.
+/// "Verify with WhatsApp": a pill label with the WhatsApp glyph as its icon.
 struct ObWhatsAppLabel: View {
     var title: String
     var body: some View {

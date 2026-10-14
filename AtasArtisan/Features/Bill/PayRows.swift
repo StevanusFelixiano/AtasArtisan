@@ -33,7 +33,12 @@ struct PayRow: View {
                    bg: store.people[row.user_id]?.avatar_bg)
             VStack(alignment: .leading, spacing: 6) {
                 HStack {
-                    Text(name).font(Type5.manrope(16, 700)).foregroundStyle(Brand.cocoa)
+                    // 9-10e: the badge after the name; unverified people have no WhatsApp button here, so the host
+                    // sees why.
+                    let person = store.people[row.user_id].flatMap { $0.verified ? VerifiedPerson($0, index: store.colorIndex(row.user_id)) : nil }
+                    BadgedName(name: name, font: Type5.manrope(16, 700), person: person) {
+                        if person == nil { NotVerifiedNote() }
+                    }
                     Spacer()
                     Text(Rupiah.format(row.due > 0 ? row.due : row.total)).font(Type5.roundo(16)).foregroundStyle(Brand.cocoa)
                 }

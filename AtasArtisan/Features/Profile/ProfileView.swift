@@ -1,8 +1,9 @@
 import SwiftUI
 import Supabase
 
-/// 6-5 Profile: picture, name, verified number, payment methods, notifications, message language, saved places,
-/// log out; then legal, support and delete account (guideline 5.1.1(v)), which the board leaves out.
+/// 6-5 Profile (9-9a/b): picture, name, the verified number with the L badge or the "Get the Verified badge" card,
+/// payment methods, notifications, message language, saved places, change number, Sign in with Apple, log out; then
+/// legal, support and delete account (guideline 5.1.1(v)), which the board leaves out.
 struct ProfileView: View {
     @Environment(AppModel.self) private var app
     @Environment(\.openURL) private var openURL
@@ -13,6 +14,10 @@ struct ProfileView: View {
     @State private var confirmDelete = false
     @State private var pickingAvatar = false
     @State private var confirmLogout = false
+    /// 9-4a from the badge card or Change number, pushed on this stack.
+    @State private var verifying = false
+    /// 9-8 from the "Signed in with Apple · Link" row.
+    @State private var linking: LinkPrompt?
     @State private var problem: Problem?
     @FocusState private var editingName: Bool
     /// DEBUG `ATASTE_PROFILE` = notifications (6-7) | payout (6-6, the first payment method).
@@ -22,6 +27,7 @@ struct ProfileView: View {
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 header
+                if app.profile?.verified == false { verifyCard }
                 Text("Payment methods · for when you host").brand(.label).padding(.horizontal, 4).padding(.top, 6)
                 payoutCard
                 settingsCard
@@ -46,14 +52,27 @@ struct ProfileView: View {
         .onAppear { if DebugScreens.value("ATASTE_SHEET") == "avatar" { pickingAvatar = true } }
         .sheet(isPresented: $pickingAvatar) { NavigationStack { AvatarPicker() } }
         .navigationDestination(item: $editingAccount) { a in PayoutEditor(account: a, sheet: false) { _ in Task { await load() } } }
+        .navigationDestination(isPresented: $verifying) {
+            VerifyFlow(origin: .profile) { end in
+                Task {
+                    if end == .verified { await app.loadProfile() }
+                    verifying = false
+                }
+            }
+        }
+        .doughSheet(item: $linking) { _ in LinkAppleSheet {} }
         .alert("Log out?", isPresented: $confirmLogout) {
             Button("Log out", role: .destructive) { Task { await app.signOut() } }
             Button("Cancel", role: .cancel) {}
-        } message: { Text("You can sign back in with WhatsApp any time.") }
+        } message: {
+            // An account made with WhatsApp sign-in and never linked comes back through 9-7 instead.
+            Text(app.appleLinked == false ? "To get back to this account, sign in with Apple and verify the same WhatsApp number."
+                                          : "You can sign back in with Apple any time.")
+        }
             .alert("Delete your account?", isPresented: $confirmDelete) {
                 Button("Delete", role: .destructive) { Task { await attempt($problem, "Couldn't delete your account") { try await app.deleteAccount() } } }
                 Button("Cancel", role: .cancel) {}
-            } message: { Text("Your profile, orders, payment methods, receipts and photos are deleted. Groups you host are deleted for everyone. This can't be undone.") }
+            } message: { Text("Your profile, orders, payment methods, receipts and photos are deleted. Groups you host are deleted for everyone. Your Apple ID is disconnected from Ataste. This can't be undone.") }
             .problemAlert($problem)
     }
     
@@ -82,19 +101,16 @@ struct ProfileView: View {
                 .onSubmit { Task { await saveName() } }
                 .onChange(of: editingName) { _, on in if !on { Task { await saveName() } } }
                 .accessibilityLabel("Your name")
-            HStack(spacing: 6) {
-                Text(PhoneFormat.spaced(app.profile?.phone ?? "")).obText(.headline, 14, weight: 600, Brand.ink2)
-                HStack(spacing: 4) {
-                    Image(systemName: "checkmark.circle").font(.system(size: 12, weight: .semibold))
-                    Text("Verified").font(Brand.font(.label, size: 11, weight: 600)).tracking(0.33).textCase(.uppercase)
+            // 9-9b: the number with the L badge (6-5's lime pill read as PAID). 9-9a: no number yet.
+            if let p = app.profile, let phone = p.phone {
+                HStack(spacing: 8) {
+                    Text(PhoneFormat.spaced(phone)).obText(.headline, 14, weight: 600, Brand.ink2)
+                        .accessibilityLabel("Verified number \(PhoneFormat.spaced(phone))")
+                    VerifiedBadge(size: .l, person: VerifiedPerson(p))
                 }
-                .foregroundStyle(Brand.cocoa)
-                .padding(.leading, 6).padding(.trailing, 10).padding(.vertical, 2)
-                .background(Capsule().fill(Brand.lime))
-                .overlay(Capsule().strokeBorder(Brand.limeDeep, lineWidth: 1.5))
+            } else {
+                Text("No phone number yet").obText(.callout, 13, Brand.ink3)
             }
-            .accessibilityElement(children: .combine)
-            .accessibilityLabel("Verified number \(PhoneFormat.spaced(app.profile?.phone ?? ""))")
         }
         .frame(maxWidth: .infinity)
         .padding(.top, 14)
@@ -102,6 +118,22 @@ struct ProfileView: View {
     }
     
     // MARK: Cards
+
+    /// 9-9a: hosting needs a verified number, and hosts reach members on WhatsApp.
+    private var verifyCard: some View {
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 10) {
+                Text("Get the Verified badge").obText(.headline, 17).frame(maxWidth: .infinity, alignment: .leading)
+                VerifiedBadge()
+            }
+            Text("Prove the WhatsApp number is yours with one message. You need it to host, and hosts can reach you.")
+                .obText(.callout, 14, Brand.ink2).lineSpacing(3).fixedSize(horizontal: false, vertical: true)
+            Button { verifying = true } label: { ObWhatsAppLabel(title: "Verify with WhatsApp").frame(maxWidth: .infinity) }
+                .buttonStyle(.pill(.primary, .medium))
+        }
+        .padding(18)
+        .background(RoundedRectangle(cornerRadius: 28, style: .continuous).fill(Brand.card))
+    }
     
     private var payoutCard: some View {
         VStack(spacing: 0) {
@@ -144,42 +176,8 @@ struct ProfileView: View {
                 }
             }
             .buttonStyle(.plain)
-            // The system pull-down menu, with the up/down arrows of the Area picker in Saved places.
-            Menu {
-                Picker("Atas message language", selection: Binding(
-                    get: { app.profile?.msg_lang ?? "id" },
-                    set: { lang in Task { try? await app.saveProfile(msgLang: lang) } })) {
-                    Text("Bahasa Indonesia").tag("id")
-                    Text("English").tag("en")
-                }
-            } label: {
-                ProfileRow(divider: true, vertical: 13) {
-                    // A Menu label takes the caramel tint and centres wrapped text; the other rows don't.
-                    ObWhatsAppGlyph(size: 19).foregroundStyle(Color.primary)
-
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text("Atas message language")
-                            .obText(.headline, 15, weight: 600)
-
-                        Text("Used when you send a group order")
-                            .obText(.footnote, 12, Brand.ink3)
-                    }
-                    .multilineTextAlignment(.leading)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                    Text(
-                        app.profile?.msg_lang == "en"
-                        ? "English"
-                        : "Bahasa Indonesia"
-                    )
-                    .obText(.callout, 13, Brand.ink3)
-                    .lineLimit(1)
-                    .fixedSize(horizontal: true, vertical: false)
-
-                    Image(systemName: "chevron.up.chevron.down").font(.system(size: 13, weight: .semibold)).foregroundStyle(Brand.ink4)
-                }
-            }
-            .accessibilityLabel("Atas message language, \(app.profile?.msg_lang == "en" ? "English" : "Bahasa Indonesia")")
+            // The language of the order message to Atas, which only hosts send: unverified people can't host yet.
+            if app.profile?.verified == true { languageRow }
             NavigationLink { SavedPlacesView() } label: {
                 ProfileRow(divider: true, vertical: 13) {
                     Image(systemName: "mappin.and.ellipse").rowIcon()
@@ -189,6 +187,18 @@ struct ProfileView: View {
                 }
             }
             .buttonStyle(.plain)
+            // 9-9b: runs 9-4a again; the new number replaces the old one and the badge moves with it.
+            if app.profile?.verified == true {
+                Button { verifying = true } label: {
+                    ProfileRow(divider: true, vertical: 13) {
+                        Image(systemName: "arrow.triangle.2.circlepath").rowIcon()
+                        Text("Change number").obText(.headline, 15, weight: 600).frame(maxWidth: .infinity, alignment: .leading)
+                        Chevron()
+                    }
+                }
+                .buttonStyle(.plain)
+            }
+            appleRow
             Button { confirmLogout = true } label: {
                 ProfileRow(divider: false, vertical: 13) {
                     Image(systemName: "rectangle.portrait.and.arrow.right").rowIcon()
@@ -200,6 +210,63 @@ struct ProfileView: View {
         }
         .padding(.horizontal, Brand.s4).padding(.vertical, Brand.s1)
         .background(RoundedRectangle(cornerRadius: Brand.rCard, style: .continuous).fill(Brand.card))
+    }
+
+    /// "Signed in with Apple · Linked", or a Link button (9-8) for an account made with WhatsApp sign-in. Hidden until
+    /// the server has said which.
+    @ViewBuilder private var appleRow: some View {
+        if let linked = app.appleLinked {
+            Button { linking = LinkPrompt() } label: {
+                ProfileRow(divider: true, vertical: 13) {
+                    Image(systemName: "person").rowIcon()
+                    Text("Signed in with Apple").obText(.headline, 15, weight: 600).frame(maxWidth: .infinity, alignment: .leading)
+                    Text(linked ? "Linked" : "Link").obText(linked ? .callout : .headline, linked ? 13 : 15, weight: linked ? nil : 600,
+                                                          linked ? Brand.ink3 : Brand.caramel)
+                }
+            }
+            .buttonStyle(.plain)
+            .disabled(linked)
+            .accessibilityHint(linked ? "" : "Links your Apple ID to this account")
+        }
+    }
+
+    private var languageRow: some View {
+        // The system pull-down menu, with the up/down arrows of the Area picker in Saved places.
+        Menu {
+            Picker("Atas message language", selection: Binding(
+                get: { app.profile?.msg_lang ?? "id" },
+                set: { lang in Task { try? await app.saveProfile(msgLang: lang) } })) {
+                Text("Bahasa Indonesia").tag("id")
+                Text("English").tag("en")
+            }
+        } label: {
+            ProfileRow(divider: true, vertical: 13) {
+                // A Menu label takes the caramel tint and centres wrapped text; the other rows don't.
+                ObWhatsAppGlyph(size: 19).foregroundStyle(Color.primary)
+
+                VStack(alignment: .leading, spacing: 1) {
+                    Text("Atas message language")
+                        .obText(.headline, 15, weight: 600)
+
+                    Text("Used when you send a group order")
+                        .obText(.footnote, 12, Brand.ink3)
+                }
+                .multilineTextAlignment(.leading)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+                Text(
+                    app.profile?.msg_lang == "en"
+                    ? "English"
+                    : "Bahasa Indonesia"
+                )
+                .obText(.callout, 13, Brand.ink3)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+
+                Image(systemName: "chevron.up.chevron.down").font(.system(size: 13, weight: .semibold)).foregroundStyle(Brand.ink4)
+            }
+        }
+        .accessibilityLabel("Atas message language, \(app.profile?.msg_lang == "en" ? "English" : "Bahasa Indonesia")")
     }
     
     private var aboutCard: some View {

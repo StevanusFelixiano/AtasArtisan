@@ -49,6 +49,15 @@ final class AppModel {
     var note: InAppNote?
     /// Where to get a newer build when this one is below the server's minimum (`app_release`); nil = up to date.
     var updateURL: URL?
+    /// A new account signing up: name, verify intro and primer come before Home even when Apple gave a name.
+    var onboarding = false
+    /// Whether this account can sign in with Apple (`apple_linked()`); nil until known, or on a server without it.
+    var appleLinked: Bool?
+    /// "Your number is verified" when a verification left running finishes (9-4b "Do it later").
+    var toast: ToastNote?
+    /// 9-7 for a verification left running whose number turned out to belong to another account.
+    var takenLater: Taken?
+    private var verifyTask: Task<Void, Never>?
 
     /// A push in the foreground: the in-app banner shows it, unless it is about the group on screen.
     func arrived(_ n: InAppNote) {
@@ -64,8 +73,16 @@ final class AppModel {
                 await loadProfile()
                 phase = .signedIn
                 Notices.shared.registerIfAllowed()
+                appleLinked = try? await supabase.rpc("apple_linked").execute().value
+                #if DEBUG
+                if let v = DebugScreens.value("ATASTE_APPLE") { appleLinked = v == "linked" }
+                #endif
             } else {
                 profile = nil
+                onboarding = false
+                NameStep.suggested = ""
+                appleLinked = nil
+                stopVerifyLater()
                 phase = .signedOut
             }
         }
@@ -74,6 +91,39 @@ final class AppModel {
     func loadProfile() async {
         guard let userID else { return }
         profile = try? await supabase.from("profiles").select().eq("id", value: userID).single().execute().value
+        #if DEBUG
+        if let p = profile, DebugScreens.unverified(p.name, me: true) { profile?.phone = nil }
+        #endif
+    }
+
+    /// Keeps checking a code the user walked away from (9-4b "Do it later") until it runs out. Verified: the profile
+    /// reloads (the badge appears) and a toast says so. Taken: 9-7 opens over whatever is on screen.
+    func verifyLater(nonce: String, until: Date) {
+        verifyTask?.cancel()
+        verifyTask = Task {
+            while !Task.isCancelled && Date() < until.addingTimeInterval(30) {
+                try? await Task.sleep(for: .seconds(3))
+                guard !Task.isCancelled, let s = await VerifyStatus.check(nonce) else { continue }
+                switch s.status {
+                case "verified":
+                    await loadProfile()
+                    toast = ToastNote(text: "Your number is verified")
+                    return
+                case "taken":
+                    if let phone = s.phone, let account = s.account { takenLater = Taken(nonce: nonce, phone: phone, account: account) }
+                    return
+                case "expired":
+                    return
+                default:
+                    continue
+                }
+            }
+        }
+    }
+
+    func stopVerifyLater() {
+        verifyTask?.cancel()
+        verifyTask = nil
     }
 
     func saveProfile(name: String? = nil, msgLang: String? = nil, mute: [String]? = nil) async throws {
@@ -187,6 +237,9 @@ struct RootView: View {
         .task(id: scenePhase) { if scenePhase == .active { await app.checkUpdate() } }
         .background(KeyboardDismiss())
         .background(BannerWindowInstaller())
+        .fullScreenCover(item: Binding(get: { app.takenLater }, set: { app.takenLater = $0 })) { t in
+            TakenView(taken: t) { app.takenLater = nil }
+        }
     }
 
     @ViewBuilder private var screen: some View {
@@ -196,7 +249,8 @@ struct RootView: View {
             case .signedOut: OnboardingFlow()
             case .signedIn:
                 if let p = app.profile {
-                    if p.name.isEmpty { NameStep() } else { MainTabs() }
+                    // A new account: name, verify intro, primer. Another account (9-7's "Continue as") starts afresh.
+                    if p.name.isEmpty || app.onboarding { NameStep() } else { MainTabs().id(app.userID) }
                 } else {
                     // Signed in but the profile didn't load (offline, or a session that couldn't be stored):
                     // don't ask for a name the server already has.

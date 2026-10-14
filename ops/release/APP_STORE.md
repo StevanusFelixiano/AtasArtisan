@@ -45,14 +45,17 @@ Not collected: location, contacts, browsing, purchases, usage data, diagnostics,
 - Sign-in required: yes. Demo account: there is no password; see notes.
 - Notes (paste, replacing CODE with the Keychain value `ataste.review-code`):
 
-  Ataste verifies a user's phone number by having them send a one-time code from their own WhatsApp to our
-  number; the reviewer may not have WhatsApp, so there is a review sign-in. On the Welcome screen, press and
-  hold the "ataste" logo for 1 second; a "Review code" field appears. Enter CODE and tap Sign in. You are
-  signed in as "Rani", the host of a sample group ("Academy Bali Friday Treats", open) and a member of a
-  second group whose bill is final ("Academy Bali Snacks"). Ataste does not process payments: members transfer
-  money to the host outside the app (physical goods, guideline 3.1.3(e)). Ataste is not affiliated with Atas
-  Artisan; the "Send to Atas" button opens WhatsApp with the order text for the host to send themselves.
-  Account deletion: Profile → Delete account.
+  Sign in with Apple is the only sign-in. A new account can join groups and order right away. Hosting a group
+  needs a verified phone number, because members pay the host and the bakery needs the host's number: the user
+  sends a one-time code from their own WhatsApp to our number, and gets a "Verified" badge.
+  To see sample data without WhatsApp, use the demo account: on the Welcome screen, press and hold the "ataste"
+  logo for 1 second; a "Review code" field appears. Enter CODE and tap Sign in. You are signed in as "Rani"
+  (already verified), the host of a sample group ("Academy Bali Friday Treats", open) and a member of a second
+  group whose bill is final ("Academy Bali Snacks"). It may offer once to link an Apple ID; tap Later.
+  Ataste does not process payments: members transfer money to the host outside the app (physical goods,
+  guideline 3.1.3(e)). Ataste is not affiliated with Atas Artisan; the "Send to Atas" button opens WhatsApp
+  with the order text for the host to send themselves.
+  Account deletion: Profile → Delete account (it also revokes the Sign in with Apple token).
 
 ## Export compliance
 `ITSAppUsesNonExemptEncryption = NO` in Info.plist (HTTPS only), so no questions per build.

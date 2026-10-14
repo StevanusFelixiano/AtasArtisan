@@ -5,13 +5,16 @@ import Foundation
 
 nonisolated struct Profile: Codable, Identifiable, Hashable {
     var id: UUID
-    var phone: String
+    /// The WhatsApp number they verified (62812…); nil until they do. Verified people get the badge and can host.
+    var phone: String?
     var name: String
     var msg_lang: String
     var notify_mute: [String]
     var avatar: String?
     /// Picture background, a key of `Art.backgrounds`; nil = the pastel from join order.
     var avatar_bg: String?
+
+    var verified: Bool { phone != nil }
 }
 
 nonisolated struct PayoutAccount: Codable, Identifiable, Hashable {

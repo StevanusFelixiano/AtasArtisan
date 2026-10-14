@@ -1,6 +1,8 @@
 # verify_jwt per function; the ones with it off check a secret or need no caller identity.
 [functions.otp]
 verify_jwt = false
+[functions.apple]
+verify_jwt = false
 [functions.wa-inbound]
 verify_jwt = false
 [functions.push]

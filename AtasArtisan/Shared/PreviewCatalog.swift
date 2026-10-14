@@ -132,13 +132,15 @@ enum PreviewData {
 }
 
 #Preview("Welcome") {
-    NavigationStack { WelcomeStep(next: {}) }
+    NavigationStack { WelcomeStep() }
+        .environment(PreviewData.app)
 }
 
 #Preview("Verified") {
     NavigationStack {
-        VerifiedStep(phone: "6281234567890", suggestedName: "Putri", token: "", notMe: {})
+        VerifiedStep(phone: "6281234567890", notMe: {}, proceed: {})
     }
+    .environment(PreviewData.app)
 }
 
 #Preview("Name") {
@@ -194,7 +196,8 @@ enum PreviewData {
 }
 
 #Preview("Join login prompt") {
-    JoinLoginPrompt(code: PreviewData.group.code, action: {})
+    JoinLoginPrompt(code: PreviewData.group.code)
+        .environment(PreviewData.app)
 }
 
 #Preview("Home") {

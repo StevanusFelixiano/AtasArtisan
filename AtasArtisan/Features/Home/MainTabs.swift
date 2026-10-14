@@ -54,6 +54,8 @@ struct MainTabs: View {
             Color.clear.ignoresSafeArea(.keyboard)
                 .onGeometryChange(for: CGFloat.self) { $0.safeAreaInsets.bottom } action: { safeBottom = $0 }
         }
+        // 9-4b: a verification left running finished ("Your number is verified"), over the tab bar.
+        .toast(Binding(get: { app.toast }, set: { app.toast = $0 }), above: max(8, AtasteTabBar.top + 8 - safeBottom))
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillShowNotification)) { _ in keyboard = true }
         .onReceive(NotificationCenter.default.publisher(for: UIResponder.keyboardWillHideNotification)) { _ in keyboard = false }
         .fullScreenCover(item: Binding(get: { app.pendingJoin.map(JoinCode.init) }, set: { app.pendingJoin = $0?.code }),
@@ -150,9 +152,16 @@ struct HomeView: View {
     @State private var pastedCode: String?
     @State private var problem: Problem?
     @State private var cardFrames: [UUID: CGRect] = [:]
+    /// 9-8, once: an account that can't sign in with Apple yet.
+    @State private var linking: LinkPrompt?
     #if DEBUG
     @State private var debugSheet: String?
+    @State private var debugMeaning: VerifiedPerson?
     #endif
+
+    private static let linkAsked = "linkAppleAsked"
+    /// Hosting needs a verified number (9-6): until then `creating` opens the gate instead of the create sheet.
+    private var verified: Bool { app.profile?.verified == true }
 
     private static let emptyID = "home"
     private var active: [OrderGroup] { groups.filter { $0.state.isLive } }
@@ -192,17 +201,35 @@ struct HomeView: View {
             #endif
             default: break
             }
+            // DEBUG board 9 over Home: gate (9-6, with ATASTE_UNVERIFIED=me), link (9-8), meaning (9-10b).
+            #if DEBUG
+            switch DebugScreens.value("ATASTE_SIGNIN") {
+            case "gate": try? await Task.sleep(for: .seconds(1.5)); creating = true
+            case "link": try? await Task.sleep(for: .seconds(1.5)); linking = LinkPrompt()
+            case "meaning": try? await Task.sleep(for: .seconds(1.5)); debugMeaning = app.profile.map { VerifiedPerson($0) }
+            default: break
+            }
+            #endif
+        }
+        .task(id: app.appleLinked) {
+            guard app.appleLinked == false, !UserDefaults.standard.bool(forKey: Self.linkAsked) else { return }
+            try? await Task.sleep(for: .seconds(0.8))
+            linking = LinkPrompt()
+        }
+        .doughSheet(item: $linking) { _ in
+            LinkAppleSheet { UserDefaults.standard.set(true, forKey: Self.linkAsked) }
         }
         #if DEBUG
         .sheet(item: Binding(get: { debugSheet.map(JoinCode.init) }, set: { debugSheet = $0?.code })) { s in
             if s.code == "born", let g = active.first {
                 ScrollView { GroupBornState(group: g).padding(.top, 40) }.screen()
             } else {
-                JoinLoginPrompt(code: DebugScreens.value("ATASTE_JOIN_CODE") ?? "") {}
+                JoinLoginPrompt(code: DebugScreens.value("ATASTE_JOIN_CODE") ?? "")
             }
         }
+        .doughSheet(item: $debugMeaning) { p in VerifiedMeaning(person: p) }
         #endif
-        .sheet(item: Binding(get: { creating.map(CreateMode.init) }, set: { creating = $0?.group })) { mode in
+        .sheet(item: Binding(get: { verified ? creating.map(CreateMode.init) : nil }, set: { creating = $0?.group })) { mode in
             NavigationStack {
                 CreateGroupView(personal: !mode.group) { id in
                     creating = nil
@@ -210,6 +237,8 @@ struct HomeView: View {
                 }
             }
         }
+        .hostingGate(Binding(get: { verified ? nil : creating.map { GateRequest(group: $0) } },
+                             set: { if $0 == nil { creating = nil } })) { creating = $0.group }
         .sheet(isPresented: $pasting, onDismiss: {
             if let code = pastedCode { pastedCode = nil; app.pendingJoin = code }
         }) {
@@ -407,6 +436,7 @@ struct HomeView: View {
 }
 
 struct CreateMode: Identifiable { var group: Bool; var id: Bool { group } }
+struct LinkPrompt: Identifiable { let id = 0 }
 
 /// The small "ataste" wordmark pill in the Home header: Roundo 700 19 on caramel, a 2pt cocoa drop under it.
 struct HomeLogo: View {

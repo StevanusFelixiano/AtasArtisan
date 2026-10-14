@@ -28,14 +28,24 @@ Personal, machine-specific notes go in `CLAUDE.local.md` (gitignored).
   - `AtasArtisan-Info.plist` (URL scheme `ataste`, `whatsapp` query scheme, `ITSAppUsesNonExemptEncryption` false) and `AtasArtisan.entitlements` sit at the repo root, outside the synced folder.
   - Default actor isolation is MainActor: data models and `Logic/` are `nonisolated`.
 
-## How sign-in works (reverse WhatsApp OTP)
-1. The app calls `otp/start` and gets `ATASTE XXXX` plus a nonce, then opens `wa.me/6281936100819?text=ATASTE XXXX`.
-2. The user presses send in their own WhatsApp.
-3. The bridge sees the message, resolves the sender's number (LID → phone; never verifies a LID-only sender), and POSTs `{code, phone, wa_id}` to `wa-inbound` with `x-bridge-secret`.
-4. The app polls `otp/status?nonce=` every 2 s. On verified, `otp` creates the user (email `<phone>@wa.ataste.invalid`, a `profiles` row) and returns a magic-link `token_hash`.
-5. The app finishes with `auth.verifyOTP(tokenHash:type:.magiclink)`. We mint no JWTs.
+## How sign-in works (Sign in with Apple; WhatsApp verifies a number)
+1. **Sign in with Apple is the only sign-in** (App Review 4.8). The app sends Apple the SHA-256 of a random nonce, then
+   posts the identity token, authorization code and raw nonce to `apple`.
+2. `apple` checks the token (Apple's JWKS, audience `com.bayujo.Ataste`, nonce), trades the code for a refresh token
+   (Vault `siwa_key`, key 3553QXY6KR), and returns a magic-link `token_hash`. A new Apple ID gets a user
+   (`<sub>@apple.ataste.invalid`), a `profiles` row with no phone, and an `apple_accounts` row.
+3. The app finishes with `auth.verifyOTP(tokenHash:type:.magiclink)`. We mint no JWTs.
+4. **Verified** = `profiles.phone` is set: the badge, and needed to host (`host_creates` policy). Verifying is the
+   reverse WhatsApp code:
+   - The app calls `otp/start` with its session and gets `ATASTE XXXX` plus a nonce, then opens
+     `wa.me/6281936100819?text=ATASTE XXXX`. The user presses send in their own WhatsApp.
+   - The bridge resolves the sender's number (LID → phone; never verifies a LID-only sender) and POSTs
+     `{code, phone, wa_id}` to `wa-inbound` with `x-bridge-secret`. The app polls `otp/status?nonce=` every 2 s.
+   - A number on another account answers `taken`; `otp/claim` moves the Apple ID to that older account and deletes the
+     new empty one.
+5. Builds 23 and older sign in with the code alone (`otp/start` without a session); keep that path until they are gone.
 6. Public sign-ups are **off** in Auth settings; admin `createUser` still works.
-7. Verification codes are deleted after a day by `tick()`.
+7. Verification codes are deleted after a day by `tick()`. Account deletion (`account`) revokes the Apple token.
 
 **App Review:** a long-press on the Welcome logo opens a code field (ask the owner for the code). The account is phone `6200000000001`, named "Rani".
 - `supabase/seed/review_demo.sql` gives it 5 demo friends and two groups (re-runnable), after it has signed in once.
@@ -54,7 +64,8 @@ Personal, machine-specific notes go in `CLAUDE.local.md` (gitignored).
 - **Notifications:** every row of `notifications` goes through the trigger, `pg_net`, then the `push` function (APNs). Muted kinds are in `profiles.notify_mute`.
 - **Timer:** `pg_cron` `ataste-tick` runs every minute: the 30-minute cutoff reminder, auto-lock, auto-close
   (3 days after delivery, once everyone has paid), and code cleanup.
-- **Functions** (`supabase/functions`, `verify_jwt` in `supabase/config.toml`): otp, wa-inbound, push, join (302 → the invite page `/j/CODE`), legal (302 → the legal pages), account (delete), menu-ingest.
+- **Functions** (`supabase/functions`, `verify_jwt` in `supabase/config.toml`): apple, otp, wa-inbound, push, join (302 → the invite page `/j/CODE`), legal (302 → the legal pages), account (delete), menu-ingest.
+  - `apple` and `account` import `_shared/apple.ts`: deploy it with both.
 - **Realtime** events mean "refetch"; a 30 s poll stays behind each channel, and each watcher has its own topic.
 - **Tests:** `supabase/tests/bill.sql` runs the design's sample order end to end as the real roles and rolls back.
 - **Legal:** edit `legal/*.md`, run `python3 legal/build.py` (writes branded HTML to `web/legal/`). Served at `https://ataste.51-79-240-114.sslip.io/legal/{privacy,terms,support}`.

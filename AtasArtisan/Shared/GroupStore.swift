@@ -40,7 +40,12 @@ final class GroupStore {
     init(id: UUID) { self.id = id }
 
     var me: UUID? { AppModel.shared.userID }
-    var isHost: Bool { group?.host_id == me }
+    var isHost: Bool {
+        #if DEBUG
+        if let role = DebugScreens.value("ATASTE_ROLE") { return role == "host" }
+        #endif
+        return group?.host_id == me
+    }
     var activeMembers: [Member] { members.filter { $0.removed_at == nil }.sorted { $0.joined_at < $1.joined_at } }
     var subtotal: Int { items.reduce(0) { $0 + $1.total } }
     var myItems: [Item] { items.filter { $0.owner_id == me } }
@@ -153,6 +158,9 @@ final class GroupStore {
             self.pickups = pickups
             self.shareNotices = notices
             self.people = Dictionary(uniqueKeysWithValues: profiles.map { ($0.id, $0) })
+            #if DEBUG
+            for (id, p) in people where DebugScreens.unverified(p.name) { people[id]?.phone = nil }
+            #endif
             self.products.merge(prods.map { ($0.id, $0) }) { _, new in new }
             self.payout = payout
             self.loadError = nil

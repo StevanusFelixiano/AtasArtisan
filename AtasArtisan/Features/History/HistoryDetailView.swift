@@ -10,6 +10,8 @@ struct HistoryDetailView: View {
     @State private var store: GroupStore
     @State private var photo: URL?
     @State private var reordering = false
+    /// 9-6: a personal order needs a verified number too (Atas needs it in the order message).
+    @State private var gate: GateRequest?
     @State private var problem: Problem?
 
     init(id: UUID) {
@@ -55,6 +57,7 @@ struct HistoryDetailView: View {
         .sheet(isPresented: $reordering) {
             NavigationStack { CreateGroupView(personal: true) { newID in Task { await reorder(into: newID) } } }
         }
+        .hostingGate($gate) { _ in reordering = true }
         .problemAlert($problem)
     }
 
@@ -156,7 +159,9 @@ struct HistoryDetailView: View {
 
     private var reorderBar: some View {
         VStack(spacing: 0) {
-            Button { reordering = true } label: { Label("Reorder my items", systemImage: "arrow.triangle.2.circlepath") }
+            Button {
+                if AppModel.shared.profile?.verified == false { gate = GateRequest(group: false) } else { reordering = true }
+            } label: { Label("Reorder my items", systemImage: "arrow.triangle.2.circlepath") }
                 .buttonStyle(.pill(.primary))
             Text(reorderNote).obText(.footnote, 12, Brand.ink2).multilineTextAlignment(.center)
                 .padding(.top, Brand.s2).padding(.bottom, 2)

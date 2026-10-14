@@ -43,6 +43,8 @@ struct GroupView: View {
     @State var shareTaps = 0
     /// My item whose note is being edited, and the text in the alert's field.
     @State var noting: Item?
+    /// 9-6 before "Start an order with my items" (6-10) for someone without a verified number.
+    @State var orderGate: GateRequest?
     @State var noteText = ""
 
     init(id: UUID, path: Binding<NavigationPath>) {
@@ -207,6 +209,7 @@ struct GroupView: View {
                 .padding(.bottom, 24)
             }
             .scrollIndicators(.hidden)
+            .defaultScrollAnchor(DebugScreens.scrollAnchor)
             .pullToRefresh {
                 await store.refresh()
                 return store.loadError == nil

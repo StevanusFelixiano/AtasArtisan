@@ -1,68 +1,46 @@
 import SwiftUI
 import Supabase
 
-/// Board 1. Welcome → Verify via WhatsApp → Waiting → Verified "+62…" → (signed in) → Name → notification primer.
-/// Reverse OTP: the user never types a number. They send "ATASTE 4K9X" from their own WhatsApp to our number,
-/// the VPS bridge reads the sender, and `otp/status` hands back a one-time token for this app session.
+/// Board 9 (it replaces board 1's WhatsApp sign-in): Welcome → Sign in with Apple → (signed in) → Name → Verify intro →
+/// notification primer. Verifying a WhatsApp number is optional, signed in, and earns the Verified badge (`VerifyStep`):
+/// the user sends "ATASTE 4K9X" from their own WhatsApp to our number, the VPS bridge reads the sender, and `otp/status`
+/// puts that number on their profile. They never type it.
 ///
-/// DEBUG hook `ATASTE_ONBOARD` = splash | verify | waiting | expired | nowa | verified | name | primer renders one
-/// state without the network (no code is requested, nothing is sent).
+/// DEBUG hook `ATASTE_SIGNIN` renders one screen without the network (no code is requested, nothing is sent):
+/// welcome, signing (9-1, 9-1b) · name, noname (9-2) · intro (9-3) · send, waiting, expired, nowa (9-4a to 9-4d) ·
+/// verified (9-5) · taken (9-7) · splash · primer (1-6). gate (9-6), link (9-8) and meaning (9-10b) sit over Home and
+/// need a session (`HomeView`).
 struct OnboardingFlow: View {
-    enum Step: Hashable {
-        /// `attempt` gives each new verification its own view identity, so "Try again" starts fresh.
-        case verify(attempt: Int)
-    }
-    @State private var path: [Step] = []
-    @State private var attempt = 0
     @Environment(AppModel.self) private var app
-    /// 2-6b: an invite link opened before sign-in. Shown once; the code stays in `pendingJoin` and the join
-    /// sheet opens by itself after sign-in.
+    /// 2-6b: an invite link opened before sign-in. Shown once; the code stays in `pendingJoin` and the join sheet opens
+    /// by itself after sign-in.
     @State private var invitePrompted = false
 
     var body: some View {
-        switch DebugScreens.value("ATASTE_ONBOARD") {
+        switch DebugScreens.value("ATASTE_SIGNIN") {
         case "splash": SplashView()
-        case "name", "primer": NameStep(debugPrimer: DebugScreens.value("ATASTE_ONBOARD") == "primer")
-        default: flow
+        case "name", "noname", "intro", "primer": NameStep()
+        case "send", "waiting", "expired", "nowa", "verified": NavigationStack { VerifyFlow(origin: .onboarding) { _ in } }
+        case "taken": TakenView(taken: .fixture) {}
+        default: welcome
         }
     }
 
-    private var flow: some View {
-        NavigationStack(path: $path) {
-            WelcomeStep { restart() }
-                .navigationDestination(for: Step.self) { _ in
-                    // 1-4b is shown over the verify step itself, so it fades in over the waiting screen.
-                    VerifyStep { restart() }
-                }
-        }
-        .sheet(isPresented: Binding(get: { app.pendingJoin != nil && !invitePrompted }, set: { if !$0 { invitePrompted = true } })) {
-            JoinLoginPrompt(code: app.pendingJoin ?? "") {
-                invitePrompted = true
-                restart()
+    private var welcome: some View {
+        NavigationStack { WelcomeStep() }
+            .sheet(isPresented: Binding(get: { app.pendingJoin != nil && !invitePrompted }, set: { if !$0 { invitePrompted = true } })) {
+                JoinLoginPrompt(code: app.pendingJoin ?? "")
             }
-        }
-        .onAppear {
-            switch DebugScreens.value("ATASTE_ONBOARD") {
-            case "verify", "waiting", "expired", "nowa", "verified": path = [.verify(attempt: 0)]
-            default: break
-            }
-        }
-    }
-
-    private func restart() {
-        attempt += 1
-        path = [.verify(attempt: attempt)]
     }
 }
 
-// MARK: Welcome (1-2)
+// MARK: Welcome (9-1, 9-1b)
 
 struct WelcomeStep: View {
-    var next: () -> Void
     @State private var askReview = false
     @State private var reviewCode = ""
     @State private var problem: Problem?
-    @State private var busy = false
+    @State private var busy = DebugScreens.value("ATASTE_SIGNIN") == "signing"
 
     var body: some View {
         VStack(spacing: 0) {
@@ -87,10 +65,22 @@ struct WelcomeStep: View {
                 Text("Ataste collects everyone’s Atas Artisan order, checks it, splits the bill and writes the WhatsApp message for you.")
                     .obText(.body, 16, Brand.ink2).lineSpacing(4)
                     .fixedSize(horizontal: false, vertical: true)
-                Button(action: next) { ObWhatsAppLabel(title: "Continue with WhatsApp") }
-                    .buttonStyle(.pill(.dark))
-                    .padding(.top, 10)
-                LegalNote().frame(maxWidth: .infinity)
+                AppleButton(mode: .signIn, busy: $busy) { reason in
+                    problem = Problem(title: "Couldn’t sign in. Try again.", message: reason)
+                }
+                .padding(.top, 10)
+                // Apple's label stays as it is (HIG): while Ataste signs in, the spinner takes the legal line's place.
+                ZStack {
+                    LegalNote().opacity(busy ? 0 : 1)
+                    if busy {
+                        HStack(spacing: Brand.s2) {
+                            ProgressView().tint(Brand.caramel)
+                            Text("Signing in…").obText(.callout, 14, weight: 600, Brand.ink2)
+                        }
+                        .accessibilityElement(children: .combine)
+                    }
+                }
+                .frame(maxWidth: .infinity)
             }
             .padding(.horizontal, Brand.s5)
             .padding(.bottom, Brand.s2)
@@ -123,7 +113,7 @@ struct WelcomeStep: View {
 
 struct LegalNote: View {
     var body: some View {
-        Text("By continuing you agree to the [Terms](\(Links.terms.absoluteString)) and [Privacy Policy](\(Links.privacy.absoluteString)). Ataste is not affiliated with Atas Artisan.")
+        Text("By continuing you agree to the [Terms](\(Links.terms.absoluteString)) and [Privacy Policy](\(Links.privacy.absoluteString)). Ataste is an independent app, not affiliated with Atas Artisan.")
             .brand(.footnote, Brand.ink3).multilineTextAlignment(.center).tint(Brand.caramel)
     }
 }
@@ -142,23 +132,26 @@ struct LogoPill: View {
     }
 }
 
-// MARK: Verify + Waiting + Timed out + No WhatsApp (1-3, 1-4a, 1-4c, 1-4d), Verified (1-4b)
+// MARK: Send + Waiting + Timed out + No WhatsApp (9-4a to 9-4d), Verified (9-5)
 
 /// Motion board 16. Open WhatsApp hands off to WhatsApp; when the app comes back the code card turns into the code
 /// chip (its sides and height on `Motion.doughLead`, its top on `Motion.doughTrail`, the code 40 → 15 pt), the giraffe
 /// grows into the waiting pose as the ring fades in and turns a quarter, and the copy and button change. Timed out:
 /// the chip shakes and the fresh code rolls in over it, the giraffe looks confused and the ring fades. Verified: the
 /// ring turns once more, then the Cocoa screen fades in over this one and its parts arrive in order. Reduce Motion:
-/// crossfades at the final size, the ring still. The polling and the endpoints are the same as before.
+/// crossfades at the final size, the ring still.
+/// Signed in, so the code verifies this account's number (`otp/start` with the session). "Do it later" leaves a code that
+/// is still waiting with `AppModel`, which finishes it in the background. A number on another account opens 9-7.
 struct VerifyStep: View {
-    var notMe: () -> Void
+    var origin: VerifyOrigin = .onboarding
+    /// 9-5's "Not your number? Try again".
+    var retry: () -> Void
+    var finish: (VerifyEnd) -> Void
 
     // `expires_at` is left out: the functions client decodes dates with Foundation's default strategy, which
     // can't read Postgres timestamps, so including it failed every start. The server enforces expiry; the
-    // countdown on 1-4a runs from when this app received the code (codes last 10 minutes).
+    // countdown on 9-4b runs from when this app received the code (codes last 10 minutes).
     private struct Start: Decodable { var code: String; var message: String?; var nonce: String }
-    private struct Status: Decodable { var status: String; var phone: String?; var push_name: String?; var token_hash: String? }
-    private struct Verified { var phone: String; var name: String; var token: String }
 
     enum Wait { case starting, ready, waiting, expired, noWhatsApp }
     @State private var start: Start?
@@ -170,7 +163,10 @@ struct VerifyStep: View {
     @State private var awayForCode = false
     @State private var problem: Problem?
     @State private var wentAway = false
-    @State private var verifiedAs: Verified?
+    @State private var verifiedAs: String?
+    /// 9-7: the number belongs to another account.
+    @State private var taken: Taken?
+    @Environment(AppModel.self) private var app
     /// The bar goes once 1-4b has faded in over it; hiding it sooner shifts the waiting screen up under the fade.
     @State private var barHidden = false
     @State private var ringTurns = 0
@@ -222,20 +218,25 @@ struct VerifyStep: View {
         .overlay {
             // Laid out against the window's top inset, not the bar's: the bar is still up while 1-4b fades in, and a
             // taller overlay would otherwise push the waiting screen up under the fade.
-            if let v = verifiedAs {
-                VerifiedStep(phone: v.phone, suggestedName: v.name, token: v.token, notMe: notMe)
+            if let phone = verifiedAs {
+                VerifiedStep(phone: phone, continueTitle: origin.continueTitle, notMe: retry) { finish(.verified) }
+                    .ignoresSafeArea(.container, edges: .top)
+                    .safeAreaPadding(.top, Self.windowTop)
+                    .transition(.opacity)
+            } else if let taken {
+                TakenView(taken: taken) { finish(.later) }
                     .ignoresSafeArea(.container, edges: .top)
                     .safeAreaPadding(.top, Self.windowTop)
                     .transition(.opacity)
             }
         }
-        .navigationTitle(verifiedAs == nil ? "Verify" : "Verified")
+        .navigationTitle(verifiedAs != nil ? "Verified" : taken != nil ? "Number has an account" : "Verify")
         .navigationBarTitleDisplayMode(.inline)
         .toolbar(removing: .title)
         .toolbar(barHidden ? .hidden : .automatic, for: .navigationBar)
         .navigationBarBackButtonHidden(barHidden)
         .task { await debugOrBegin() }
-        .task(id: wait) { if wait == .waiting, DebugScreens.value("ATASTE_ONBOARD") == nil { await poll() } }
+        .task(id: wait) { if wait == .waiting, Self.debugState == nil { await poll() } }
         .onChange(of: scenePhase) { _, p in
             // Back from WhatsApp without using our button (e.g. the code was typed by hand): start checking.
             if p == .background { wentAway = true }
@@ -312,7 +313,7 @@ struct VerifyStep: View {
         VStack(spacing: 0) {
             VStack(alignment: .leading, spacing: 12) {
                 Text("Send us one message").obText(.title1, 32, tracking: -0.01)
-                Text("Tap the button. WhatsApp opens with a code already typed — just press send.")
+                Text("Tap the button. WhatsApp opens with a code already typed. Just press send.")
                     .obText(.body, 16, Brand.ink2).lineSpacing(4).fixedSize(horizontal: false, vertical: true)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -325,7 +326,7 @@ struct VerifyStep: View {
                 cardFace(code: start?.code)
                     .hidden()
                     .onGeometryChange(for: CGRect.self) { $0.frame(in: .named(Self.space)) } action: { cardSlot = $0 }
-                Text("Send it from the WhatsApp you want to log in with. We read your number from the message.")
+                Text("Send it from the WhatsApp number you want on your profile. We read the number from the message and nothing else.")
                     .obText(.callout, 14, Brand.ink2).lineSpacing(3).multilineTextAlignment(.center).frame(maxWidth: 320)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -347,8 +348,8 @@ struct VerifyStep: View {
             ZStack {
                 VStack(spacing: 10) {
                     Text(expired ? "We didn’t get your message" : "Checking your WhatsApp…").obText(.title1, 28).multilineTextAlignment(.center)
-                    Text(expired ? "Codes last 10 minutes and this one ran out. Here’s a fresh one — send it the same way."
-                                 : "This finishes by itself as soon as your message reaches us. You can leave and come back.")
+                    Text(expired ? "Codes last 10 minutes and this one ran out. Here’s a fresh one. Send it the same way."
+                                 : "This finishes by itself when your message reaches us. Carry on using Ataste and we’ll let you know.")
                         .obText(.body, 15, Brand.ink2).lineSpacing(4).multilineTextAlignment(.center).frame(maxWidth: 310)
                 }
                 .id(expired)
@@ -367,7 +368,7 @@ struct VerifyStep: View {
         VStack(spacing: 20) {
             Mascot(pose: "pose-confused", size: 180, fill: Brand.pink100)
             Text("WhatsApp isn’t on this iPhone").obText(.title1, 28).multilineTextAlignment(.center)
-            Text("Ataste logs you in with one WhatsApp message, and the group order goes to Atas on WhatsApp too. Install it, then come back — your code will still be here.")
+            Text("Verifying takes one WhatsApp message from this iPhone. Install it, then come back. Your code will still be here.")
                 .obText(.body, 15, Brand.ink2).lineSpacing(4).multilineTextAlignment(.center).frame(maxWidth: 320)
         }
         .padding(.horizontal, Brand.s2)
@@ -380,6 +381,7 @@ struct VerifyStep: View {
             VStack(spacing: 10) {
                 Button("Get WhatsApp") { openURL(Self.whatsAppStore) }.buttonStyle(.pill(.primary))
                 Button("I’ve installed it") { send() }.buttonStyle(.pill(.secondary))
+                later
             }
         default:
             // One button through 1-3, 1-4a and 1-4c: Dark → Secondary → Dark, its label rolling to the next.
@@ -400,9 +402,21 @@ struct VerifyStep: View {
                 if !chipLook {
                     Text("Code works for this iPhone only, for 10 minutes").obText(.footnote, 12, Brand.ink3)
                         .transition(.opacity.animation(reduceMotion ? Motion.Reduced.fade : Motion.fadeOut))
+                } else {
+                    later.transition(.opacity.animation((reduceMotion ? Motion.Reduced.fade : Motion.fade).delay(delay)))
                 }
             }
         }
+    }
+
+    /// 9-4b to 9-4d: verifying is optional. A code still waiting keeps working in the background for its 10 minutes;
+    /// when the message arrives a toast says so and the badge appears.
+    private var later: some View {
+        Button("Do it later") {
+            if wait == .waiting, let start { app.verifyLater(nonce: start.nonce, until: expiresAt) }
+            finish(.later)
+        }
+        .obText(.headline, 16, weight: 600, Brand.ink2).frame(maxWidth: .infinity, minHeight: 44)
     }
 
     // MARK: The code card and chip
@@ -549,15 +563,22 @@ struct VerifyStep: View {
         return "\(s / 60):" + String(format: "%02d", s % 60)
     }
 
+    /// DEBUG `ATASTE_SIGNIN`: one of 9-4a to 9-5, drawn without asking for a code.
+    private static var debugState: String? {
+        DebugScreens.value("ATASTE_SIGNIN").flatMap { ["send", "waiting", "expired", "nowa", "verified"].contains($0) ? $0 : nil }
+    }
+
     private func debugOrBegin() async {
-        guard let state = DebugScreens.value("ATASTE_ONBOARD") else { await begin(); return }
+        guard let state = Self.debugState else { await begin(); return }
         start = Start(code: state == "expired" ? "ATASTE 7HQ2" : "ATASTE 4K9X", nonce: "")
         expiresAt = Date().addingTimeInterval(522)
         wait = switch state { case "waiting": .waiting; case "expired": .expired; case "nowa": .noWhatsApp; default: .ready }
-        if state == "verified" { arrive(phone: "6281290345521", name: "Putri", token: "") }
+        if state == "verified" { arrive(phone: "6281290345521") }
     }
 
     private func begin() async {
+        // A code left running in the background gives way to this one.
+        app.stopVerifyLater()
         wait = .starting
         if await fetchCode() { wait = .ready } else { wait = .expired }
     }
@@ -595,9 +616,18 @@ struct VerifyStep: View {
     private func poll() async {
         guard let nonce = start?.nonce else { return }
         while !Task.isCancelled && wait == .waiting {
-            if let s: Status = try? await supabase.functions.invoke("otp/status", options: .init(method: .get, query: [URLQueryItem(name: "nonce", value: nonce)])) {
-                if s.status == "verified", let phone = s.phone, let token = s.token_hash {
-                    arrive(phone: phone, name: s.push_name ?? "", token: token)
+            if let s = await VerifyStatus.check(nonce) {
+                if s.status == "verified", let phone = s.phone {
+                    arrive(phone: phone)
+                    return
+                }
+                if s.status == "taken", let phone = s.phone, let account = s.account {
+                    arrivals += 1
+                    withAnimation(reduceMotion ? Motion.Reduced.fade : Motion.fade) {
+                        taken = Taken(nonce: nonce, phone: phone, account: account)
+                    } completion: {
+                        barHidden = true
+                    }
                     return
                 }
                 if s.status == "expired" {
@@ -610,12 +640,12 @@ struct VerifyStep: View {
         }
     }
 
-    /// The message arrived: the ring turns a quarter, then 1-4b fades in over this screen.
-    private func arrive(phone: String, name: String, token: String) {
+    /// The message arrived: the ring turns a quarter, then 9-5 fades in over this screen.
+    private func arrive(phone: String) {
         ringTurns += 1
         arrivals += 1
         withAnimation((reduceMotion ? Motion.Reduced.fade : Motion.fade).delay(SignInMotion.screenDelay)) {
-            verifiedAs = Verified(phone: phone, name: name, token: token)
+            verifiedAs = phone
         } completion: {
             barHidden = true
         }
@@ -637,20 +667,20 @@ private struct CodeType: ViewModifier, Animatable {
 }
 
 
-// MARK: Verified (1-4b)
+// MARK: Verified (9-5)
 
-/// Shown over the waiting screen when the message arrives: the Cocoa screen fades in, the sunburst turns from −40° and
-/// grows from 0.8, the lime disc pops, the celebrating giraffe rises 60 pt, "You’re in!" pops from 0.6 at −6°, the
-/// verified line fades in and Continue rises 40 pt, then everything rests. Reduce Motion: the parts fade in and the
-/// sunburst is still.
+/// Shown over the waiting screen when the message arrives (motion of 1-4b): the Cocoa screen fades in, the sunburst turns
+/// from −40° and grows from 0.8, the lime disc pops, the celebrating giraffe rises 60 pt, "Verified!" pops from 0.6 at
+/// −6°, the number with its badge fades in and Continue rises 40 pt, then everything rests. Reduce Motion: the parts fade
+/// in and the sunburst is still. The number is already on the profile; Continue goes back to where verifying started.
 struct VerifiedStep: View {
     var phone: String
-    var suggestedName: String
-    var token: String
+    /// "Continue", or "Set up your group" after the hosting gate.
+    var continueTitle = "Continue"
     var notMe: () -> Void
-    @State private var busy = false
-    @State private var problem: Problem?
+    var proceed: () -> Void
     @State private var shown = false
+    @Environment(AppModel.self) private var app
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
@@ -676,25 +706,30 @@ struct VerifiedStep: View {
                     .scaleEffect(shown || reduceMotion ? 1 : sun.scale)
                     .animation(shown && !reduceMotion ? Motion.settle.delay(sun.delay) : nil, value: shown)
             }
-            .padding(.top, 28)
+            // As on 9-5, the sunburst starts under the status bar: room for the line about hosting.
+            .padding(.top, -22)
             VStack(spacing: 12) {
-                Text("You’re in!").obText(.accent, 52, Brand.lime)
+                Text("Verified!").obText(.accent, 52, Brand.lime)
                     .entrance(shown, scale: SignInMotion.headline.scale, tilt: SignInMotion.headline.tilt, Motion.pop, delay: SignInMotion.headline.delay)
-                HStack(spacing: Brand.s2) {
-                    Image(systemName: "checkmark.circle").font(.system(size: 19, weight: .semibold)).foregroundStyle(Brand.lime)
-                    Text("Verified as \(PhoneFormat.masked(phone))").obText(.headline, 16, weight: 600, Brand.cream)
+                VStack(spacing: 12) {
+                    HStack(spacing: 10) {
+                        Text(PhoneFormat.spaced(phone)).obText(.headline, 20, weight: 700, Brand.cream)
+                        VerifiedBadge(size: .l, dark: true, person: app.profile.map { VerifiedPerson($0) })
+                    }
+                    Text("The badge now shows next to your name. You can host group orders.")
+                        .obText(.body, 15, Brand.liquorice400).lineSpacing(4).multilineTextAlignment(.center).frame(maxWidth: 320)
+                        .fixedSize(horizontal: false, vertical: true)
                 }
-                .accessibilityElement(children: .combine)
                 .entrance(shown, Motion.fade, delay: SignInMotion.lineDelay)
             }
-            .padding(.top, 22)
+            .padding(.top, 16)
+            .padding(.horizontal, Brand.s5)
             Spacer(minLength: Brand.s4)
             VStack(spacing: 12) {
-                Button("Continue") { Task { await finish() } }
+                Button(continueTitle, action: proceed)
                     .buttonStyle(.pill(.success))
-                    .disabled(busy)
                 Button(action: notMe) {
-                    (Text("Not you? ").foregroundStyle(Brand.liquorice400) + Text("Try again").bold().foregroundStyle(Brand.choc100))
+                    Text("\(Text("Not your number? ").foregroundStyle(Brand.liquorice400))\(Text("Try again").bold().foregroundStyle(Brand.choc100))")
                         .font(Brand.font(.callout, size: 14))
                 }
                 .frame(minHeight: 44)
@@ -706,36 +741,12 @@ struct VerifiedStep: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background(Brand.cocoa.ignoresSafeArea())
         .preferredColorScheme(.dark)
-        .onAppear {
-            NameStep.suggested = suggestedName
-            shown = true
-        }
-        .problemAlert($problem)
-    }
-
-    private func finish() async {
-        busy = true
-        defer { busy = false }
-        await attempt($problem, "Couldn't sign in") {
-            try await supabase.auth.verifyOTP(tokenHash: token, type: .magiclink)
-        }
+        .onAppear { shown = true }
     }
 }
 
 enum PhoneFormat {
-    /// 6281277882210 → "+62 812-7788-2210"
-    static func display(_ p: String) -> String {
-        groups(p).map { "+62 " + $0.joined(separator: "-") } ?? "+" + p
-    }
-
-    /// 6281290345521 → "+62 812-xxxx-5521" (1-4b: confirms the number without showing all of it).
-    static func masked(_ p: String) -> String {
-        guard var g = groups(p), g.count == 3 else { return display(p) }
-        g[1] = String(repeating: "x", count: g[1].count)
-        return "+62 " + g.joined(separator: "-")
-    }
-
-    /// 6281290345521 → "+62 812 9034 5521" (6-5 Profile).
+    /// 6281290345521 → "+62 812 9034 5521" (6-5 Profile, 9-5, 9-7).
     static func spaced(_ p: String) -> String {
         groups(p).map { "+62 " + $0.joined(separator: " ") } ?? "+" + p
     }
@@ -747,29 +758,80 @@ enum PhoneFormat {
     }
 }
 
-// MARK: Name + notification primer (1-5, 1-6)
+// MARK: Name, verify intro, notification primer (9-2, 9-3, 1-6)
 
+/// A new account's first screens, before Home: its name (prefilled from Apple when Apple shared it), the verify intro
+/// once if the account has no number, and the notification primer. The name is saved at the end.
 struct NameStep: View {
+    /// Apple's given name from this sign-in; Apple shares it only the first time, and the user may hide it.
     static var suggested = ""
-    var debugPrimer = false
+    enum Step { case name, intro, primer }
     @Environment(AppModel.self) private var app
     @State private var name = NameStep.suggested
-    @State private var primer = false
+    @State private var step = Step.name
+    @State private var verifying = false
     @State private var problem: Problem?
     @FocusState private var focused: Bool
+    /// The field was filled from the Apple ID, so its note says where the name came from.
+    @State private var fromApple = !NameStep.suggested.isEmpty
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            if primer { primerContent } else { nameContent }
+        NavigationStack {
+            VStack(alignment: .leading, spacing: 0) {
+                switch step {
+                case .name: nameContent
+                case .intro:
+                    VerifyIntro(name: name.trimmingCharacters(in: .whitespaces), avatar: app.profile?.avatar, bg: app.profile?.avatar_bg) {
+                        verifying = true
+                    } later: { step = .primer }
+                case .primer: primerContent
+                }
+            }
+            .padding(.horizontal, Brand.s4)
+            .padding(.bottom, Brand.s4)
+            .screen()
+            .navigationTitle(title)
+            .toolbar(.hidden, for: .navigationBar)
+            .navigationDestination(isPresented: $verifying) {
+                VerifyFlow(origin: .onboarding) { _ in
+                    // Verified or not, onboarding goes on to 1-6.
+                    step = .primer
+                    verifying = false
+                }
+            }
         }
-        .padding(.horizontal, Brand.s4)
-        .padding(.bottom, Brand.s4)
-        .screen()
         .problemAlert($problem)
-        .onAppear { if debugPrimer { primer = true } else if DebugScreens.value("ATASTE_ONBOARD") == "name" { name = "Putri"; focused = true } }
+        .onAppear(perform: debugOrFocus)
     }
 
-    // 1-5
+    private var title: String {
+        switch step {
+        case .name: "Your name"
+        case .intro: "Get verified"
+        case .primer: "Notifications"
+        }
+    }
+
+    /// No name from Apple: the keyboard is up, as on 1-5. DEBUG `ATASTE_SIGNIN` = name | noname | intro | primer.
+    private func debugOrFocus() {
+        switch DebugScreens.value("ATASTE_SIGNIN") {
+        case "name": name = "Putri"; fromApple = true
+        case "noname": name = ""; fromApple = false; focusSoon()
+        case "intro": name = "Putri"; step = .intro
+        case "primer": step = .primer
+        default: if name.isEmpty { focusSoon() }
+        }
+    }
+
+    /// Focus set in the first frame inside the stack is dropped; the keyboard comes up a moment later.
+    private func focusSoon() {
+        Task {
+            try? await Task.sleep(for: .seconds(0.4))
+            focused = true
+        }
+    }
+
+    // 9-2 (1-5 with Apple's name)
     @ViewBuilder private var nameContent: some View {
         VStack(alignment: .leading, spacing: 12) {
             VStack(alignment: .leading, spacing: Brand.s2) {
@@ -791,16 +853,35 @@ struct NameStep: View {
                 .background(RoundedRectangle(cornerRadius: Brand.rSmall).fill(Brand.card))
                 .overlay(RoundedRectangle(cornerRadius: Brand.rSmall).strokeBorder(focused ? Brand.caramel : Brand.liquorice400, lineWidth: 2))
                 .background(RoundedRectangle(cornerRadius: Brand.rSmall + 4).fill(focused ? Brand.choc100 : .clear).padding(-4))
+                .overlay(alignment: .trailing) {
+                    if !name.isEmpty {
+                        Button { name = ""; focused = true } label: {
+                            Image(systemName: "xmark").font(.system(size: 11, weight: .heavy)).foregroundStyle(Brand.cocoa)
+                                .frame(width: 24, height: 24).background(Circle().fill(Brand.liquorice100))
+                                .frame(width: 44, height: 44).contentShape(Rectangle())
+                        }
+                        .buttonStyle(.plain)
+                        .padding(.trailing, 4)
+                        .accessibilityLabel("Clear name")
+                    }
+                }
                 .focused($focused)
                 .submitLabel(.continue)
-                .onSubmit { if valid { primer = true } }
+                .onSubmit { if valid { next() } }
                 .padding(.top, 12)
-            Text("First name is fine. You can change it in Profile.").obText(.footnote, 13, Brand.ink3)
+            Text(fromApple ? "From your Apple ID. Change it here or later in Profile." : "First name is fine. You can change it in Profile.")
+                .obText(.footnote, 13, Brand.ink3)
         }
         .padding(.horizontal, Brand.s2)
         .padding(.top, 48)
         Spacer(minLength: Brand.s4)
-        Button("Continue") { primer = true }.buttonStyle(.pill(.primary)).disabled(!valid, reason: "Type your name first")
+        Button("Continue", action: next).buttonStyle(.pill(.primary)).disabled(!valid, reason: "Type your name first")
+    }
+
+    /// 9-3 once, for an account without a number; otherwise straight to 1-6.
+    private func next() {
+        focused = false
+        step = app.profile?.verified == false ? .intro : .primer
     }
 
     // 1-6
@@ -851,6 +932,7 @@ struct NameStep: View {
     private func save() async {
         await attempt($problem, "Couldn't save your name") {
             try await app.saveProfile(name: name.trimmingCharacters(in: .whitespaces))
+            app.onboarding = false
         }
     }
 }
