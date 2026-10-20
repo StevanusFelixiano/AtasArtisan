@@ -2,7 +2,8 @@ import SwiftUI
 
 /// DEBUG-only screenshot hooks (simulator, headless): `SIMCTL_CHILD_ATASTE_REVIEW_CODE` signs in as the App Review
 /// account, `ATASTE_TAB` (1 History, 2 Profile), `ATASTE_OPEN` (group name contains), `ATASTE_SHEET`
-/// (menu, send, confirm, bill, board, delivery, pickup, share, claim, shareitem, ask, product; avatar on the Profile tab),
+/// (menu, send, confirm, bill, board, delivery, pickup, share, claim, shareitem, ask, splititem, product; avatar on the
+/// Profile tab),
 /// `ATASTE_SIGNIN` (board 9, see `OnboardingFlow` and `HomeView`), `ATASTE_UNVERIFIED` (names, comma-separated, or `me`:
 /// those people show without a number), `ATASTE_APPLE` (linked | unlinked: what `apple_linked()` answers), `ATASTE_ROLE`
 /// (host | member: how the open group is seen), `ATASTE_SCROLL` (0 to 1: where the group screen starts). Compiled out of

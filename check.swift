@@ -149,6 +149,25 @@ func expect(_ ok: Bool, _ what: String, file: StaticString = #file, line: UInt =
         expect(PeopleLimit.line(limit: 6, full: 4) == "4 of 6 adding items" && PeopleLimit.line(limit: 6, full: 6) == "Full · 6 of 6 adding items", "limit line")
         expect(PeopleLimit.line(limit: nil, full: 3) == nil, "no limit line")
 
+        // Split after lock (board 10): Rani (host) owns the cheesecake and keeps 5; Kevin claimed 2 first, then Putri 3,
+        // then Dimas 2. Putri's view: Rani, you, Kevin, Dimas.
+        let kevin = UUID()
+        let cake = "Burnt Cheesecake 20 cm"
+        expect(Pickup.order(owner: host, me: putri, claimers: [kevin, putri, dimas]) == [host, putri, kevin, dimas], "owner, me, then claim order")
+        expect(Pickup.order(owner: host, me: host, claimers: [kevin, dimas]) == [host, kevin, dimas], "my own item")
+        expect(Pickup.order(owner: host, me: nadia, claimers: [kevin, dimas]) == [host, kevin, dimas], "not in the split")
+        expect(Pickup.holding(5, of: cake, owner: true, you: false) == "keeps 5" && Pickup.holding(5, of: cake, owner: true, you: true) == "keep 5"
+               && Pickup.holding(2, of: cake, owner: false, you: false) == "2 slices" && Pickup.holding(4, of: "Classic Brownie 20×20 cm", owner: false, you: true) == "4 pieces", "holding")
+        expect(Pickup.bulk(cake, left: 12, of: 12) == "I took the whole \(cake)", "10-3a nothing taken")
+        expect(Pickup.bulk(cake, left: 10, of: 12) == "I took the rest · 10 slices", "some taken")
+        expect(Pickup.bulk(cake, left: 1, of: 12) == "I took the rest · 1 slice" && Pickup.bulk(cake, left: 0, of: 12) == nil, "last slice, then hidden")
+        expect(Pickup.takenLine(nil, at: "12:40") == "Taken 12:40" && Pickup.takenLine("you", at: "12:40") == "Taken by you · 12:40"
+               && Pickup.takenLine("Kevin", at: "12:15") == "Taken by Kevin · 12:15", "who marked it")
+        expect(Pickup.takenBy(nil, at: "12:40") == "12:40" && Pickup.takenBy("you", at: "12:40") == "by you · 12:40", "10-2b beside TAKEN")
+        expect(Pickup.inFridge(left: 12, of: 12, name: cake, at: nil) == "12 of 12 slices in the fridge"
+               && Pickup.inFridge(left: 0, of: 12, name: cake, at: "12:40") == "All 12 slices taken · 12:40"
+               && Pickup.inFridge(left: 0, of: 16, name: "Classic Brownie 20×20 cm", at: nil) == "All 16 pieces taken", "fridge caption")
+
         print("check.swift: all passed")
     }
 }

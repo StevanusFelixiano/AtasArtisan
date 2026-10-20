@@ -154,7 +154,7 @@ select pg_temp.take('kevin', true);
 select pg_temp.take('kevin', true);  -- again: keeps the first time
 do $$ begin assert pg_temp.notes('p', 'rani', 'fridge_clear') = 1, 'not again after undo and re-take'; end $$;
 
--- Bills never move; Close isn't blocked by pickup (only by payment), and Pickup ends with it.
+-- Bills never move; Close isn't blocked by pickup (only by payment), and Pickup stays open after it.
 select pg_temp.take('kevin', false);
 do $$ begin
   assert not exists (select 1 from public.group_bill_v v join t_bills b on b.user_id = v.user_id
@@ -163,7 +163,12 @@ end $$;
 select pg_temp.run('rani', format('select public.confirm_paid(%L, %L)', pg_temp.gid('p'), pg_temp.id('putri')));
 select pg_temp.run('rani', format('select public.confirm_paid(%L, %L)', pg_temp.gid('p'), pg_temp.id('kevin')));
 select pg_temp.run('rani', format('select public.close_group(%L)', pg_temp.gid('p')));  -- Kevin hasn't taken his
-select pg_temp.fails('kevin', format('select public.mark_taken(%L, true)', pg_temp.gid('p')), 'Pickup opens once the order is delivered');
+delete from public.notifications where group_id = pg_temp.gid('p') and kind = 'fridge_clear';
+select pg_temp.take('kevin', true);
+do $$ begin
+  assert pg_temp.taken('p', 'kevin'), 'taken after close';
+  assert pg_temp.notes('p', 'rani', 'fridge_clear') = 0, 'no Fridge is clear on a closed order';
+end $$;
 select pg_temp.fails('rani', format('select public.pickup_nudge(%L, %L)', pg_temp.gid('p'), pg_temp.id('kevin')), 'not possible while the group is closed');
 
 delete from public.groups where id in (select v from t_g);

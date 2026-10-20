@@ -378,6 +378,7 @@ struct NotificationSettingsView: View {
             ("Someone wants to share your item", ["share_asked"]),
             ("Your shared item at lock, or 30 minutes before", ["share_min_reminder", "share_locked_in", "share_min_not_met"]),
             ("Sharing stopped on an item you claimed", ["share_stopped"]),
+            ("Someone takes your shared pieces out of the fridge", ["split_taken", "split_put_back"]),
         ]),
         ("Money", [
             ("Bill is final", ["bill_final"]),

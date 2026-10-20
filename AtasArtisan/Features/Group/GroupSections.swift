@@ -2,7 +2,8 @@ import SwiftUI
 import Supabase
 
 // The group screen's content per state: open (3-1/3-2/3-3/3-8), waiting on the host (3-5), sent (5-2),
-// confirmed (5-4), delivered and closed (5-13, with Pickup 7-1/7-3), cancelled (6-10).
+// confirmed (5-4), delivered and closed (5-13, with Pickup 7-1/7-3), cancelled (6-10). From sent on, the shared items
+// card (board 10) is in SplitAfterLock.swift.
 
 extension GroupView {
 
@@ -563,6 +564,8 @@ extension GroupView {
             // Pay first: payments go on while the order is with Atas.
             billOrPayments(g).entrance(sentIn, offset: HandOffMotion.cardOffset, Motion.settle, delay: HandOffMotion.totalsDelay)
         }
+        // 10-1: who is in each split, after the bill as on Confirmed.
+        splitSection(g).entrance(sentIn, offset: HandOffMotion.cardOffset, Motion.settle, delay: HandOffMotion.totalsDelay)
         if store.isHost {
             Button { openURL(Links.whatsApp(Links.atasNumber)) } label: {
                 Label { Text("Open the Atas chat") } icon: { WhatsAppGlyph(size: 17) }
@@ -636,6 +639,7 @@ extension GroupView {
         }
         .surface(32, padding: edges(20, 20), fill: Brand.caramel)
         billOrPayments(g)
+        splitSection(g)
         timeline(g, .inline)
     }
 
@@ -679,8 +683,15 @@ extension GroupView {
         if g.state == .delivered && store.isHost && !g.personal {
             StillOwesCard(store: store)
             pickupCard
+            splitSection(g)
         } else {
-            if !store.isHost { memberPickupSections() }
+            // A member's shared items sit between their food and the Pickup card (10-3); pickup stays open once Closed.
+            if !store.isHost {
+                memberPickupSections(g)
+            } else if g.state == .closed {
+                pickupCard
+                splitSection(g)
+            }
             if g.state == .delivered, unpaid != nil {
                 BillBanner(text: "The treats have arrived. \(hostFirst) can close the order once you’ve paid.", fill: Brand.choc100, circle: Brand.cream)
             }

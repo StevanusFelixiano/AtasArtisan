@@ -451,6 +451,8 @@ struct GroupView: View {
             } else {
                 memberDeliveredBar(g)
             }
+        case .closed where !store.isHost:
+            memberDeliveredBar(g)
         case .waiting where g.payPhase != nil, .closed:
             memberPayBar(g)
         case .waiting, .cancelled:
@@ -544,6 +546,7 @@ struct GroupView: View {
         case .board: NavigationStack { PaymentBoardView(store: store) { sheet = .send } }
         case .delivery: NavigationStack { DeliveryView(store: store) }
         case .pickup: NavigationStack { PickupBoardView(store: store) }
+        case .splitItem(let i): NavigationStack { SplitItemSheet(store: store, itemID: i.id) }
         case .editDelivery: NavigationStack { EditDeliverySheet(store: store) }
         }
     }
@@ -563,6 +566,7 @@ struct GroupView: View {
         case "claim": if let i = store.sharedItems.first(where: { $0.owner_id != store.me }) { sheet = store.myClaim(i) > 0 ? .editClaim(i) : .claim(i) }
         case "shareitem": if let i = store.myItems.first(where: { $0.share_pieces != nil }) ?? store.myItems.first { sheet = .shareItem(i, nil) }
         case "ask": if let u = store.activeMembers.map(\.user_id).first(where: { u in u != store.me && store.items(of: u).contains { $0.share_pieces == nil } }) { sheet = .ask(u) }
+        case "splititem": if let i = store.fridgeShared.first { sheet = .splitItem(i) }
         case "request": sheet = .requestEdit(RequestSeed(member: store.items.first { $0.owner_id != store.me }?.owner_id,
                                                          item: store.items.first { $0.owner_id != store.me }?.id, reason: .soldOut))
         case "delivery-details": sheet = .editDelivery
@@ -584,11 +588,14 @@ enum GroupSheet: Identifiable {
     case pickup
     /// A2: claim or edit my claim on a shared item, the owner's share settings (answering a request), ask to share.
     case claim(Item), editClaim(Item), shareItem(Item, ShareRequest?), ask(UUID)
+    /// Board 10: one shared item after lock, its holders and their taken states (10-2).
+    case splitItem(Item)
     var id: String {
         switch self {
         case .menu: "menu"; case .share: "share"; case .send: "send"
         case .claim(let i): "claim-\(i.id)"; case .editClaim(let i): "edit-claim-\(i.id)"
         case .shareItem(let i, _): "share-item-\(i.id)"; case .ask(let u): "ask-\(u)"
+        case .splitItem(let i): "split-item-\(i.id)"
         case .confirmAtas: "confirm"; case .bill: "bill"; case .board: "board"; case .delivery: "delivery"
         case .requestEdit: "request"; case .editDelivery: "edit-delivery"; case .pickup: "pickup"
         }

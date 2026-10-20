@@ -18,8 +18,8 @@ struct FoodLine: Identifiable {
 }
 
 extension GroupStore {
-    /// Pickup runs while a group order is Delivered.
-    var pickupOpen: Bool { group?.state == .delivered && group?.personal == false }
+    /// Pickup runs once a group order is Delivered, and stays open after it's Closed (food can still be in the fridge).
+    var pickupOpen: Bool { [.delivered, .closed].contains(group?.state) && group?.personal == false }
 
     func member(_ user: UUID) -> Member? { members.first { $0.user_id == user } }
     func takenAt(_ user: UUID) -> Date? { member(user)?.taken_at }
@@ -53,9 +53,41 @@ extension GroupStore {
         return out.filter { !$0.shared } + out.filter(\.shared)
     }
 
-    /// Who holds pieces of a shared item: the owner (what nobody claimed), then each claim.
+    /// Who holds pieces of a shared item, in the order board 10 lists them: the owner (what nobody claimed), then me,
+    /// then the others in claim order. Nobody without pieces.
     func holders(_ item: Item) -> [(user: UUID, pieces: Int)] {
-        [(item.owner_id, ownerPieces(item))] + claims(item).map { ($0.user_id, $0.pieces) }
+        let claims = claims(item)
+        return Pickup.order(owner: item.owner_id, me: me, claimers: claims.map(\.user_id)).compactMap { u in
+            let n = u == item.owner_id ? ownerPieces(item) : claims.first { $0.user_id == u }?.pieces ?? 0
+            return n > 0 ? (user: u, pieces: n) : nil
+        }
+    }
+
+    /// I hold pieces of this shared item, so I may mark anyone's pieces of it taken and WhatsApp the others (board 10).
+    func inSplit(_ item: Item) -> Bool { holders(item).contains { $0.user == me } }
+
+    /// Who marked `user`'s pieces of `item` taken when it wasn't them (`item_pickups.marked_by`).
+    func takenBy(_ item: Item, _ user: UUID) -> UUID? {
+        pickups.first { $0.item_id == item.id && $0.user_id == user }?.marked_by.flatMap { $0 == user ? nil : $0 }
+    }
+
+    /// "Taken 12:40", "Taken by you · 12:40", "Taken by Kevin · 12:15"; nil while in the fridge. `short` is the sheet's
+    /// line beside the TAKEN tag ("by you · 12:40").
+    func takenLine(_ item: Item, _ user: UUID, short: Bool = false) -> String? {
+        guard let at = lineTaken(item, by: user) else { return nil }
+        let by = takenBy(item, user).map { $0 == me ? "you" : name($0) }
+        let time = Wita.string(at, "HH:mm")
+        return short ? Pickup.takenBy(by, at: time) : Pickup.takenLine(by, at: time)
+    }
+
+    /// When the last of a shared item's pieces left the fridge.
+    func lastTaken(_ item: Item) -> Date? { holders(item).compactMap { lineTaken(item, by: $0.user) }.max() }
+
+    /// The piece bar after lock: each holder's pieces in their colour while in the fridge, Liquorice 100 once taken.
+    func splitFills(_ item: Item) -> [Color?] {
+        holders(item).flatMap { h in
+            Array(repeating: lineTaken(item, by: h.user) == nil ? pieceColor(h.user) : Brand.liquorice100, count: h.pieces)
+        }
     }
 
     /// When `user` took their line of `item`: its own pickup row, or every line once they said I've taken mine (a
@@ -97,12 +129,19 @@ extension GroupStore {
     func markTaken(_ item: Item, _ taken: Bool) async throws {
         try await rpc("mark_item_taken", ["item": .string(item.id.uuidString), "taken": .bool(taken)])
     }
+
+    /// Someone's pieces of a shared item I'm in taken (true) or back in the fridge (false); `holder` nil is every
+    /// holder at once ("I took the whole …"). The holder hears of it only once the 4 s Undo is over (server cron).
+    func markSplit(_ item: Item, holder: UUID?, taken: Bool) async throws {
+        try await rpc("mark_split_taken", ["item": .string(item.id.uuidString),
+                                           "holder": holder.map { .string($0.uuidString) } ?? .null, "taken": .bool(taken)])
+    }
 }
 
 // MARK: - Group screen
 
 extension GroupView {
-    /// I can say I've taken mine: the order is Delivered and I have food in it, not yet taken.
+    /// I can say I've taken mine: pickup is open and I have food in it, not yet taken.
     var canTake: Bool {
         guard store.pickupOpen, let me = store.me else { return false }
         return store.hasFood(me) && store.takenAt(me) == nil
@@ -126,13 +165,15 @@ extension GroupView {
         }, hold: 4)
     }
 
-    /// 7-1 / 7-2: my food card, then the Pickup card. Members only; the host marks theirs on the board.
-    @ViewBuilder func memberPickupSections() -> some View {
+    /// 7-1 / 7-2: my food card, the shared items in the fridge (10-3), then the Pickup card. Members only; the host
+    /// marks theirs on the board.
+    @ViewBuilder func memberPickupSections(_ g: OrderGroup) -> some View {
         if store.pickupOpen, let me = store.me {
             if store.hasFood(me) {
                 PickupFoodCard(store: store, undo: { Task { await markTaken(false) } },
                                mark: { item, taken in Task { await markTaken(item, taken) } })
             }
+            splitSection(g)
             pickupCard
         }
     }
@@ -209,7 +250,10 @@ struct PickupFoodCard: View {
                     ProductPhoto(url: store.products[l.item.product_id]?.photo, size: 44, fill: [Brand.choc100, Brand.pink100, Brand.lime][i % 3])
                     VStack(alignment: .leading, spacing: 2) {
                         Text(l.text).ui(GFont.manrope(15, 600))
-                        if l.shared, let pieces = l.item.share_pieces {
+                        if l.shared, store.takenBy(l.item, me) != nil, let line = store.takenLine(l.item, me) {
+                            // Someone in the split took mine out with theirs (board 10): "Taken by Putri · 12:40".
+                            Text(line).ui(GFont.manrope(12, 600))
+                        } else if l.shared, let pieces = l.item.share_pieces {
                             Text("\(store.fridgeLeft(l.item)) of \(pieces) \(Pickup.word(l.item.name, pieces)) left in the fridge")
                                 .ui(GFont.manrope(12), Brand.ink3)
                                 .contentTransition(.numericText())
@@ -242,11 +286,19 @@ struct PickupFoodCard: View {
 // MARK: - 7-4 Pickup board
 
 /// Who has taken their food and who hasn't, with the host's Nudge, and each shared item's pieces still in the fridge.
-/// Members see the same board without Nudge. Everyone marks their own food from their own row (the host's only way).
+/// Members see the same board without Nudge. Everyone marks their own food from their own row (the host's only way);
+/// someone in a split also marks the others' pieces of it in the fridge card (10-4).
 struct PickupBoardView: View {
     var store: GroupStore
     @Environment(\.dismiss) private var dismiss
     @State private var problem: Problem?
+    @State private var toast: ToastNote?
+    @State private var putBack: PutBack?
+
+    private var hostFirst: String {
+        let n = store.name(store.group?.host_id ?? UUID())
+        return String(n.split(separator: " ").first ?? Substring(n))
+    }
 
     var body: some View {
         let people = store.pickupPeople
@@ -265,8 +317,9 @@ struct PickupBoardView: View {
                     .padding(.vertical, 4).padding(.horizontal, 16)
                     .background(RoundedRectangle(cornerRadius: 32, style: .continuous).fill(Brand.card))
                     if !store.fridgeShared.isEmpty { fridgeCard }
-                    Text(store.isHost ? "Each person marks their own food. This doesn’t change anyone’s bill, and you can close the order at any time."
-                                      : "Each person marks their own food. This doesn’t change anyone’s bill.")
+                    Text("Each person, or anyone in their split, marks food as taken. It doesn’t change anyone’s bill"
+                         + (store.group?.state == .closed ? "."
+                            : ", and " + (store.isHost ? "you" : hostFirst) + " can close the order at any time."))
                         .font(Type5.manrope(12)).lineSpacing(1).foregroundStyle(Brand.ink3).padding(.horizontal, 4)
                 }
             }
@@ -279,7 +332,11 @@ struct PickupBoardView: View {
         .navigationBarTitleDisplayMode(.inline)
         .toolbar { ToolbarItem(placement: .cancellationAction) { Button(role: .close) { dismiss() } } }
         .problemAlert($problem)
+        .putBackAlert($putBack, store: store) { p in Task { await marker.put(p.item, p.holder) } }
+        .toast($toast)
     }
+
+    private var marker: SplitMarker { SplitMarker(store: store, problem: $problem, toast: $toast, ask: $putBack) }
 
     /// TAKEN · 4 of 6, the bar, and the two name lists.
     private func summary(_ people: [Member]) -> some View {
@@ -323,53 +380,98 @@ struct PickupBoardView: View {
         .accessibilityElement(children: .combine)
     }
 
-    /// Shared items in the fridge: pieces left, one cell per piece (taken ones grey), and each holder.
+    /// Shared items in the fridge (10-4): pieces left, the bar in each holder's colour (Liquorice 100 once taken), and
+    /// each holder's pieces with who took them. Someone in the split marks any holder's pieces or puts them back;
+    /// anyone else reads it.
     private var fridgeCard: some View {
         VStack(alignment: .leading, spacing: 14) {
             Text("Shared items in the fridge").brand(.label)
-            ForEach(store.fridgeShared) { item in
-                let pieces = item.share_pieces ?? 0
-                let left = store.fridgeLeft(item)
-                VStack(alignment: .leading, spacing: 12) {
-                    HStack(spacing: 14) {
-                        ProductPhoto(url: store.products[item.product_id]?.photo, size: 56, fill: Brand.pink100)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text(item.name).font(Type5.manrope(15, 600)).foregroundStyle(Brand.cocoa)
-                            Text("\(left) of \(pieces) \(Pickup.word(item.name, pieces)) left").font(Type5.roundo(17)).foregroundStyle(Brand.cocoa)
-                                .contentTransition(.numericText(value: Double(left)))
-                        }
-                    }
-                    HStack(spacing: 3) {
-                        ForEach(0..<pieces, id: \.self) { k in
-                            let inFridge = k >= pieces - left
-                            RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                .fill(inFridge ? Brand.choc400 : Brand.liquorice100)
-                                .overlay { if inFridge { RoundedRectangle(cornerRadius: 4, style: .continuous).strokeBorder(Brand.caramel, lineWidth: 1.5) } }
-                                .frame(height: 14)
-                        }
-                    }
-                    .animation(Motion.quick, value: left)
-                    .accessibilityHidden(true)
-                    VStack(spacing: 6) {
-                        ForEach(store.holders(item), id: \.user) { h in
-                            HStack {
-                                Text("\(store.name(h.user)) · \(Pickup.count(h.pieces, of: item.name))").font(Type5.manrope(13)).foregroundStyle(Brand.ink2)
-                                Spacer()
-                                if let at = store.takenAt(h.user) {
-                                    Text("Taken \(Wita.string(at, "HH:mm"))").font(Type5.manrope(13, 600)).foregroundStyle(Brand.cocoa)
-                                } else {
-                                    Text("In the fridge").font(Type5.manrope(13, 600)).foregroundStyle(Brand.caramel)
-                                }
-                            }
-                            .accessibilityElement(children: .combine)
-                        }
-                    }
-                }
+            ForEach(Array(store.fridgeShared.enumerated()), id: \.element.id) { i, item in
+                if i > 0 { Rectangle().fill(Brand.liquorice100).frame(height: 1).padding(.vertical, 2) }
+                FridgeSharedItem(store: store, item: item, marker: marker)
             }
         }
         .padding(20)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(RoundedRectangle(cornerRadius: 32, style: .continuous).fill(Brand.card))
+    }
+}
+
+/// One shared item on the board's fridge card: "4 of 16 pieces left", the bar, a row per holder ("Kevin · keeps 8 ·
+/// Taken 12:15", "Dimas · 4 pieces · Taken by Kevin · 12:15"), and for someone in the split Mark taken, Put back and the
+/// whole-item button. Not in it: "You’re not in the … split".
+private struct FridgeSharedItem: View {
+    var store: GroupStore
+    var item: Item
+    var marker: SplitMarker
+    @State private var busy = false
+
+    var body: some View {
+        let pieces = item.share_pieces ?? 0
+        let left = store.fridgeLeft(item)
+        let inSplit = store.inSplit(item)
+        let canMark = store.pickupOpen && inSplit
+        VStack(alignment: .leading, spacing: 12) {
+            HStack(spacing: 14) {
+                ProductPhoto(url: store.products[item.product_id]?.photo, size: 56, fill: Brand.pink100)
+                VStack(alignment: .leading, spacing: 2) {
+                    Text(item.name).font(Type5.manrope(15, 600)).foregroundStyle(Brand.cocoa)
+                    Text(left == 0 ? Pickup.inFridge(left: 0, of: pieces, name: item.name, at: nil)
+                                   : "\(left) of \(pieces) \(Pickup.word(item.name, pieces)) left")
+                        .font(Type5.roundo(17)).foregroundStyle(Brand.cocoa)
+                        .contentTransition(.numericText(value: Double(left)))
+                }
+            }
+            PieceBar(fills: store.splitFills(item), height: 14)
+            VStack(spacing: 0) {
+                ForEach(store.holders(item), id: \.user) { h in row(h.user, h.pieces, canMark: canMark) }
+            }
+            if canMark, let label = Pickup.bulk(item.name, left: left, of: pieces) {
+                Button { run { await marker.mark(item, nil) } } label: { Label(label, systemImage: "bag") }
+                    .buttonStyle(SharePillStyle(fill: Brand.cream, border: Brand.choc100))
+                    .disabled(busy)
+            }
+            if !inSplit {
+                Text("You’re not in the \(item.name) split, so you can see it but not change it.")
+                    .font(Type5.manrope(12)).lineSpacing(1).foregroundStyle(Brand.ink3)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+    }
+
+    private func row(_ user: UUID, _ n: Int, canMark: Bool) -> some View {
+        let you = user == store.me
+        let who = you ? "You" : store.name(user)
+        let line = store.takenLine(item, user)
+        return HStack(spacing: 8) {
+            Text("\(who) · \(Pickup.holding(n, of: item.name, owner: user == item.owner_id, you: you))")
+                .font(Type5.manrope(13)).foregroundStyle(Brand.ink2)
+            Spacer(minLength: 8)
+            Group {
+                if let line {
+                    Text(line).font(Type5.manrope(13, 600)).foregroundStyle(Brand.cocoa)
+                } else {
+                    Text("In the fridge").font(Type5.manrope(13, 600)).foregroundStyle(Brand.caramel)
+                }
+            }
+            .lineLimit(1)
+            if canMark {
+                let whose = SplitMarker.whose(store, item, user, n)
+                if line != nil {
+                    PutBackLink(whose: whose) { marker.putBack(item, user, pieces: n) }.disabled(busy)
+                } else if !you {
+                    MarkTakenChip(whose: whose) { run { await marker.mark(item, user) } }.disabled(busy)
+                }
+            }
+        }
+        .frame(minHeight: canMark ? 44 : 36)
+        .overlay(alignment: .top) { Rectangle().fill(Brand.liquorice100).frame(height: 1) }
+        .accessibilityElement(children: .contain)
+    }
+
+    private func run(_ work: @escaping () async -> Void) {
+        busy = true
+        Task { await work(); busy = false }
     }
 }
 
@@ -454,7 +556,7 @@ private struct PickupPersonRow: View {
                     .buttonStyle(ChipStyle(fill: Brand.lime, ring: Brand.limeDeep))
                     .disabled(busy)
             }
-        } else if store.isHost && !taken {
+        } else if store.isHost && !taken && store.group?.state == .delivered {  // pickup_nudge stops at Close
             if let at = member.pickup_nudged_at {
                 Label("Nudged \(Wita.string(at, "HH:mm"))", systemImage: "checkmark")
                     .labelStyle(IconLabel(spacing: 5, size: 12))

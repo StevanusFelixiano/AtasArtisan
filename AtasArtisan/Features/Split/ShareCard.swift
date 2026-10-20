@@ -399,14 +399,7 @@ private struct SharedBlock: View {
             return (c.user_id, mine ? "\(who) · \(c.pieces)" : "\(who) · \(Pieces.label(c.pieces))")
         }
         return FlowRow(spacing: 6) {
-            ForEach(rows, id: \.0) { user, text in
-                HStack(spacing: 6) {
-                    Circle().fill(store.pieceColor(user)).frame(width: 18, height: 18)
-                    Text(text).ui(GFont.manrope(13, 600)).lineLimit(1)
-                }
-                .padding(EdgeInsets(top: 4, leading: 4, bottom: 4, trailing: 10))
-                .background(Capsule().fill(Brand.cream))
-            }
+            ForEach(rows, id: \.0) { user, text in PieceChip(color: store.pieceColor(user), text: text) }
         }
     }
 
@@ -429,6 +422,21 @@ private struct SharedBlock: View {
                 .disabled(left == 0, reason: "Every piece is claimed. Ask \(owner) to add more.")
                 .padding(.bottom, left == 0 ? 2 : 0)
         }
+    }
+}
+
+/// A-2's people chip: an 18 pt piece-colour dot and "Kevin · 2 pieces" on a cream capsule (also board 10's chips for
+/// someone not in a split).
+struct PieceChip: View {
+    var color: Color
+    var text: String
+    var body: some View {
+        HStack(spacing: 6) {
+            Circle().fill(color).frame(width: 18, height: 18)
+            Text(text).ui(GFont.manrope(13, 600)).lineLimit(1)
+        }
+        .padding(EdgeInsets(top: 4, leading: 4, bottom: 4, trailing: 10))
+        .background(Capsule().fill(Brand.cream))
     }
 }
 

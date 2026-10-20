@@ -212,6 +212,9 @@ nonisolated struct ItemPickup: Codable, Hashable {
     var group_id: UUID
     var user_id: UUID
     var taken_at: Date
+    /// Someone else in the split marked these pieces taken (board 10); nil when the holder did, or on a server without
+    /// the column.
+    var marked_by: UUID? = nil
 }
 
 /// "Ask to share": someone asked an item's owner to share it, with `mine` of `pieces` for them (`share_requests`).
