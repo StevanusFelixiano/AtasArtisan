@@ -75,6 +75,7 @@ Personal, machine-specific notes go in `CLAUDE.local.md` (gitignored).
 ## Server side (outside Supabase)
 - **WhatsApp bridge** (`bridge/`): Vellum's bridge plus `ataste.go`, whatsmeow kept at `@latest` (older versions get unlinked right after pairing). The linked number needs a re-scan about every 20 days.
 - **Menu scraper:** runs at 05:00 and 12:00 WITA, reads the iSeller APIs, and calls `menu-ingest` only when the menu hash changed. Products missing from a scrape are marked unavailable, which sends sold-out notices.
+- **Supabase keepalive:** a daily anon REST query at 11:00 WITA keeps the free-tier project from pausing after 7 idle days. It runs on the VPS (it was a GitHub Actions workflow until 2026-11-08).
 
 ## Release
 - Bump `CURRENT_PROJECT_VERSION` in `project.pbxproj` for each upload. The App Store Connect checklist is in `ops/release/APP_STORE.md`.
