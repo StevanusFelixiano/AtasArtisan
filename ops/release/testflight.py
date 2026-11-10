@@ -13,6 +13,9 @@ HERE = os.path.dirname(os.path.abspath(__file__))
 API = "https://api.appstoreconnect.apple.com/v1"
 WAITING = {"WAIT", "READY_FOR_BETA_SUBMISSION", "WAITING_FOR_BETA_REVIEW", "IN_BETA_REVIEW", "BETA_APPROVED",
            "PROCESSING_EXCEPTION", "MISSING_EXPORT_COMPLIANCE"}
+# App Store versions App Review has yet to approve (it may still install their build).
+UNAPPROVED = {"PREPARE_FOR_SUBMISSION", "READY_FOR_REVIEW", "WAITING_FOR_REVIEW", "IN_REVIEW", "REJECTED",
+              "METADATA_REJECTED", "DEVELOPER_REJECTED", "INVALID_BINARY", "WAITING_FOR_EXPORT_COMPLIANCE"}
 
 
 def call(path, data=None):
@@ -43,6 +46,16 @@ def step(build):
     return state
 
 
+def review_cap():
+    """The lowest build on an App Store version not yet approved, or None. App Review installs report the sandbox
+    environment like TestFlight, so UpdateGate checks them against the TestFlight minimum: raising it past the build
+    in review makes the reviewer see "Update Ataste" (rejected 2026-10-29, guideline 2.1)."""
+    app = call("/apps?filter[bundleId]=com.bayujo.Ataste")["data"][0]["id"]
+    builds = [call(f"/appStoreVersions/{v['id']}/build")["data"] for v in call(f"/apps/{app}/appStoreVersions")["data"]
+              if v["attributes"]["appVersionState"] in UNAPPROVED]
+    return min((int(b["attributes"]["version"]) for b in builds if b), default=None)
+
+
 def main(build, force=True):
     for _ in range(144):  # 10-minute checks for 24 h
         state = step(build)
@@ -56,7 +69,11 @@ def main(build, force=True):
         sys.exit("gave up after 24 h")
     if not force:
         return
-    pw = subprocess.run(["security", "find-generic-password", "-s", "ataste.db-password", "-a", "ataste", "-w"],
+    cap = review_cap()
+    if cap is not None and cap < int(build):
+        print(f"build {cap} awaits App Review: min_build stops at {cap}", flush=True)
+        build = cap
+    pw =subprocess.run(["security", "find-generic-password", "-s", "ataste.db-password", "-a", "ataste", "-w"],
                         capture_output=True, text=True, check=True).stdout.strip()
     subprocess.run(["/opt/homebrew/opt/libpq/bin/psql",
                     "host=aws-0-ap-northeast-1.pooler.supabase.com port=5432 user=postgres.scgyssmzfurqjkgfomtq dbname=postgres",

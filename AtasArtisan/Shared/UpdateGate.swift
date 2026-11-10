@@ -4,7 +4,8 @@ import Supabase
 
 extension AppModel {
     /// Blocks the app when its build is below `app_release.min_build` for the channel it was installed from.
-    /// TestFlight installs report the sandbox environment, App Store installs production; Xcode builds are never
+    /// TestFlight installs report the sandbox environment, App Store installs production; App Review installs also
+    /// report sandbox, so `testflight.py` keeps that minimum at or below the build in review. Xcode builds are never
     /// gated. The channel comes from the app transaction, unverified if need be (this is a nudge, not a security
     /// check), else from the receipt's file name: on some iOS 26 TestFlight installs the app transaction fails and
     /// the gate never ran. Offline leaves the app usable.
