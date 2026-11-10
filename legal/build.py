@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Builds the legal pages from legal/*.md into web/legal/<doc>.html, styled like the rest of Ataste (cream page,
 caramel logo pill, white cards, Roundo headings, Manrope text). The VPS serves them at
-https://ataste.51-79-240-114.sslip.io/legal/<doc>; the app opens them in-app, and the Supabase `legal` function
-(the URL App Store Connect has) redirects there. Deploy: rsync -a --delete web/ vps:/srv/ataste-web/
+https://ataste.51-79-240-114.sslip.io/legal/<doc>, which the app opens in-app. It also writes plain-text copies to
+supabase/functions/legal/docs.json for the Supabase `legal` function, the URLs App Store Connect has (App Review could
+not open the sslip.io host, 2026-11-10; Supabase serves function HTML as text/plain).
+Deploy: rsync -a --delete web/ vps:/srv/ataste-web/, then deploy the `legal` function.
 
 The Markdown is a small subset: '# ' the title, the line after it the date, '## ' headings, '- ' bullets, '|' table
 rows (the first row is the header; '|---' rows are skipped), any other line a paragraph. Email addresses become
@@ -10,6 +12,7 @@ mailto links.
 
 Usage: python3 legal/build.py"""
 import html
+import json
 import pathlib
 import re
 
@@ -133,7 +136,35 @@ def render(md: str) -> str:
     return PAGE.format(title=html.escape(title), date=html.escape(date), lead="\n    ".join(lead), body="\n".join(sections))
 
 
+def text(md: str) -> str:
+    """The same document as plain text: headings in capitals, each table row as a bullet with its labelled cells."""
+    out_lines, heads = [], None
+    for line in (l.rstrip() for l in md.splitlines() if l.strip()):
+        if line.startswith("|"):
+            if not line.startswith("|---"):
+                cells = [c.strip() for c in line.strip("|").split("|")]
+                if heads is None:
+                    heads = cells
+                else:
+                    out_lines.append(f"- {cells[0]}" + "".join(f"\n    {h}: {c}" for h, c in zip(heads[1:], cells[1:])))
+            continue
+        heads = None
+        if line.startswith("## "):
+            out_lines += ["", line[3:].upper()]
+        elif line.startswith("- "):
+            out_lines.append(line)
+        else:
+            out_lines += ["", line.removeprefix("# ")]
+    return "\n".join(out_lines).strip() + "\n\nAtaste is an independent app and is not affiliated with Atas Artisan.\n"
+
+
 out.mkdir(parents=True, exist_ok=True)
+texts = {}
 for src, name in DOCS.items():
-    (out / f"{name}.html").write_text(render((root / src).read_text()))
+    md = (root / src).read_text()
+    (out / f"{name}.html").write_text(render(md))
+    texts[name] = text(md)
     print("web/legal/" + name + ".html")
+fn = root.parent / "supabase" / "functions" / "legal" / "docs.json"
+fn.write_text(json.dumps(texts, ensure_ascii=False, indent=1) + "\n")
+print(fn.relative_to(root.parent))

@@ -1,8 +1,13 @@
-// /legal/privacy | /legal/terms | /legal/support: the URLs App Store Connect has. Supabase serves function HTML as
-// text/plain, so the pages live on the VPS (repo web/legal, built by legal/build.py); this redirects there.
-const DOCS = new Set(["privacy", "terms", "support"]);
+// /legal/privacy | /legal/terms | /legal/support: the Support and Privacy Policy URLs in App Store Connect. App Review
+// could not open the sslip.io pages (guideline 1.5, 2026-10-29 and 2026-11-10), and Supabase rewrites function HTML to
+// text/plain, so this serves plain-text copies (docs.json, written by legal/build.py). The app opens the styled pages.
+import docs from "./docs.json" with { type: "json" };
+
+const TEXT: Record<string, string> = docs;
 Deno.serve((req) => {
   const doc = new URL(req.url).pathname.split("/").pop() ?? "";
-  if (!DOCS.has(doc)) return new Response("not found", { status: 404 });
-  return new Response(null, { status: 302, headers: { location: `https://ataste.51-79-240-114.sslip.io/legal/${doc}` } });
+  if (!Object.hasOwn(TEXT, doc)) return new Response("not found", { status: 404 });
+  return new Response(TEXT[doc], {
+    headers: { "content-type": "text/plain; charset=utf-8", "x-robots-tag": "noindex, nofollow" },
+  });
 });

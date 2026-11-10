@@ -12,6 +12,8 @@
 - Age rating: 4+ (no objectionable content; user photos limited to private groups, reportable)
 - Privacy Policy URL: https://scgyssmzfurqjkgfomtq.supabase.co/functions/v1/legal/privacy
 - Support URL: https://scgyssmzfurqjkgfomtq.supabase.co/functions/v1/legal/support
+  (plain text served by the `legal` function. App Review could not open the sslip.io host, either through the old
+  redirect (2026-10-29) or directly (2026-11-10), both times under 1.5. The app keeps the styled sslip.io pages.)
 - Copyright: 2026 Johar Kurniawan
 
 ## Description (as submitted for 1.0)
@@ -49,7 +51,7 @@ Not collected: location, contacts, browsing, purchases, usage data, diagnostics,
   needs a verified phone number, because members pay the host and the bakery needs the host's number: the user
   sends a one-time code from their own WhatsApp to our number, and gets a "Verified" badge.
   To see sample data without WhatsApp, use the demo account: on the Welcome screen, press and hold the "ataste"
-  logo for 1 second; a "Review code" field appears. Enter CODE and tap Sign in. You are signed in as "Rani"
+  logo for 2 seconds; a "Review code" field appears. Enter CODE and tap Sign in. You are signed in as "Rani"
   (already verified), the host of a sample group ("Academy Bali Friday Treats", open) and a member of a second
   group whose bill is final ("Academy Bali Snacks"). It may offer once to link an Apple ID; tap Later.
   Ataste does not process payments: members transfer money to the host outside the app (physical goods,
@@ -80,8 +82,18 @@ header 3840 × 1646 as **PNG** (the same size as JPEG was rejected, "File dimens
   Price free.
   - Rejected 2026-10-12, guideline 4.8 (Login Services): "Continue with WhatsApp" read as a third-party login.
   - Resubmitted 2026-10-14 with build 24 (Sign in with Apple as the only sign-in; WhatsApp only verifies a
-    number) and a reply in the submission's messages. Review demo cutoff is 2026-10-21; rerun
-    `supabase/seed/review_demo.sql` if review runs past it.
+    number) and a reply in the submission's messages.
+  - Rejected 2026-10-29 (iPad Air, iPadOS 27.2): 2.1(a) the reviewer got "Update Ataste" (App Review installs read
+    as TestFlight; `testflight.py` had raised that minimum to 25 over build 24 in review), so the logo was out of
+    reach; 1.5 Support URL "not functional"; 3.2 asked whether the app is for one organisation.
+  - Resubmitted 2026-10-29 with build 25, notes "hold for 2 seconds" (the gesture needs 1.2 s), direct legal URLs,
+    and a reply answering the 3.2 questions. `testflight.py` now stops the TestFlight minimum at the build in review.
+    Review demo cutoff is 2026-11-05 (reseeded 2026-10-29); rerun `supabase/seed/review_demo.sql` if review runs
+    past it.
+  - Rejected 2026-11-10 (iPad Air 11-inch M3), 1.5 only: the sslip.io Support URL "not functional" (it answered 200
+    from here). Moved the Support and Privacy Policy URLs to the Supabase `legal` function (plain text), reseeded the
+    review demo (cutoff 2026-11-17 13:00 WITA), replied in the submission's messages, and resubmitted build 25 the
+    same day through the API.
   - The resubmit button stays disabled until the rejected item is marked resolved: API `PATCH
     reviewSubmissionItems/{id}` `resolved: true`, then `PATCH reviewSubmissions/{id}` `submitted: true`.
 - Asset Library draft iOS submission (started 2026-10-07): header, search results and the 14 Duo screenshots,
